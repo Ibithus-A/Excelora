@@ -37,9 +37,9 @@ export function SidebarNode({ nodeId, depth }: SidebarNodeProps) {
   const [draftTitle, setDraftTitle] = useState("");
   const [initialTitle, setInitialTitle] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isTitleHovered, setIsTitleHovered] = useState(false);
   const { message: renameNotice, setMessage: setRenameNotice } =
     useAutoDismissMessage(2400);
-  const [isTitleHovered, setIsTitleHovered] = useState(false);
 
   if (!node) return null;
 
@@ -104,6 +104,7 @@ export function SidebarNode({ nodeId, depth }: SidebarNodeProps) {
           type="button"
           onClick={(event) => {
             event.stopPropagation();
+            selectNode(node.id);
             if (hasChildren) toggleExpanded(node.id);
           }}
           className="mr-1 inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-200/70 hover:text-zinc-600 disabled:opacity-30"
@@ -120,7 +121,7 @@ export function SidebarNode({ nodeId, depth }: SidebarNodeProps) {
           type="button"
           onClick={() => {
             if (isEditing) return;
-            if (isTitleHovered) {
+            if (isTitleHovered && isSelected) {
               setInitialTitle(node.title);
               setDraftTitle(node.title);
               setIsEditing(true);

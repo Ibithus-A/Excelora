@@ -21,7 +21,7 @@ import {
   useState,
 } from "react";
 
-const STORAGE_KEY = "flowstate:v1";
+const STORAGE_KEY = "flowstate:v2";
 
 type Action =
   | { type: "hydrate"; payload: FlowState }
