@@ -1,0 +1,182 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Length 2501 >>
+stream
+BT
+/F1 11 Tf
+54 738 Td
+(How to Add User Authentication, Role-Based Access, and Progression Rules) Tj
+0 -14 Td
+() Tj
+0 -14 Td
+(1. Identity + Roles) Tj
+0 -14 Td
+(- Use an auth provider \(Auth.js, Clerk, or Supabase Auth\).) Tj
+0 -14 Td
+(- Users table fields:) Tj
+0 -14 Td
+(  - id, email, password_hash \(or provider ID\)) Tj
+0 -14 Td
+(  - role: admin | student) Tj
+0 -14 Td
+(  - plan: standard | custom) Tj
+0 -14 Td
+(  - is_active) Tj
+0 -14 Td
+(- Admin is just a user with role=admin \(or an isOwner flag for exactly one super-admin\).) Tj
+0 -14 Td
+() Tj
+0 -14 Td
+(2. Course Access Model) Tj
+0 -14 Td
+(- modules table: each module/chapter/subtopic with ordering.) Tj
+0 -14 Td
+(- enrollments table: student ? course.) Tj
+0 -14 Td
+(- module_access table: explicit overrides per student \(locked/unlocked\).) Tj
+0 -14 Td
+(- module_prerequisites table: Module B requires Module A pass.) Tj
+0 -14 Td
+(- module_results table: student test score + passed boolean.) Tj
+0 -14 Td
+() Tj
+0 -14 Td
+(3. Authorization Rules \(server-side\)) Tj
+0 -14 Td
+(- Admin can view/edit everything, lock/unlock any module, override progression.) Tj
+0 -14 Td
+(- Student can view only modules that satisfy:) Tj
+0 -14 Td
+(  1. Enrolled in course, and) Tj
+0 -14 Td
+(  2. One of:) Tj
+0 -14 Td
+(     - plan=custom and admin has granted access, or) Tj
+0 -14 Td
+(     - all prerequisite modules are passed, or) Tj
+0 -14 Td
+(     - admin override unlock exists.) Tj
+0 -14 Td
+(- Never trust frontend lock state alone; API/database policy must enforce this.) Tj
+0 -14 Td
+() Tj
+0 -14 Td
+(4. Progression Logic) Tj
+0 -14 Td
+(- On End of Topic Test submission:) Tj
+0 -14 Td
+(  - Grade attempt.) Tj
+0 -14 Td
+(  - Mark passed=true if above threshold \(e.g., 70%\).) Tj
+0 -14 Td
+(  - Recompute unlocks for next modules \(or compute at read time\).) Tj
+0 -14 Td
+(- If failed, keep downstream locked unless admin override/custom plan unlock exists.) Tj
+0 -14 Td
+() Tj
+0 -14 Td
+(5. Admin Controls You Need) Tj
+0 -14 Td
+(- Student management page:) Tj
+0 -14 Td
+(  - assign plan \(standard/custom\)) Tj
+0 -14 Td
+(  - enroll student in course) Tj
+0 -14 Td
+(  - manual unlock/lock per module) Tj
+0 -14 Td
+(  - view progress, scores, attempts) Tj
+0 -14 Td
+(- Module policy editor:) Tj
+0 -14 Td
+(  - define prerequisites) Tj
+0 -14 Td
+(  - define pass threshold per module) Tj
+0 -14 Td
+() Tj
+0 -14 Td
+(6. Student Experience) Tj
+0 -14 Td
+(- Sidebar shows all modules but locked ones are visibly gated.) Tj
+0 -14 Td
+(- Locked module click shows reason:) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 3 0 R /Resources << /Font << /F1 7 0 R >> >> >>
+endobj
+5 0 obj
+<< /Length 1031 >>
+stream
+BT
+/F1 11 Tf
+54 738 Td
+(  - Pass Module X first, or) Tj
+0 -14 Td
+(  - Available on Custom Plan.) Tj
+0 -14 Td
+(- After passing a module, next eligible modules unlock instantly.) Tj
+0 -14 Td
+() Tj
+0 -14 Td
+(7. Security + Scale Best Practices) Tj
+0 -14 Td
+(- Enforce role checks in middleware + API handlers.) Tj
+0 -14 Td
+(- Use row-level security/policies \(if Supabase/Postgres\) for student-scoped data.) Tj
+0 -14 Td
+(- Audit log admin actions \(manual unlocks, plan changes\).) Tj
+0 -14 Td
+(- Rate-limit auth and test submission endpoints.) Tj
+0 -14 Td
+(- Store only minimal PII; encrypt sensitive fields.) Tj
+0 -14 Td
+() Tj
+0 -14 Td
+(8. Recommended Rollout Order) Tj
+0 -14 Td
+(1. Auth + roles) Tj
+0 -14 Td
+(2. Enrollment + module access checks) Tj
+0 -14 Td
+(3. Test result + pass/fail progression) Tj
+0 -14 Td
+(4. Admin overrides) Tj
+0 -14 Td
+(5. Plan-based unlock rules \(custom\)) Tj
+0 -14 Td
+() Tj
+0 -14 Td
+(If needed next, we can define the concrete backend schema and API contract endpoint-by-endpoint for QuickLearn.) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 5 0 R /Resources << /Font << /F1 9 0 R >> >> >>
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000002680 00000 n 
+0000002806 00000 n 
+0000003889 00000 n 
+0000004015 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+4085
+%%EOF

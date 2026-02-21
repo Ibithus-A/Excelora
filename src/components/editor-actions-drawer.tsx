@@ -13,20 +13,16 @@ type EditorActionsDrawerProps = {
   isDarkMode: boolean;
   lockInfo: NodeLockInfo;
   lockLabel: string;
-  actionNotice: string | null;
   onToggleLock: () => void;
   onToggleDarkMode: () => void;
-  onExportPdf: () => void;
 };
 
 export function EditorActionsDrawer({
   isDarkMode,
   lockInfo,
   lockLabel,
-  actionNotice,
   onToggleLock,
   onToggleDarkMode,
-  onExportPdf,
 }: EditorActionsDrawerProps) {
   return (
     <div className="group/actions absolute inset-y-0 right-0 z-40 w-2">
@@ -72,14 +68,6 @@ export function EditorActionsDrawer({
 
             <button
               type="button"
-              onClick={onExportPdf}
-              className="inline-flex w-full items-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
-            >
-              Export as PDF
-            </button>
-
-            <button
-              type="button"
               onClick={onToggleDarkMode}
               className="inline-flex w-full items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
             >
@@ -91,11 +79,6 @@ export function EditorActionsDrawer({
               <span>{isDarkMode ? "Switch to Light" : "Switch to Dark"}</span>
             </button>
 
-            {actionNotice && (
-              <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
-                {actionNotice}
-              </p>
-            )}
           </div>
         </div>
       </aside>

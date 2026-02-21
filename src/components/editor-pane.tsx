@@ -2,8 +2,7 @@
 
 import { EditorActionsDrawer } from "@/components/editor-actions-drawer";
 import { useFlowState } from "@/context/flowstate-context";
-import { DUPLICATE_PAGE_NAME_MESSAGE, EXPORT_POPUP_BLOCKED_MESSAGE } from "@/lib/constants/messages";
-import { printNodeAsPdf } from "@/lib/export/print-pdf";
+import { DUPLICATE_PAGE_NAME_MESSAGE } from "@/lib/constants/messages";
 import { useAutoDismissMessage } from "@/lib/hooks/use-auto-dismiss-message";
 import {
   getDefaultTitle,
@@ -98,8 +97,6 @@ export function EditorPane({ isDarkMode, onToggleDarkMode }: EditorPaneProps) {
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const { message: renameNotice, setMessage: setRenameNotice } =
     useAutoDismissMessage(2400);
-  const { message: actionNotice, setMessage: setActionNotice } =
-    useAutoDismissMessage(2800);
 
   const selectedId = state.selectedId;
   const selectedNode = selectedId ? state.nodes[selectedId] : null;
@@ -202,25 +199,14 @@ export function EditorPane({ isDarkMode, onToggleDarkMode }: EditorPaneProps) {
     applyNextContent(nextValue, commandStart + caretOffset);
   };
 
-  const exportCurrentNodeAsPdf = () => {
-    if (!selectedNode) return;
-    const didOpenPrint = printNodeAsPdf(selectedNode, { isDarkMode });
-    if (!didOpenPrint) {
-      setActionNotice(EXPORT_POPUP_BLOCKED_MESSAGE);
-      return;
-    }
-  };
-
   return (
     <section className="relative grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] bg-[var(--surface-panel)]">
       <EditorActionsDrawer
         isDarkMode={isDarkMode}
         lockInfo={lockInfo}
         lockLabel={lockLabel}
-        actionNotice={actionNotice}
         onToggleLock={() => toggleLock(selectedNode.id)}
         onToggleDarkMode={onToggleDarkMode}
-        onExportPdf={exportCurrentNodeAsPdf}
       />
 
       <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)]">
