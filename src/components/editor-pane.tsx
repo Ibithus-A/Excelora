@@ -54,6 +54,14 @@ const SLASH_OPTIONS: SlashOption[] = [
   },
 ];
 
+const DEFAULT_LOCK_INFO = {
+  isEffectivelyLocked: false,
+  isLockedBySelf: false,
+  isLockedByAncestorFolder: false,
+  isLockedByAncestorPage: false,
+  canToggleLock: false,
+};
+
 function getSlashContext(value: string, cursor: number) {
   const upToCursor = value.slice(0, cursor);
   const slashIndex = upToCursor.lastIndexOf("/");
@@ -101,13 +109,7 @@ export function EditorPane({ role }: EditorPaneProps) {
   const selectedNode = selectedId ? state.nodes[selectedId] : null;
   const lockInfo = selectedNode
     ? getNodeLockInfo(state, selectedNode.id)
-    : {
-        isEffectivelyLocked: false,
-        isLockedBySelf: false,
-        isLockedByAncestorFolder: false,
-        isLockedByAncestorPage: false,
-        canToggleLock: false,
-      };
+    : DEFAULT_LOCK_INFO;
   const isStudent = role === "student";
   const canEditTitle = !isStudent;
   const canEditContent = !isStudent;
@@ -220,45 +222,45 @@ export function EditorPane({ role }: EditorPaneProps) {
               lockInfo.isEffectivelyLocked ? "opacity-65" : "",
             ].join(" ")}
           >
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
-            <div className="min-w-0">
-              <input
-                value={selectedNode.title}
-                onChange={(event) => {
-                  if (!canEditTitle) return;
-                  const nextTitle = event.target.value;
-                  if (hasDuplicatePageTitleInParent(state, selectedNode.id, nextTitle)) {
-                    setRenameNotice(DUPLICATE_PAGE_NAME_MESSAGE);
-                    return;
-                  }
-                  updateTitle(selectedNode.id, nextTitle);
-                }}
-                onBlur={() => {
-                  if (!canEditTitle) return;
-                  const trimmed = selectedNode.title.trim();
-                  if (!trimmed) {
-                    updateTitle(selectedNode.id, getDefaultTitle(selectedNode.kind));
-                  } else if (
-                    hasDuplicatePageTitleInParent(state, selectedNode.id, trimmed)
-                  ) {
-                    setRenameNotice(DUPLICATE_PAGE_NAME_MESSAGE);
-                  } else if (trimmed !== selectedNode.title) {
-                    updateTitle(selectedNode.id, trimmed);
-                  }
-                }}
-                className="w-full rounded-md border border-transparent bg-transparent px-1 py-1 text-4xl font-semibold tracking-[-0.03em] text-zinc-900 outline-none placeholder:text-zinc-300"
-                placeholder={getDefaultTitle(selectedNode.kind)}
-                readOnly={!canEditTitle}
-              />
+            <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+              <div className="min-w-0">
+                <input
+                  value={selectedNode.title}
+                  onChange={(event) => {
+                    if (!canEditTitle) return;
+                    const nextTitle = event.target.value;
+                    if (hasDuplicatePageTitleInParent(state, selectedNode.id, nextTitle)) {
+                      setRenameNotice(DUPLICATE_PAGE_NAME_MESSAGE);
+                      return;
+                    }
+                    updateTitle(selectedNode.id, nextTitle);
+                  }}
+                  onBlur={() => {
+                    if (!canEditTitle) return;
+                    const trimmed = selectedNode.title.trim();
+                    if (!trimmed) {
+                      updateTitle(selectedNode.id, getDefaultTitle(selectedNode.kind));
+                    } else if (
+                      hasDuplicatePageTitleInParent(state, selectedNode.id, trimmed)
+                    ) {
+                      setRenameNotice(DUPLICATE_PAGE_NAME_MESSAGE);
+                    } else if (trimmed !== selectedNode.title) {
+                      updateTitle(selectedNode.id, trimmed);
+                    }
+                  }}
+                  className="w-full rounded-md border border-transparent bg-transparent px-1 py-1 text-4xl font-semibold tracking-[-0.03em] text-zinc-900 outline-none placeholder:text-zinc-300"
+                  placeholder={getDefaultTitle(selectedNode.kind)}
+                  readOnly={!canEditTitle}
+                />
 
-              {renameNotice && (
-                <p className="mt-2 inline-flex rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
-                  {renameNotice}
-                </p>
-              )}
+                {renameNotice && (
+                  <p className="mt-2 inline-flex rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                    {renameNotice}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
         <div
           className={[

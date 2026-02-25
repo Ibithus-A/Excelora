@@ -9,13 +9,11 @@ import {
   TrashIcon,
 } from "@/components/icons";
 import { useFlowState } from "@/context/flowstate-context";
+import { DUPLICATE_PAGE_NAME_MESSAGE } from "@/lib/constants/messages";
 import { useAutoDismissMessage } from "@/lib/hooks/use-auto-dismiss-message";
 import { getDefaultTitle, hasDuplicatePageTitleInParent } from "@/lib/tree-utils";
 import type { DragEvent } from "react";
 import { useState } from "react";
-
-const DUPLICATE_PAGE_NAME_MESSAGE =
-  "A page with this name already exists in this folder.";
 
 type SidebarNodeProps = {
   nodeId: string;
@@ -195,44 +193,44 @@ export function SidebarNode({
 
         {canManage ? (
           <div className="ml-1 hidden items-center gap-0.5 group-hover:flex group-focus-within:flex">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              addNode("page", node.id);
-            }}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-800"
-            aria-label="Add page inside"
-            title="Add page"
-          >
-            <PlusIcon className="h-3.5 w-3.5" />
-          </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                addNode("page", node.id);
+              }}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-800"
+              aria-label="Add page inside"
+              title="Add page"
+            >
+              <PlusIcon className="h-3.5 w-3.5" />
+            </button>
 
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              addNode("folder", node.id);
-            }}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-800"
-            aria-label="Add folder inside"
-            title="Add folder"
-          >
-            <FolderPlusIcon className="h-3.5 w-3.5" />
-          </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                addNode("folder", node.id);
+              }}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-800"
+              aria-label="Add folder inside"
+              title="Add folder"
+            >
+              <FolderPlusIcon className="h-3.5 w-3.5" />
+            </button>
 
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              removeNode(node.id);
-            }}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 hover:bg-red-50 hover:text-red-600"
-            aria-label="Delete"
-            title="Delete"
-          >
-            <TrashIcon className="h-3.5 w-3.5" />
-          </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                removeNode(node.id);
+              }}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-500 hover:bg-red-50 hover:text-red-600"
+              aria-label="Delete"
+              title="Delete"
+            >
+              <TrashIcon className="h-3.5 w-3.5" />
+            </button>
           </div>
         ) : null}
       </div>
@@ -250,14 +248,14 @@ export function SidebarNode({
           {node.childrenIds
             .filter((childId) => (canViewNode ? canViewNode(childId) : true))
             .map((childId) => (
-            <SidebarNode
-              key={childId}
-              nodeId={childId}
-              depth={depth + 1}
-              canManage={canManage}
-              canViewNode={canViewNode}
-            />
-          ))}
+              <SidebarNode
+                key={childId}
+                nodeId={childId}
+                depth={depth + 1}
+                canManage={canManage}
+                canViewNode={canViewNode}
+              />
+            ))}
         </div>
       )}
     </div>

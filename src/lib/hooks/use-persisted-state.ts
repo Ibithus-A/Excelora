@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type UsePersistedStateOptions<T> = {
   key: string;
@@ -15,6 +15,12 @@ export function usePersistedState<T>({
   serialize = JSON.stringify,
   deserialize = JSON.parse as (raw: string) => T,
 }: UsePersistedStateOptions<T>) {
+  const serializeRef = useRef(serialize);
+
+  useEffect(() => {
+    serializeRef.current = serialize;
+  }, [serialize]);
+
   const [value, setValue] = useState<T>(() => {
     if (typeof window === "undefined") return defaultValue;
     try {
@@ -28,11 +34,11 @@ export function usePersistedState<T>({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(key, serialize(value));
+      window.localStorage.setItem(key, serializeRef.current(value));
     } catch {
       // Ignore quota/private mode failures.
     }
-  }, [key, serialize, value]);
+  }, [key, value]);
 
   return [value, setValue] as const;
 }

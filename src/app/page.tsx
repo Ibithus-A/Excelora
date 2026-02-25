@@ -11,8 +11,9 @@ import { useTheme } from "@/lib/hooks/use-theme";
 import type { AuthenticatedAccount } from "@/types/auth";
 import { useState } from "react";
 
+type AppView = "workspace" | "dashboard";
+
 export default function HomePage() {
-  type AppView = "workspace" | "dashboard";
   const [view, setView] = useState<AppView>("workspace");
   const [isSidebarAutoOpen, setIsSidebarAutoOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthenticatedAccount | null>(null);
@@ -38,11 +39,6 @@ export default function HomePage() {
   };
 
   const handleSignOut = () => {
-    setCurrentUser(null);
-    setView("dashboard");
-  };
-
-  const handleSwitchAccount = () => {
     setCurrentUser(null);
     setView("dashboard");
   };
@@ -78,7 +74,7 @@ export default function HomePage() {
             activeStudentName={selectedStudent?.name}
             onOpenWorkspace={handleOpenWorkspaceFromDashboard}
             onSignOut={handleSignOut}
-            onSwitchAccount={handleSwitchAccount}
+            onSwitchAccount={handleSignOut}
             chapterTitles={chapterTitles}
             students={students}
             selectedStudentEmail={selectedStudentEmail}

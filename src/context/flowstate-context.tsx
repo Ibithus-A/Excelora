@@ -2,6 +2,7 @@
 
 import {
   addNodeToState,
+  type MoveTarget,
   moveNodeInState,
   removeNodeFromState,
   selectNodeInState,
@@ -10,10 +11,12 @@ import {
   updateContentInState,
   updateTitleInState,
 } from "@/lib/tree-utils";
+import { FLOWSTATE_STORAGE_KEY } from "@/lib/constants/storage";
 import { createSeedState, insertALevelMathsTree } from "@/lib/seed";
-import type { FlowState, NodeKind } from "@/types/flowstate";
+import type { FlowNode, FlowState, NodeKind } from "@/types/flowstate";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -21,19 +24,10 @@ import {
   useState,
 } from "react";
 
-const STORAGE_KEY = "flowstate:v2";
-
 type Action =
   | { type: "hydrate"; payload: FlowState }
   | { type: "add"; kind: NodeKind; parentId: string | null }
-  | {
-      type: "move";
-      id: string;
-      target:
-        | { type: "root" }
-        | { type: "inside"; targetId: string }
-        | { type: "after"; targetId: string };
-    }
+  | { type: "move"; id: string; target: MoveTarget }
   | { type: "remove"; id: string }
   | { type: "select"; id: string }
   | { type: "toggle"; id: string }
@@ -76,6 +70,83 @@ function isFlowStateLike(value: unknown): value is FlowState {
     Array.isArray(candidate.rootIds) &&
     ("selectedId" in candidate || candidate.selectedId === null)
   );
+}
+
+function isNodeKind(value: unknown): value is NodeKind {
+  return value === "page" || value === "folder";
+}
+
+function isFlowNodeLike(value: unknown): value is FlowNode {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<FlowNode>;
+
+  return (
+    typeof candidate.id === "string" &&
+    isNodeKind(candidate.kind) &&
+    typeof candidate.title === "string" &&
+    (typeof candidate.parentId === "string" || candidate.parentId === null) &&
+    Array.isArray(candidate.childrenIds) &&
+    candidate.childrenIds.every((childId) => typeof childId === "string") &&
+    typeof candidate.content === "string" &&
+    typeof candidate.isExpanded === "boolean" &&
+    typeof candidate.createdAt === "number" &&
+    typeof candidate.updatedAt === "number"
+  );
+}
+
+function dedupeIds(ids: string[]): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
+  }
+  return unique;
+}
+
+function repairNodeReferences(state: FlowState): FlowState {
+  const validNodes = Object.fromEntries(
+    Object.entries(state.nodes).filter(([, node]) => isFlowNodeLike(node)),
+  );
+
+  const repairedNodes = Object.fromEntries(
+    Object.entries(validNodes).map(([id, node]) => [
+      id,
+      {
+        ...node,
+        parentId: node.parentId && validNodes[node.parentId] ? node.parentId : null,
+        childrenIds: dedupeIds(node.childrenIds).filter((childId) => Boolean(validNodes[childId])),
+        isLocked: node.isLocked ?? false,
+        isUnlockedOverride: node.isUnlockedOverride ?? false,
+      },
+    ]),
+  );
+
+  for (const node of Object.values(repairedNodes)) {
+    for (const childId of node.childrenIds) {
+      repairedNodes[childId].parentId = node.id;
+    }
+  }
+
+  const rootIds = dedupeIds(state.rootIds).filter((id) => {
+    const node = repairedNodes[id];
+    return Boolean(node && node.parentId === null);
+  });
+
+  for (const [id, node] of Object.entries(repairedNodes)) {
+    if (node.parentId !== null) continue;
+    if (!rootIds.includes(id)) {
+      rootIds.push(id);
+    }
+  }
+
+  const selectedId =
+    state.selectedId && repairedNodes[state.selectedId]
+      ? state.selectedId
+      : rootIds[0] ?? null;
+
+  return { nodes: repairedNodes, rootIds, selectedId };
 }
 
 function collectSubtreeIds(state: FlowState, id: string, ids: Set<string>) {
@@ -156,22 +227,12 @@ function stripDuplicatedSeedPageTitle(state: FlowState): FlowState {
 }
 
 function normalizeFlowState(state: FlowState): FlowState {
-  const normalizedNodes = Object.fromEntries(
-    Object.entries(state.nodes).map(([id, node]) => [
-      id,
-      {
-        ...node,
-        isLocked: node.isLocked ?? false,
-        isUnlockedOverride: node.isUnlockedOverride ?? false,
-      },
-    ]),
-  );
+  const repairedState = repairNodeReferences(state);
 
   return insertALevelMathsTree(
     stripDuplicatedSeedPageTitle(
       removeDeprecatedALevelMaths({
-        ...state,
-        nodes: normalizedNodes,
+        ...repairedState,
       }),
     ),
   );
@@ -181,13 +242,7 @@ type FlowStateContextValue = {
   state: FlowState;
   isHydrated: boolean;
   addNode: (kind: NodeKind, parentId?: string | null) => void;
-  moveNode: (
-    id: string,
-    target:
-      | { type: "root" }
-      | { type: "inside"; targetId: string }
-      | { type: "after"; targetId: string },
-  ) => void;
+  moveNode: (id: string, target: MoveTarget) => void;
   removeNode: (id: string) => void;
   selectNode: (id: string) => void;
   toggleExpanded: (id: string) => void;
@@ -209,7 +264,7 @@ export function FlowStateProvider({
   // Load from localStorage on first client render
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const raw = window.localStorage.getItem(FLOWSTATE_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as unknown;
         if (isFlowStateLike(parsed)) {
@@ -228,28 +283,60 @@ export function FlowStateProvider({
     if (!isHydrated) return;
 
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      window.localStorage.setItem(FLOWSTATE_STORAGE_KEY, JSON.stringify(state));
     } catch {
       // Ignore storage quota/private mode failures
     }
   }, [state, isHydrated]);
 
+  const addNode = useCallback(
+    (kind: NodeKind, parentId: string | null = null) =>
+      dispatch({ type: "add", kind, parentId }),
+    [],
+  );
+  const moveNode = useCallback(
+    (id: string, target: MoveTarget) => dispatch({ type: "move", id, target }),
+    [],
+  );
+  const removeNode = useCallback((id: string) => dispatch({ type: "remove", id }), []);
+  const selectNode = useCallback((id: string) => dispatch({ type: "select", id }), []);
+  const toggleExpanded = useCallback((id: string) => dispatch({ type: "toggle", id }), []);
+  const toggleLock = useCallback((id: string) => dispatch({ type: "toggleLock", id }), []);
+  const updateTitle = useCallback(
+    (id: string, title: string) => dispatch({ type: "updateTitle", id, title }),
+    [],
+  );
+  const updateContent = useCallback(
+    (id: string, content: string) =>
+      dispatch({ type: "updateContent", id, content }),
+    [],
+  );
+
   const value = useMemo<FlowStateContextValue>(
     () => ({
       state,
       isHydrated,
-      addNode: (kind, parentId = null) =>
-        dispatch({ type: "add", kind, parentId }),
-      moveNode: (id, target) => dispatch({ type: "move", id, target }),
-      removeNode: (id) => dispatch({ type: "remove", id }),
-      selectNode: (id) => dispatch({ type: "select", id }),
-      toggleExpanded: (id) => dispatch({ type: "toggle", id }),
-      toggleLock: (id) => dispatch({ type: "toggleLock", id }),
-      updateTitle: (id, title) => dispatch({ type: "updateTitle", id, title }),
-      updateContent: (id, content) =>
-        dispatch({ type: "updateContent", id, content }),
+      addNode,
+      moveNode,
+      removeNode,
+      selectNode,
+      toggleExpanded,
+      toggleLock,
+      updateTitle,
+      updateContent,
     }),
-    [state, isHydrated],
+    [
+      addNode,
+      isHydrated,
+      moveNode,
+      removeNode,
+      selectNode,
+      state,
+      toggleExpanded,
+      toggleLock,
+      updateContent,
+      updateTitle,
+    ],
   );
 
   return (

@@ -4,8 +4,6 @@ import type { StudentDailyStats } from "@/types/dashboard";
 
 export const CHAPTER_ONE_TITLE = "Chapter 1: Algebra 1";
 export const CHAPTER_TITLES = A_LEVEL_MATHS_CHAPTER_TITLES;
-export const STUDENT_UNLOCK_STORAGE_KEY = "quicklearn:student-chapter-unlocks";
-export const STUDENT_MILESTONE_STORAGE_KEY = "quicklearn:student-chapter-milestones";
 
 export function ensureChapterOneUnlocked(
   unlocks: Record<string, string[]>,

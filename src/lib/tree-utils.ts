@@ -297,7 +297,7 @@ function isInSubtree(state: FlowState, rootId: string, targetId: string): boolea
   return false;
 }
 
-type MoveTarget =
+export type MoveTarget =
   | { type: "root" }
   | { type: "inside"; targetId: string }
   | { type: "after"; targetId: string };

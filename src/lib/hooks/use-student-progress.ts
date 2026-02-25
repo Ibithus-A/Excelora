@@ -1,12 +1,14 @@
 "use client";
 
 import { STUDENT_ACCOUNTS, normalizeEmail } from "@/lib/auth";
+import {
+  STUDENT_MILESTONE_STORAGE_KEY,
+  STUDENT_UNLOCK_STORAGE_KEY,
+} from "@/lib/constants/storage";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import {
   CHAPTER_ONE_TITLE,
   CHAPTER_TITLES,
-  STUDENT_MILESTONE_STORAGE_KEY,
-  STUDENT_UNLOCK_STORAGE_KEY,
   buildUnlocksUpToChapter,
   buildStudentStats,
   deserializeStudentMilestones,
