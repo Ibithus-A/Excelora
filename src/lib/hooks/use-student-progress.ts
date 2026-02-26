@@ -1,6 +1,6 @@
 "use client";
 
-import { STUDENT_ACCOUNTS, normalizeEmail } from "@/lib/auth";
+import { normalizeEmail, type StudentAccount } from "@/lib/auth";
 import {
   STUDENT_MILESTONE_STORAGE_KEY,
   STUDENT_UNLOCK_STORAGE_KEY,
@@ -18,32 +18,96 @@ import {
   toggleChapterUnlock,
 } from "@/lib/student-progress";
 import type { AuthenticatedAccount } from "@/types/auth";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-export function useStudentProgress(currentUser: AuthenticatedAccount | null) {
+function areUnlockMapsEqual(
+  left: Record<string, string[]>,
+  right: Record<string, string[]>,
+) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    const leftValues = left[key];
+    const rightValues = right[key];
+    if (!rightValues) return false;
+    if (leftValues.length !== rightValues.length) return false;
+    for (let index = 0; index < leftValues.length; index += 1) {
+      if (leftValues[index] !== rightValues[index]) return false;
+    }
+  }
+
+  return true;
+}
+
+function areMilestoneMapsEqual(
+  left: Record<string, string | null>,
+  right: Record<string, string | null>,
+) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    if (left[key] !== right[key]) return false;
+  }
+
+  return true;
+}
+
+export function useStudentProgress(
+  currentUser: AuthenticatedAccount | null,
+  studentAccounts: StudentAccount[],
+) {
+  const firstStudentEmail = studentAccounts[0]
+    ? normalizeEmail(studentAccounts[0].email)
+    : "";
   const [selectedStudentEmail, setSelectedStudentEmail] = useState(
-    normalizeEmail(STUDENT_ACCOUNTS[0].email),
+    firstStudentEmail,
   );
 
   const [studentChapterUnlocks, setStudentChapterUnlocks] = usePersistedState<
     Record<string, string[]>
   >({
     key: STUDENT_UNLOCK_STORAGE_KEY,
-    defaultValue: ensureChapterOneUnlocked({}),
+    defaultValue: ensureChapterOneUnlocked({}, studentAccounts),
     serialize: JSON.stringify,
-    deserialize: deserializeStudentUnlocks,
+    deserialize: (raw) => deserializeStudentUnlocks(raw, studentAccounts),
   });
   const [studentMilestones, setStudentMilestones] = usePersistedState<
     Record<string, string | null>
   >({
     key: STUDENT_MILESTONE_STORAGE_KEY,
-    defaultValue: ensureStudentMilestones({}),
+    defaultValue: ensureStudentMilestones({}, studentAccounts),
     serialize: JSON.stringify,
-    deserialize: deserializeStudentMilestones,
+    deserialize: (raw) => deserializeStudentMilestones(raw, studentAccounts),
   });
 
+  useEffect(() => {
+    setStudentChapterUnlocks((prev) => {
+      const next = ensureChapterOneUnlocked(prev, studentAccounts);
+      return areUnlockMapsEqual(prev, next) ? prev : next;
+    });
+    setStudentMilestones((prev) => {
+      const next = ensureStudentMilestones(prev, studentAccounts);
+      return areMilestoneMapsEqual(prev, next) ? prev : next;
+    });
+  }, [setStudentChapterUnlocks, setStudentMilestones, studentAccounts]);
+
+  const resolvedSelectedStudentEmail = useMemo(() => {
+    if (studentAccounts.length === 0) return "";
+    const isCurrentSelectionValid = studentAccounts.some(
+      (student) => normalizeEmail(student.email) === selectedStudentEmail,
+    );
+    if (isCurrentSelectionValid) return selectedStudentEmail;
+    return normalizeEmail(studentAccounts[0].email);
+  }, [selectedStudentEmail, studentAccounts]);
+
   const selectedStudentUnlocks =
-    studentChapterUnlocks[selectedStudentEmail] ?? [CHAPTER_ONE_TITLE];
+    resolvedSelectedStudentEmail
+      ? studentChapterUnlocks[resolvedSelectedStudentEmail] ?? [CHAPTER_ONE_TITLE]
+      : [CHAPTER_ONE_TITLE];
 
   const activeStudentUnlocks =
     currentUser?.role === "student"
@@ -51,36 +115,36 @@ export function useStudentProgress(currentUser: AuthenticatedAccount | null) {
       : selectedStudentUnlocks;
 
   const statsByStudent = useMemo(() => {
-    const entries = STUDENT_ACCOUNTS.map((student, index) => {
+    const entries = studentAccounts.map((student, index) => {
       const key = normalizeEmail(student.email);
       const unlocked = studentChapterUnlocks[key] ?? [CHAPTER_ONE_TITLE];
       return [key, buildStudentStats(unlocked.length, index + 1)] as const;
     });
     return Object.fromEntries(entries);
-  }, [studentChapterUnlocks]);
+  }, [studentAccounts, studentChapterUnlocks]);
 
   const selectedStudent = useMemo(
     () =>
-      STUDENT_ACCOUNTS.find(
-        (student) => normalizeEmail(student.email) === selectedStudentEmail,
+      studentAccounts.find(
+        (student) => normalizeEmail(student.email) === resolvedSelectedStudentEmail,
       ),
-    [selectedStudentEmail],
+    [resolvedSelectedStudentEmail, studentAccounts],
   );
 
   const currentStudentStats =
     currentUser?.role === "student"
       ? statsByStudent[normalizeEmail(currentUser.email)]
-      : statsByStudent[selectedStudentEmail];
+      : statsByStudent[resolvedSelectedStudentEmail] ?? buildStudentStats(1, 1);
 
   const selectedStudentMilestone =
-    studentMilestones[selectedStudentEmail] ?? null;
+    studentMilestones[resolvedSelectedStudentEmail] ?? null;
 
   const chapterTagsByTitle = useMemo(() => {
     const tags = Object.fromEntries(
       CHAPTER_TITLES.map((title) => [title, [] as Array<{ name: string; email: string }>]),
     );
 
-    for (const student of STUDENT_ACCOUNTS) {
+    for (const student of studentAccounts) {
       const email = normalizeEmail(student.email);
       const milestone = studentMilestones[email];
       if (!milestone) continue;
@@ -92,45 +156,49 @@ export function useStudentProgress(currentUser: AuthenticatedAccount | null) {
     }
 
     return tags;
-  }, [studentMilestones]);
+  }, [studentAccounts, studentMilestones]);
 
   const selectStudent = (email: string) => {
     setSelectedStudentEmail(normalizeEmail(email));
   };
 
   const toggleChapterForSelectedStudent = (chapterTitle: string) => {
+    if (!resolvedSelectedStudentEmail) return;
     if (!selectedStudentMilestone) return;
     if (chapterTitle === CHAPTER_ONE_TITLE) return;
 
     setStudentChapterUnlocks((prev) => {
       const next = { ...prev };
-      const current = next[selectedStudentEmail] ?? [CHAPTER_ONE_TITLE];
-      next[selectedStudentEmail] = toggleChapterUnlock(current, chapterTitle);
+      const current = next[resolvedSelectedStudentEmail] ?? [CHAPTER_ONE_TITLE];
+      next[resolvedSelectedStudentEmail] = toggleChapterUnlock(current, chapterTitle);
       return next;
     });
   };
 
   const setMilestoneForSelectedStudent = (chapterTitle: string) => {
+    if (!resolvedSelectedStudentEmail) return;
     if (!CHAPTER_TITLES.includes(chapterTitle)) return;
 
-    const isRemovingCurrentMilestone =
-      (studentMilestones[selectedStudentEmail] ?? null) === chapterTitle;
+    const currentMilestone =
+      studentMilestones[resolvedSelectedStudentEmail] ?? CHAPTER_ONE_TITLE;
+    const nextMilestone =
+      currentMilestone === chapterTitle
+        ? CHAPTER_ONE_TITLE
+        : chapterTitle;
 
     setStudentMilestones((prev) => ({
       ...prev,
-      [selectedStudentEmail]: isRemovingCurrentMilestone ? null : chapterTitle,
+      [resolvedSelectedStudentEmail]: nextMilestone,
     }));
 
     setStudentChapterUnlocks((prev) => ({
       ...prev,
-      [selectedStudentEmail]: isRemovingCurrentMilestone
-        ? buildUnlocksUpToChapter(CHAPTER_ONE_TITLE)
-        : buildUnlocksUpToChapter(chapterTitle),
+      [resolvedSelectedStudentEmail]: buildUnlocksUpToChapter(nextMilestone),
     }));
   };
 
   return {
-    selectedStudentEmail,
+    selectedStudentEmail: resolvedSelectedStudentEmail,
     selectedStudent,
     activeStudentUnlocks,
     currentStudentStats,
@@ -140,6 +208,6 @@ export function useStudentProgress(currentUser: AuthenticatedAccount | null) {
     toggleChapterForSelectedStudent,
     setMilestoneForSelectedStudent,
     chapterTitles: CHAPTER_TITLES,
-    students: STUDENT_ACCOUNTS,
+    students: studentAccounts,
   };
 }

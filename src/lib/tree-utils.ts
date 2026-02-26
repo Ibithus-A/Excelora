@@ -30,6 +30,24 @@ export function getDefaultTitle(kind: NodeKind): string {
   return kind === "folder" ? "New Folder" : "Untitled Page";
 }
 
+function toTopicTitleCase(title: string): string {
+  return title
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word) => {
+      if (!word) return word;
+      return word
+        .split("-")
+        .map((part) => {
+          if (!part) return part;
+          return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+        })
+        .join("-");
+    })
+    .join(" ");
+}
+
 function createNode(kind: NodeKind, parentId: string | null): FlowNode {
   const now = Date.now();
   return {
@@ -96,7 +114,7 @@ export function updateTitleInState(
   if (!target) return state;
 
   const next = cloneState(state);
-  next.nodes[id].title = title;
+  next.nodes[id].title = toTopicTitleCase(title);
   next.nodes[id].updatedAt = Date.now();
   return next;
 }
@@ -109,7 +127,7 @@ export function hasDuplicatePageTitleInParent(
   const node = state.nodes[id];
   if (!node || node.kind !== "page") return false;
 
-  const normalized = title.trim().toLocaleLowerCase();
+  const normalized = toTopicTitleCase(title).toLocaleLowerCase();
   if (!normalized) return false;
 
   const siblingIds = node.parentId
@@ -120,7 +138,7 @@ export function hasDuplicatePageTitleInParent(
     if (siblingId === id) continue;
     const sibling = state.nodes[siblingId];
     if (!sibling || sibling.kind !== "page") continue;
-    if (sibling.title.trim().toLocaleLowerCase() === normalized) {
+    if (toTopicTitleCase(sibling.title).toLocaleLowerCase() === normalized) {
       return true;
     }
   }

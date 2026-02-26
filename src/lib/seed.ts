@@ -34,6 +34,29 @@ type ChapterDef = {
   subtopics: string[];
 };
 
+function toCapitalizedWords(title: string): string {
+  return title
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word) => {
+      if (!word) return word;
+      return word
+        .split("-")
+        .map((segment) => {
+          if (!segment) return segment;
+          const firstLetterIndex = segment.search(/[a-zA-Z]/);
+          if (firstLetterIndex === -1) return segment;
+          const prefix = segment.slice(0, firstLetterIndex);
+          const letter = segment.charAt(firstLetterIndex).toUpperCase();
+          const suffix = segment.slice(firstLetterIndex + 1).toLowerCase();
+          return `${prefix}${letter}${suffix}`;
+        })
+        .join("-");
+    })
+    .join(" ");
+}
+
 export const A_LEVEL_MATHS_CHAPTERS: ChapterDef[] = [
   {
     title: "Chapter 1: Algebra 1",
@@ -383,6 +406,10 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
   }
 
   for (const chapter of A_LEVEL_MATHS_CHAPTERS) {
+    const normalizedSubtopics = chapter.subtopics.map((subtopic) =>
+      toCapitalizedWords(subtopic),
+    );
+
     const existingChapterId = next.nodes[courseRootId]?.childrenIds.find((childId) => {
       const child = next.nodes[childId];
       return child?.kind === "folder" && normalizeTitle(child.title) === normalizeTitle(chapter.title);
@@ -417,7 +444,7 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
     }
 
     const allowedPageTitles = new Set(
-      [...chapter.subtopics, END_OF_TOPIC_ASSESSMENT_TITLE, LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE].map(
+      [...normalizedSubtopics, END_OF_TOPIC_ASSESSMENT_TITLE, LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE].map(
         (title) => normalizeTitle(title),
       ),
     );
@@ -434,13 +461,18 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
       return false;
     });
 
-    for (const subtopic of chapter.subtopics) {
-      const hasSubtopic = next.nodes[chapterId]?.childrenIds.some((childId) => {
+    for (const subtopic of normalizedSubtopics) {
+      const existingSubtopicId = next.nodes[chapterId]?.childrenIds.find((childId) => {
         const child = next.nodes[childId];
         return child?.kind === "page" && normalizeTitle(child.title) === normalizeTitle(subtopic);
       });
-      if (!hasSubtopic) {
+      if (!existingSubtopicId) {
         createPage(subtopic, chapterId);
+        continue;
+      }
+
+      if (next.nodes[existingSubtopicId].title !== subtopic) {
+        next.nodes[existingSubtopicId].title = subtopic;
       }
     }
 
@@ -458,7 +490,7 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
     next.nodes[chapterId].childrenIds = orderChildrenByTitle(
       next.nodes,
       next.nodes[chapterId].childrenIds,
-      [...chapter.subtopics, END_OF_TOPIC_ASSESSMENT_TITLE],
+      [...normalizedSubtopics, END_OF_TOPIC_ASSESSMENT_TITLE],
     );
   }
 

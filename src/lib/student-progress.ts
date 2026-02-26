@@ -1,16 +1,34 @@
-import { STUDENT_ACCOUNTS, normalizeEmail } from "@/lib/auth";
+import {
+  buildStudentEmail,
+  getDefaultStudentName,
+  normalizeEmail,
+  type StudentAccount,
+} from "@/lib/auth";
 import { A_LEVEL_MATHS_CHAPTER_TITLES } from "@/lib/seed";
 import type { StudentDailyStats } from "@/types/dashboard";
 
 export const CHAPTER_ONE_TITLE = "Chapter 1: Algebra 1";
 export const CHAPTER_TITLES = A_LEVEL_MATHS_CHAPTER_TITLES;
+const LEGACY_STUDENT_EMAIL_PATTERN = /^student(\d+)@quicklearn\.com$/i;
+
+function normalizeStudentProgressEmail(email: string): string {
+  const normalized = normalizeEmail(email);
+  const legacyMatch = normalized.match(LEGACY_STUDENT_EMAIL_PATTERN);
+  if (!legacyMatch) return normalized;
+
+  const studentNumber = Number(legacyMatch[1]);
+  if (!Number.isInteger(studentNumber) || studentNumber <= 0) return normalized;
+
+  return normalizeEmail(buildStudentEmail(getDefaultStudentName(studentNumber - 1)));
+}
 
 export function ensureChapterOneUnlocked(
   unlocks: Record<string, string[]>,
+  students: StudentAccount[],
 ): Record<string, string[]> {
   const next: Record<string, string[]> = {};
 
-  for (const student of STUDENT_ACCOUNTS) {
+  for (const student of students) {
     const key = normalizeEmail(student.email);
     const existing = unlocks[key] ?? [];
     const merged = new Set([CHAPTER_ONE_TITLE, ...existing]);
@@ -22,14 +40,15 @@ export function ensureChapterOneUnlocked(
 
 export function ensureStudentMilestones(
   milestones: Record<string, string | null>,
+  students: StudentAccount[],
 ): Record<string, string | null> {
   const next: Record<string, string | null> = {};
 
-  for (const student of STUDENT_ACCOUNTS) {
+  for (const student of students) {
     const key = normalizeEmail(student.email);
     const milestone = milestones[key];
     if (milestone === null) {
-      next[key] = null;
+      next[key] = CHAPTER_ONE_TITLE;
       continue;
     }
     next[key] = CHAPTER_TITLES.includes(milestone) ? milestone : CHAPTER_ONE_TITLE;
@@ -38,47 +57,53 @@ export function ensureStudentMilestones(
   return next;
 }
 
-export function deserializeStudentUnlocks(raw: string): Record<string, string[]> {
+export function deserializeStudentUnlocks(
+  raw: string,
+  students: StudentAccount[],
+): Record<string, string[]> {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") {
-      return ensureChapterOneUnlocked({});
+      return ensureChapterOneUnlocked({}, students);
     }
 
     const normalized: Record<string, string[]> = {};
     for (const [email, chapterList] of Object.entries(parsed)) {
       if (!Array.isArray(chapterList)) continue;
-      normalized[normalizeEmail(email)] = chapterList
+      normalized[normalizeStudentProgressEmail(email)] = chapterList
         .filter((chapter): chapter is string => typeof chapter === "string")
         .filter((chapter) => CHAPTER_TITLES.includes(chapter));
     }
 
-    return ensureChapterOneUnlocked(normalized);
+    return ensureChapterOneUnlocked(normalized, students);
   } catch {
-    return ensureChapterOneUnlocked({});
+    return ensureChapterOneUnlocked({}, students);
   }
 }
 
-export function deserializeStudentMilestones(raw: string): Record<string, string | null> {
+export function deserializeStudentMilestones(
+  raw: string,
+  students: StudentAccount[],
+): Record<string, string | null> {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object") {
-      return ensureStudentMilestones({});
+      return ensureStudentMilestones({}, students);
     }
 
     const normalized: Record<string, string | null> = {};
     for (const [email, chapterTitle] of Object.entries(parsed)) {
       if (chapterTitle === null) {
-        normalized[normalizeEmail(email)] = null;
+        normalized[normalizeStudentProgressEmail(email)] = null;
         continue;
       }
       if (typeof chapterTitle !== "string") continue;
-      normalized[normalizeEmail(email)] = chapterTitle;
+      normalized[normalizeStudentProgressEmail(email)] = chapterTitle;
     }
 
-    return ensureStudentMilestones(normalized);
+    return ensureStudentMilestones(normalized, students);
   } catch {
-    return ensureStudentMilestones({});
+    return ensureStudentMilestones({}, students);
   }
 }
 
