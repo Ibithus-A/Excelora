@@ -46,20 +46,6 @@ async function listStudents(): Promise<StudentAccount[]> {
   return students;
 }
 
-function buildUniqueStudentEmail(name: string, existingEmails: Set<string>) {
-  const base = name.toLowerCase();
-  let suffix = 0;
-
-  while (suffix < 1000) {
-    const localPart = suffix === 0 ? base : `${base}${suffix + 1}`;
-    const candidate = normalizeEmail(`${localPart}@quicklearn.app`);
-    if (!existingEmails.has(candidate)) return candidate;
-    suffix += 1;
-  }
-
-  throw new Error("Unable to allocate a unique student email.");
-}
-
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -89,15 +75,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { name?: unknown; password?: unknown };
+    const body = (await request.json()) as {
+      name?: unknown;
+      email?: unknown;
+      password?: unknown;
+    };
     if (typeof body.name !== "string") {
       return Response.json({ error: "Student name is required." }, { status: 400 });
+    }
+    if (typeof body.email !== "string") {
+      return Response.json({ error: "Student email is required." }, { status: 400 });
     }
     if (typeof body.password !== "string") {
       return Response.json({ error: "Student password is required." }, { status: 400 });
     }
 
     const normalizedName = normalizeStudentName(body.name);
+    const normalizedEmail = normalizeEmail(body.email);
     const normalizedPassword = body.password.trim();
     if (!normalizedName) {
       return Response.json(
@@ -111,6 +105,9 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return Response.json({ error: "Student email must be valid." }, { status: 400 });
+    }
 
     const admin = createAdminClient();
     const existingStudents = await listStudents();
@@ -119,11 +116,22 @@ export async function POST(request: Request) {
       return Response.json({ error: "A student with that name already exists." }, { status: 409 });
     }
 
-    const existingEmails = new Set(existingStudents.map((student) => normalizeEmail(student.email)));
-    const email = buildUniqueStudentEmail(normalizedName, existingEmails);
+    const { data: allUsers, error: listError } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (listError) {
+      return Response.json({ error: listError.message }, { status: 500 });
+    }
+    const emailTaken = allUsers.users.some(
+      (candidate) => normalizeEmail(candidate.email ?? "") === normalizedEmail,
+    );
+    if (emailTaken) {
+      return Response.json({ error: "A user with that email already exists." }, { status: 409 });
+    }
 
     const { data, error } = await admin.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password: normalizedPassword,
       email_confirm: true,
       user_metadata: {
@@ -137,8 +145,8 @@ export async function POST(request: Request) {
     }
 
     return Response.json({
-      student: { name: normalizedName, email },
-      credentials: { email, password: normalizedPassword },
+      student: { name: normalizedName, email: normalizedEmail },
+      credentials: { email: normalizedEmail, password: normalizedPassword },
     });
   } catch {
     return Response.json({ error: "Unable to create student." }, { status: 500 });

@@ -33,6 +33,10 @@ type AddStudentResult = {
   credentials: { email: string; password: string };
 } | null;
 
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 export function useStudents(currentUserEmail?: string | null) {
   const [students, setStudents] = useState<StudentAccount[]>([]);
 
@@ -53,16 +57,23 @@ export function useStudents(currentUserEmail?: string | null) {
     }
   }, []);
 
-  const addStudent = useCallback(async (name: string, password: string): Promise<AddStudentResult> => {
+  const addStudent = useCallback(
+    async (name: string, email: string, password: string): Promise<AddStudentResult> => {
     const normalizedName = normalizeStudentName(name);
+    const normalizedEmail = normalizeEmail(email);
     const normalizedPassword = password.trim();
     if (!normalizedName) return null;
+    if (!isValidEmail(normalizedEmail)) return null;
     if (normalizedPassword.length < 8) return null;
     try {
       const response = await fetch("/api/students", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: normalizedName, password: normalizedPassword }),
+        body: JSON.stringify({
+          name: normalizedName,
+          email: normalizedEmail,
+          password: normalizedPassword,
+        }),
       });
 
       if (!response.ok) return null;

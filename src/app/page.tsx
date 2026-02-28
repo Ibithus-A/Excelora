@@ -97,8 +97,11 @@ export default function HomePage() {
     setView("workspace");
   };
 
-  const handleCreateStudent = async (name: string, password: string) =>
-    addStudent(name, password);
+  const handleCreateStudent = async (
+    name: string,
+    email: string,
+    password: string,
+  ) => addStudent(name, email, password);
 
   const handleDeleteSelectedStudent = async () => {
     if (!selectedStudentEmail) return;

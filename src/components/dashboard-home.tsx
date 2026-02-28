@@ -26,7 +26,7 @@ type DashboardHomeProps = {
   onSelectStudent?: (email: string) => void;
   onSetMilestoneChapter?: (chapterTitle: string) => void;
   onToggleChapter?: (chapterTitle: string) => void;
-  onAddStudent?: (name: string, password: string) => Promise<{
+  onAddStudent?: (name: string, email: string, password: string) => Promise<{
     student: { name: string; email: string };
     credentials: { email: string; password: string };
   } | null>;
@@ -56,6 +56,7 @@ export function DashboardHome({
 }: DashboardHomeProps) {
   const [activeTab, setActiveTab] = useState<MetricTab>("reviewed");
   const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentEmail, setNewStudentEmail] = useState("");
   const [newStudentPassword, setNewStudentPassword] = useState("");
   const [latestCredentials, setLatestCredentials] = useState<{
     name: string;
@@ -251,6 +252,13 @@ export function DashboardHome({
                   className="w-full max-w-[240px] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
                 />
                 <input
+                  type="email"
+                  value={newStudentEmail}
+                  onChange={(event) => setNewStudentEmail(event.target.value)}
+                  placeholder="Student real email"
+                  className="w-full max-w-[280px] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+                />
+                <input
                   type="password"
                   value={newStudentPassword}
                   onChange={(event) => setNewStudentPassword(event.target.value)}
@@ -261,10 +269,14 @@ export function DashboardHome({
                   type="button"
                   onClick={async () => {
                     setStudentAddError(null);
-                    const created = await onAddStudent?.(newStudentName, newStudentPassword);
+                    const created = await onAddStudent?.(
+                      newStudentName,
+                      newStudentEmail,
+                      newStudentPassword,
+                    );
                     if (!created) {
                       setStudentAddError(
-                        "Unable to create student. Use a unique one-word name and password (8+ chars).",
+                        "Unable to create student. Use unique name/email and password (8+ chars).",
                       );
                       return;
                     }
@@ -274,6 +286,7 @@ export function DashboardHome({
                       password: created.credentials.password,
                     });
                     setNewStudentName("");
+                    setNewStudentEmail("");
                     setNewStudentPassword("");
                   }}
                   className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"

@@ -16,6 +16,7 @@ type SignInPortalProps = {
 };
 
 type SignInRole = "student" | "tutor";
+type AuthView = "sign-in" | "forgot-password";
 
 export function SignInPortal({
   onClose,
@@ -24,17 +25,36 @@ export function SignInPortal({
   isDarkMode = false,
   onToggleDarkMode,
 }: SignInPortalProps) {
+  const [view, setView] = useState<AuthView>("sign-in");
   const [role, setRole] = useState<SignInRole>("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const supabase = createClient();
     setError("");
+    setInfo("");
     setIsSubmitting(true);
+
+    if (view === "forgot-password") {
+      const redirectTo = `${window.location.origin}/reset-password`;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo,
+      });
+      setIsSubmitting(false);
+
+      if (resetError) {
+        setError(resetError.message);
+        return;
+      }
+
+      setInfo("Password reset email sent. Check your inbox.");
+      return;
+    }
 
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
@@ -109,8 +129,10 @@ export function SignInPortal({
             <button
               type="button"
               onClick={() => {
+                setView("sign-in");
                 setRole("student");
                 setError("");
+                setInfo("");
               }}
               className={[
                 "rounded-md px-3 py-2 text-sm transition",
@@ -124,8 +146,10 @@ export function SignInPortal({
             <button
               type="button"
               onClick={() => {
+                setView("sign-in");
                 setRole("tutor");
                 setError("");
+                setInfo("");
               }}
               className={[
                 "rounded-md px-3 py-2 text-sm transition",
@@ -148,6 +172,7 @@ export function SignInPortal({
               onChange={(event) => {
                 setEmail(event.target.value);
                 setError("");
+                setInfo("");
               }}
               placeholder="you@example.com"
               className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
@@ -155,42 +180,84 @@ export function SignInPortal({
               required
             />
             <p className="mt-1 text-xs text-zinc-500">
-              {role === "tutor"
+              {view === "forgot-password"
+                ? "Enter your account email to receive reset instructions."
+                : role === "tutor"
                 ? "Use your tutor account email."
                 : "Use the student credentials created by your tutor."}
             </p>
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-600">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-                setError("");
-              }}
-              placeholder="••••••••"
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-              autoComplete="current-password"
-              required
-            />
-          </div>
+          {view === "sign-in" ? (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setError("");
+                  setInfo("");
+                }}
+                placeholder="••••••••"
+                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+                autoComplete="current-password"
+                required
+              />
+            </div>
+          ) : null}
 
           {error ? (
             <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               {error}
             </p>
           ) : null}
+          {info ? (
+            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+              {info}
+            </p>
+          ) : null}
+
+          <div className="flex items-center justify-between">
+            {view === "sign-in" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setView("forgot-password");
+                  setError("");
+                  setInfo("");
+                }}
+                className="text-xs text-zinc-600 underline-offset-2 hover:underline"
+              >
+                Forgot password?
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setView("sign-in");
+                  setError("");
+                  setInfo("");
+                }}
+                className="text-xs text-zinc-600 underline-offset-2 hover:underline"
+              >
+                Back to sign in
+              </button>
+            )}
+          </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
             className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
           >
-            {isSubmitting ? "Please wait..." : "Continue to Workspace"}
+            {isSubmitting
+              ? "Please wait..."
+              : view === "forgot-password"
+                ? "Send Reset Email"
+                : "Continue to Workspace"}
           </button>
         </form>
       </div>
