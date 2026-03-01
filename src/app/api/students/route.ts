@@ -4,20 +4,35 @@ import {
   normalizeStudentName,
   type StudentAccount,
 } from "@/lib/auth";
-import { validatePassword } from "@/lib/security/password";
+import { createRateLimiter } from "@/lib/security/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getServerUserRole } from "@/lib/supabase/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function toRole(user: User): "tutor" | "student" {
-  return user.user_metadata?.role === "tutor" ? "tutor" : "student";
+const enforceTutorMutationRateLimit = createRateLimiter({
+  maxRequests: 30,
+  windowMs: 10 * 60 * 1000,
+});
+
+function writeAuditLog(action: string, actor: User, details: Record<string, string>) {
+  console.info(
+    JSON.stringify({
+      event: "student_admin_action",
+      action,
+      actor_user_id: actor.id,
+      actor_email: actor.email ?? "",
+      timestamp: new Date().toISOString(),
+      ...details,
+    }),
+  );
 }
 
 function toStudentAccount(user: User): StudentAccount | null {
-  if (toRole(user) !== "student") return null;
+  if (getServerUserRole(user) !== "student") return null;
   const email = user.email ? normalizeEmail(user.email) : "";
   if (!email) return null;
 
@@ -72,7 +87,7 @@ export async function GET() {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  if (toRole(user) === "student") {
+  if (getServerUserRole(user) === "student") {
     const account = toStudentAccount(user);
     return Response.json({ students: account ? [account] : [] });
   }
@@ -90,15 +105,21 @@ export async function POST(request: Request) {
   if (!user) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (toRole(user) !== "tutor") {
+  if (getServerUserRole(user) !== "tutor") {
     return Response.json({ error: "Forbidden." }, { status: 403 });
+  }
+  const postLimit = enforceTutorMutationRateLimit(`${user.id}:POST:/api/students`);
+  if (!postLimit.allowed) {
+    return Response.json(
+      { error: "Too many requests. Please retry shortly." },
+      { status: 429, headers: { "Retry-After": String(postLimit.retryAfterSeconds) } },
+    );
   }
 
   try {
     const body = (await request.json()) as {
       name?: unknown;
       email?: unknown;
-      password?: unknown;
     };
     if (typeof body.name !== "string") {
       return Response.json({ error: "Student name is required." }, { status: 400 });
@@ -106,13 +127,8 @@ export async function POST(request: Request) {
     if (typeof body.email !== "string") {
       return Response.json({ error: "Student email is required." }, { status: 400 });
     }
-    if (typeof body.password !== "string") {
-      return Response.json({ error: "Student password is required." }, { status: 400 });
-    }
-
     const normalizedName = normalizeStudentName(body.name);
     const normalizedEmail = normalizeEmail(body.email);
-    const normalizedPassword = body.password.trim();
     if (!normalizedName) {
       return Response.json(
         { error: "Student name must contain letters or numbers." },
@@ -121,13 +137,6 @@ export async function POST(request: Request) {
     }
     if (!isValidEmail(normalizedEmail)) {
       return Response.json({ error: "Student email must be valid." }, { status: 400 });
-    }
-    const passwordErrors = validatePassword(normalizedPassword, {
-      email: normalizedEmail,
-      displayName: normalizedName,
-    });
-    if (passwordErrors.length > 0) {
-      return Response.json({ error: passwordErrors[0] }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -147,23 +156,42 @@ export async function POST(request: Request) {
       return Response.json({ error: "A user with that email already exists." }, { status: 409 });
     }
 
-    const { data, error } = await admin.auth.admin.createUser({
-      email: normalizedEmail,
-      password: normalizedPassword,
-      email_confirm: true,
-      user_metadata: {
-        role: "student",
+    const requestUrl = new URL(request.url);
+    const origin = requestUrl.origin;
+    const inviteRedirectTo = `${origin}/reset-password`;
+
+    const { data, error } = await admin.auth.admin.inviteUserByEmail(normalizedEmail, {
+      data: {
         full_name: normalizedName,
+        role: "student",
       },
+      redirectTo: inviteRedirectTo,
     });
 
     if (error || !data.user) {
       return Response.json({ error: error?.message ?? "Unable to create student." }, { status: 500 });
     }
 
+    const { error: roleUpdateError } = await admin.auth.admin.updateUserById(data.user.id, {
+      app_metadata: {
+        role: "student",
+      },
+      user_metadata: {
+        full_name: normalizedName,
+      },
+    });
+    if (roleUpdateError) {
+      return Response.json({ error: roleUpdateError.message }, { status: 500 });
+    }
+
+    writeAuditLog("create_student", user, {
+      target_user_id: data.user.id,
+      target_email: normalizedEmail,
+    });
+
     return Response.json({
       student: { name: normalizedName, email: normalizedEmail },
-      credentials: { email: normalizedEmail, password: normalizedPassword },
+      invitationSent: true,
     });
   } catch {
     return Response.json({ error: "Unable to create student." }, { status: 500 });
@@ -175,8 +203,15 @@ export async function DELETE(request: Request) {
   if (!user) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (toRole(user) !== "tutor") {
+  if (getServerUserRole(user) !== "tutor") {
     return Response.json({ error: "Forbidden." }, { status: 403 });
+  }
+  const deleteLimit = enforceTutorMutationRateLimit(`${user.id}:DELETE:/api/students`);
+  if (!deleteLimit.allowed) {
+    return Response.json(
+      { error: "Too many requests. Please retry shortly." },
+      { status: 429, headers: { "Retry-After": String(deleteLimit.retryAfterSeconds) } },
+    );
   }
 
   try {
@@ -194,7 +229,7 @@ export async function DELETE(request: Request) {
     if (!target) {
       return Response.json({ error: "Student not found." }, { status: 404 });
     }
-    if (toRole(target) !== "student") {
+    if (getServerUserRole(target) !== "student") {
       return Response.json({ error: "Only student accounts can be removed here." }, { status: 400 });
     }
 
@@ -202,6 +237,11 @@ export async function DELETE(request: Request) {
     if (deleteError) {
       return Response.json({ error: deleteError.message }, { status: 500 });
     }
+
+    writeAuditLog("delete_student", user, {
+      target_user_id: target.id,
+      target_email: targetEmail,
+    });
 
     return Response.json({ success: true });
   } catch {

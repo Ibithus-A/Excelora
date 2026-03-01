@@ -64,4 +64,4 @@ How to Add User Authentication, Role-Based Access, and Progression Rules
 4. Admin overrides
 5. Plan-based unlock rules (custom)
 
-If needed next, we can define the concrete backend schema and API contract endpoint-by-endpoint for QuickLearn.
+If needed next, we can define the concrete backend schema and API contract endpoint-by-endpoint for Excelora.

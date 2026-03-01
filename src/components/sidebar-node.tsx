@@ -83,12 +83,13 @@ export function SidebarNode({
     <div>
       <div
         className={[
-          "group mx-1 my-0.5 flex max-w-full items-center rounded-md px-1.5 py-1 transition-all duration-150",
+          "sidebar-node-row group mx-1 my-0.5 flex max-w-full items-center rounded-md border border-transparent px-1.5 py-1 transition-all duration-150",
           isDragOver ? "bg-zinc-200/80" : "",
           isSelected
             ? "bg-zinc-100 text-zinc-900"
             : "text-zinc-700 hover:bg-zinc-100/90",
         ].join(" ")}
+        data-node-kind={node.kind}
         style={{ marginLeft: `${indentPx}px` }}
         draggable={canManage && !isEditing}
         onDragStart={(event) => {

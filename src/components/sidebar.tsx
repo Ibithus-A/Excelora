@@ -133,7 +133,7 @@ export function Sidebar({
               <FlowLogoIcon className="h-4 w-4" />
             </div>
             <p className="truncate text-[16px] font-semibold leading-none tracking-tight text-zinc-900">
-              QuickLearn
+              Excelora
             </p>
           </div>
 

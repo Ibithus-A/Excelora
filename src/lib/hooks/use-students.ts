@@ -1,7 +1,6 @@
 "use client";
 
 import { isValidEmail, normalizeEmail, normalizeStudentName, type StudentAccount } from "@/lib/auth";
-import { validatePassword } from "@/lib/security/password";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 function sortStudents(students: StudentAccount[]) {
@@ -31,7 +30,7 @@ function sanitizeStudents(value: unknown): StudentAccount[] {
 
 export type AddStudentResult = {
   student: StudentAccount;
-  credentials: { email: string; password: string };
+  invitationSent: boolean;
 } | null;
 
 export function useStudents(currentUserEmail?: string | null) {
@@ -55,20 +54,11 @@ export function useStudents(currentUserEmail?: string | null) {
   }, []);
 
   const addStudent = useCallback(
-    async (name: string, email: string, password: string): Promise<AddStudentResult> => {
+    async (name: string, email: string): Promise<AddStudentResult> => {
     const normalizedName = normalizeStudentName(name);
     const normalizedEmail = normalizeEmail(email);
-    const normalizedPassword = password.trim();
     if (!normalizedName) return null;
     if (!isValidEmail(normalizedEmail)) return null;
-    if (
-      validatePassword(normalizedPassword, {
-        email: normalizedEmail,
-        displayName: normalizedName,
-      }).length > 0
-    ) {
-      return null;
-    }
     try {
       const response = await fetch("/api/students", {
         method: "POST",
@@ -76,21 +66,16 @@ export function useStudents(currentUserEmail?: string | null) {
         body: JSON.stringify({
           name: normalizedName,
           email: normalizedEmail,
-          password: normalizedPassword,
         }),
       });
 
       if (!response.ok) return null;
       const payload = (await response.json()) as {
         student?: StudentAccount;
-        credentials?: { email?: string; password?: string };
+        invitationSent?: boolean;
       };
 
-      if (
-        !payload.student ||
-        !payload.credentials?.email ||
-        !payload.credentials?.password
-      ) {
+      if (!payload.student) {
         return null;
       }
 
@@ -104,10 +89,7 @@ export function useStudents(currentUserEmail?: string | null) {
 
       return {
         student,
-        credentials: {
-          email: normalizeEmail(payload.credentials.email),
-          password: payload.credentials.password,
-        },
+        invitationSent: Boolean(payload.invitationSent),
       };
     } catch {
       return null;

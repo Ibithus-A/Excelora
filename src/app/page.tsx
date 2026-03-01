@@ -100,8 +100,7 @@ export default function HomePage() {
   const handleCreateStudent = async (
     name: string,
     email: string,
-    password: string,
-  ) => addStudent(name, email, password);
+  ) => addStudent(name, email);
 
   const handleDeleteSelectedStudent = async () => {
     if (!selectedStudentEmail) return;

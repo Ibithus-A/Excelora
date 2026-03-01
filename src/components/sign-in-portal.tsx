@@ -92,7 +92,7 @@ export function SignInPortal({
               <FlowLogoIcon className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-lg font-semibold text-zinc-900">QuickLearn Portal</p>
+              <p className="text-lg font-semibold text-zinc-900">Excelora Portal</p>
               <p className="text-xs text-zinc-500">Tutor-managed secure sign in</p>
             </div>
           </div>

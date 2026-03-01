@@ -155,3 +155,8 @@ textarea {
     0 1px 2px rgba(2, 6, 23, 0.6),
     0 0 0 1px rgba(2, 6, 23, 0.15) !important;
 }
+
+.theme-dark .sidebar-node-row[data-node-kind="folder"]:hover {
+  background-color: transparent !important;
+  border-color: #f8fafc !important;
+}

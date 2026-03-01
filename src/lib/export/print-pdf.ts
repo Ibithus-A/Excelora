@@ -88,7 +88,7 @@ export function printNodeAsPdf(node: FlowNode, options: PrintNodeAsPdfOptions): 
     <main class="sheet">
       <h1>${title}</h1>
       <pre>${content}</pre>
-      <p class="meta">Exported from QuickLearn</p>
+      <p class="meta">Exported from Excelora</p>
     </main>
   </body>
 </html>`);

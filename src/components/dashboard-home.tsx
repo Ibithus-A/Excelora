@@ -1,7 +1,6 @@
 "use client";
 
 import { FlowLogoIcon, MoonIcon, SunIcon } from "@/components/icons";
-import { PASSWORD_POLICY_HINT } from "@/lib/security/password";
 import { CHAPTER_ONE_TITLE } from "@/lib/student-progress";
 import type { UserRole } from "@/types/auth";
 import type { StudentDailyStats } from "@/types/dashboard";
@@ -27,9 +26,9 @@ type DashboardHomeProps = {
   onSelectStudent?: (email: string) => void;
   onSetMilestoneChapter?: (chapterTitle: string) => void;
   onToggleChapter?: (chapterTitle: string) => void;
-  onAddStudent?: (name: string, email: string, password: string) => Promise<{
+  onAddStudent?: (name: string, email: string) => Promise<{
     student: { name: string; email: string };
-    credentials: { email: string; password: string };
+    invitationSent: boolean;
   } | null>;
   onDeleteSelectedStudent?: () => Promise<void>;
 };
@@ -58,11 +57,10 @@ export function DashboardHome({
   const [activeTab, setActiveTab] = useState<MetricTab>("reviewed");
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentEmail, setNewStudentEmail] = useState("");
-  const [newStudentPassword, setNewStudentPassword] = useState("");
-  const [latestCredentials, setLatestCredentials] = useState<{
+  const [latestInvitation, setLatestInvitation] = useState<{
     name: string;
     email: string;
-    password: string;
+    sent: boolean;
   } | null>(null);
   const [studentAddError, setStudentAddError] = useState<string | null>(null);
 
@@ -259,16 +257,6 @@ export function DashboardHome({
                   placeholder="Student real email"
                   className="w-full max-w-[280px] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
                 />
-                <input
-                  type="password"
-                  value={newStudentPassword}
-                  onChange={(event) => setNewStudentPassword(event.target.value)}
-                  placeholder="Set student password"
-                  className="w-full max-w-[240px] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-                />
-                <p className="w-full text-xs text-zinc-500">
-                  {PASSWORD_POLICY_HINT}
-                </p>
                 <button
                   type="button"
                   onClick={async () => {
@@ -276,30 +264,28 @@ export function DashboardHome({
                     const created = await onAddStudent?.(
                       newStudentName,
                       newStudentEmail,
-                      newStudentPassword,
                     );
                     if (!created) {
                       setStudentAddError(
-                        `Unable to create student. Use unique name/email. ${PASSWORD_POLICY_HINT}`,
+                        "Unable to create student. Use a unique name and real email.",
                       );
                       return;
                     }
-                    setLatestCredentials({
+                    setLatestInvitation({
                       name: created.student.name,
-                      email: created.credentials.email,
-                      password: created.credentials.password,
+                      email: created.student.email,
+                      sent: created.invitationSent,
                     });
                     setNewStudentName("");
                     setNewStudentEmail("");
-                    setNewStudentPassword("");
                   }}
                   className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
                 >
-                  Add Student
+                  Invite Student
                 </button>
               </div>
 
-              {latestCredentials ? (
+              {latestInvitation ? (
                 <div
                   className={[
                     "mt-2 rounded-md border px-2.5 py-2 text-xs",
@@ -308,9 +294,11 @@ export function DashboardHome({
                       : "border-emerald-200 bg-emerald-50 text-emerald-800",
                   ].join(" ")}
                 >
-                  <p className="font-medium">{latestCredentials.name} created</p>
-                  <p>Email: {latestCredentials.email}</p>
-                  <p>Password: {latestCredentials.password}</p>
+                  <p className="font-medium">{latestInvitation.name} invited</p>
+                  <p>Email: {latestInvitation.email}</p>
+                  <p>
+                    Status: {latestInvitation.sent ? "Invitation email sent" : "Invite created"}
+                  </p>
                 </div>
               ) : null}
               {studentAddError ? (

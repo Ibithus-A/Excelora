@@ -131,7 +131,7 @@ export function EditorPane({ role }: EditorPaneProps) {
       <section className="flex h-full items-center justify-center bg-[var(--surface-panel)] p-6 md:p-10">
         <div className="w-full max-w-3xl">
           <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
-            QuickLearn
+            Excelora
           </p>
           <h2 className="mt-3 text-4xl font-semibold tracking-tight text-zinc-900 md:text-5xl">
             Start with a new page
