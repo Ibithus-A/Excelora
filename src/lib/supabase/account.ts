@@ -17,14 +17,33 @@ function toFirstName(value: string): string {
   return parts[0] ?? "";
 }
 
+function resolveMetadataName(user: User): string {
+  const candidates = [
+    user.user_metadata?.full_name,
+    user.user_metadata?.name,
+    user.user_metadata?.display_name,
+    user.user_metadata?.preferred_username,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value !== "string") continue;
+    const firstName = toFirstName(value);
+    if (firstName) return firstName;
+  }
+
+  return "";
+}
+
 function toName(user: User, role: UserRole): string {
-  const metadataName =
-    typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "";
-  const normalizedMetadataName = toFirstName(metadataName);
+  const normalizedMetadataName = resolveMetadataName(user);
   if (normalizedMetadataName) return normalizedMetadataName;
 
   const emailPrefix = user.email?.split("@")[0] ?? "";
-  const normalizedEmailPrefix = toFirstName(emailPrefix.replace(/[._-]+/g, " "));
+  const sanitizedEmailPrefix = emailPrefix
+    .replace(/[._-]+/g, " ")
+    .replace(/\d+/g, " ")
+    .trim();
+  const normalizedEmailPrefix = toFirstName(sanitizedEmailPrefix);
   if (normalizedEmailPrefix) return normalizedEmailPrefix;
 
   return role === "tutor" ? "Tutor" : "Student";

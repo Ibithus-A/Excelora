@@ -141,7 +141,7 @@ export function SignInPortal({
                   : "text-zinc-500 hover:text-zinc-700",
               ].join(" ")}
             >
-              Student Sign In
+              Student
             </button>
             <button
               type="button"
@@ -158,7 +158,7 @@ export function SignInPortal({
                   : "text-zinc-500 hover:text-zinc-700",
               ].join(" ")}
             >
-              Tutor Sign In
+              Tutor
             </button>
           </div>
 

@@ -33,6 +33,7 @@ function writeAuditLog(action: string, actor: User, details: Record<string, stri
 
 function toStudentAccount(user: User): StudentAccount | null {
   if (getServerUserRole(user) !== "student") return null;
+  if (!user.email_confirmed_at) return null;
   const email = user.email ? normalizeEmail(user.email) : "";
   if (!email) return null;
 
@@ -79,6 +80,18 @@ async function listAllUsers(): Promise<User[]> {
   }
 
   return users;
+}
+
+function resolveInviteRedirectOrigin(request: Request): string {
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredSiteUrl) {
+    try {
+      return new URL(configuredSiteUrl).origin;
+    } catch {
+      // Fallback to request origin if env value is invalid.
+    }
+  }
+  return new URL(request.url).origin;
 }
 
 export async function GET() {
@@ -156,14 +169,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "A user with that email already exists." }, { status: 409 });
     }
 
-    const requestUrl = new URL(request.url);
-    const origin = requestUrl.origin;
-    const inviteRedirectTo = `${origin}/reset-password`;
+    const origin = resolveInviteRedirectOrigin(request);
+    const inviteRedirectTo = `${origin}/set-password`;
 
     const { data, error } = await admin.auth.admin.inviteUserByEmail(normalizedEmail, {
       data: {
         full_name: normalizedName,
-        role: "student",
       },
       redirectTo: inviteRedirectTo,
     });
