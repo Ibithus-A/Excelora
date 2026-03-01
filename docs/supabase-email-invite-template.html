@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f5f5f4;
+      }
+      .wrapper {
+        max-width: 620px;
+        margin: 0 auto;
+        border: 1px solid #e7e5e4;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #ffffff;
+        font-family: Arial, sans-serif;
+      }
+      .header {
+        padding: 20px 24px;
+        background: #111827;
+        color: #ffffff;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 13px;
+      }
+      .content {
+        padding: 28px 24px 10px 24px;
+        color: #111827;
+      }
+      .title {
+        margin: 0 0 12px 0;
+        font-size: 28px;
+        line-height: 1.25;
+      }
+      .text {
+        margin: 0 0 14px 0;
+        font-size: 15px;
+        line-height: 1.7;
+        color: #374151;
+      }
+      .cta-wrap {
+        padding: 0 24px 8px 24px;
+      }
+      .cta {
+        display: inline-block;
+        padding: 12px 18px;
+        border-radius: 10px;
+        background: #111827;
+        color: #ffffff !important;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .link-wrap {
+        padding: 14px 24px 22px 24px;
+      }
+      .hint {
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #6b7280;
+      }
+      .link {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #2563eb;
+        word-break: break-all;
+      }
+      .footer {
+        padding: 14px 24px;
+        border-top: 1px solid #e7e5e4;
+        font-size: 12px;
+        line-height: 1.6;
+        color: #6b7280;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #000000 !important;
+        }
+        .wrapper {
+          background: #000000 !important;
+          border-color: #ffffff !important;
+        }
+        .header {
+          background: #000000 !important;
+          color: #ffffff !important;
+          border-bottom: 1px solid #ffffff !important;
+        }
+        .content,
+        .title,
+        .text,
+        .hint,
+        .footer,
+        .link {
+          color: #ffffff !important;
+        }
+        .cta {
+          background: #ffffff !important;
+          color: #000000 !important;
+        }
+        .footer {
+          border-top-color: #ffffff !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+      <tr>
+        <td>
+          <div class="wrapper">
+            <div class="header">Excelora</div>
+
+            <div class="content">
+              <h1 class="title">Welcome to Excelora</h1>
+              <p class="text">Hi {{ .Data.full_name }},</p>
+              <p class="text">
+                Great to have you here. You have been invited to join Excelora, where your learning is built to keep you consistent, focused, and progressing toward top grades.
+              </p>
+              <p class="text">
+                Set up your password now to activate your account and get on track to achieving your A*.
+              </p>
+            </div>
+
+            <div class="cta-wrap">
+              <a class="cta" href="{{ .ConfirmationURL }}">Set Password and Open Portal</a>
+            </div>
+
+            <div class="link-wrap">
+              <p class="hint">If the button does not work, copy this link into your browser:</p>
+              <p class="link">{{ .ConfirmationURL }}</p>
+            </div>
+
+            <div class="footer">
+              This invitation was sent to {{ .Email }} for secure access to Excelora.
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
