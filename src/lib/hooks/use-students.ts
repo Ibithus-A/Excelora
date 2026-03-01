@@ -1,6 +1,7 @@
 "use client";
 
-import { normalizeEmail, normalizeStudentName, type StudentAccount } from "@/lib/auth";
+import { isValidEmail, normalizeEmail, normalizeStudentName, type StudentAccount } from "@/lib/auth";
+import { validatePassword } from "@/lib/security/password";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 function sortStudents(students: StudentAccount[]) {
@@ -28,14 +29,10 @@ function sanitizeStudents(value: unknown): StudentAccount[] {
   return sortStudents(Array.from(unique.values()));
 }
 
-type AddStudentResult = {
+export type AddStudentResult = {
   student: StudentAccount;
   credentials: { email: string; password: string };
 } | null;
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
 
 export function useStudents(currentUserEmail?: string | null) {
   const [students, setStudents] = useState<StudentAccount[]>([]);
@@ -64,7 +61,14 @@ export function useStudents(currentUserEmail?: string | null) {
     const normalizedPassword = password.trim();
     if (!normalizedName) return null;
     if (!isValidEmail(normalizedEmail)) return null;
-    if (normalizedPassword.length < 8) return null;
+    if (
+      validatePassword(normalizedPassword, {
+        email: normalizedEmail,
+        displayName: normalizedName,
+      }).length > 0
+    ) {
+      return null;
+    }
     try {
       const response = await fetch("/api/students", {
         method: "POST",

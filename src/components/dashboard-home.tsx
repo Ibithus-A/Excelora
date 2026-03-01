@@ -1,6 +1,7 @@
 "use client";
 
 import { FlowLogoIcon, MoonIcon, SunIcon } from "@/components/icons";
+import { PASSWORD_POLICY_HINT } from "@/lib/security/password";
 import { CHAPTER_ONE_TITLE } from "@/lib/student-progress";
 import type { UserRole } from "@/types/auth";
 import type { StudentDailyStats } from "@/types/dashboard";
@@ -265,6 +266,9 @@ export function DashboardHome({
                   placeholder="Set student password"
                   className="w-full max-w-[240px] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
                 />
+                <p className="w-full text-xs text-zinc-500">
+                  {PASSWORD_POLICY_HINT}
+                </p>
                 <button
                   type="button"
                   onClick={async () => {
@@ -276,7 +280,7 @@ export function DashboardHome({
                     );
                     if (!created) {
                       setStudentAddError(
-                        "Unable to create student. Use unique name/email and password (8+ chars).",
+                        `Unable to create student. Use unique name/email. ${PASSWORD_POLICY_HINT}`,
                       );
                       return;
                     }
