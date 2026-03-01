@@ -38,14 +38,6 @@ function toName(user: User, role: UserRole): string {
   const normalizedMetadataName = resolveMetadataName(user);
   if (normalizedMetadataName) return normalizedMetadataName;
 
-  const emailPrefix = user.email?.split("@")[0] ?? "";
-  const sanitizedEmailPrefix = emailPrefix
-    .replace(/[._-]+/g, " ")
-    .replace(/\d+/g, " ")
-    .trim();
-  const normalizedEmailPrefix = toFirstName(sanitizedEmailPrefix);
-  if (normalizedEmailPrefix) return normalizedEmailPrefix;
-
   return role === "tutor" ? "Tutor" : "Student";
 }
 
