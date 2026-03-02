@@ -170,7 +170,7 @@ export async function POST(request: Request) {
     }
 
     const origin = resolveInviteRedirectOrigin(request);
-    const inviteRedirectTo = `${origin}/set-password`;
+    const inviteRedirectTo = `${origin}/set-password?flow=invite`;
 
     const { data, error } = await admin.auth.admin.inviteUserByEmail(normalizedEmail, {
       data: {
