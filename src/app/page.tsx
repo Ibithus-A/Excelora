@@ -56,19 +56,19 @@ export default function HomePage() {
     const searchType = url.searchParams.get("type");
     const hashType = hashParams.get("type");
     const flowType = url.searchParams.get("flow");
+    const tokenHash = url.searchParams.get("token_hash");
 
     const hasAuthCode = url.searchParams.has("code");
     const hasTokenSession =
       hashParams.has("access_token") && hashParams.has("refresh_token");
-    const hasAuthPayload = hasAuthCode || hasTokenSession;
+    const hasAuthPayload = hasAuthCode || hasTokenSession || Boolean(tokenHash);
 
     const isRecoveryFlow =
       flowType === "recovery" || searchType === "recovery" || hashType === "recovery";
     const isInviteFlow =
       flowType === "invite" || searchType === "invite" || hashType === "invite";
 
-    if (!hasAuthPayload) return;
-    if (!isInviteFlow && !isRecoveryFlow && !hasAuthCode) return;
+    if (!hasAuthPayload && !isInviteFlow && !isRecoveryFlow) return;
 
     const targetPath = isRecoveryFlow ? "/reset-password" : "/set-password";
     const destination = `${targetPath}${window.location.search}${window.location.hash}`;

@@ -45,6 +45,8 @@ export function AuthPasswordForm({
 
         const url = new URL(window.location.href);
         const code = url.searchParams.get("code");
+        const tokenHash = url.searchParams.get("token_hash");
+        const searchType = url.searchParams.get("type");
 
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -55,6 +57,23 @@ export function AuthPasswordForm({
             return;
           }
           url.searchParams.delete("code");
+          window.history.replaceState({}, "", url.toString());
+        } else if (
+          tokenHash &&
+          (searchType === "invite" || searchType === "recovery")
+        ) {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: searchType,
+          });
+          if (verifyError) {
+            if (!cancelled) {
+              setError("This setup link is invalid or expired. Request a new email.");
+            }
+            return;
+          }
+          url.searchParams.delete("token_hash");
+          url.searchParams.delete("type");
           window.history.replaceState({}, "", url.toString());
         } else {
           const hash = window.location.hash.startsWith("#")
