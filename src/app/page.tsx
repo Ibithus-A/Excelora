@@ -176,17 +176,6 @@ export default function HomePage() {
           />
         ) : (
           <div className="relative h-full w-full overflow-hidden bg-[var(--surface-panel)]">
-            {!isSidebarAutoOpen ? (
-              <button
-                type="button"
-                onClick={() => setIsSidebarAutoOpen(true)}
-                className="absolute left-2 top-2 z-40 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
-                aria-label="Open sidebar"
-              >
-                Open sidebar
-              </button>
-            ) : null}
-
             <div className="absolute inset-y-0 left-0 z-30">
               <div
                 className="absolute inset-y-0 left-0 w-4"
