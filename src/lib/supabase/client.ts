@@ -10,7 +10,8 @@ export function createClient() {
   const { url, key } = getSupabaseEnv();
   browserClient = createBrowserClient(url, key, {
     auth: {
-      // PKCE email flows may complete in a different tab, so keep auth state in localStorage.
+      // Email confirmation and recovery links may open in a different tab or browser context.
+      flowType: "implicit",
       storage: window.localStorage,
     },
   });
