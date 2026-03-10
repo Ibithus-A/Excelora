@@ -1,5 +1,6 @@
 "use client";
 
+import { canAccessNode } from "@/lib/access";
 import { FlowLogoIcon, FolderIcon, MoonIcon, PlusIcon, SunIcon } from "@/components/icons";
 import { SidebarNode } from "@/components/sidebar-node";
 import { useFlowState } from "@/context/flowstate-context";
@@ -42,16 +43,21 @@ export function Sidebar({
   const canManage = !isStudent;
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { visibleRootIds, visibleNodeIds } = useMemo(() => {
+  const { visibleRootIds, visibleNodeIds, lockedNodeIds } = useMemo(() => {
     if (!isStudent) {
       const allVisible = new Set<string>();
       for (const id of Object.keys(state.nodes)) {
         allVisible.add(id);
       }
-      return { visibleRootIds: state.rootIds, visibleNodeIds: allVisible };
+      return {
+        visibleRootIds: state.rootIds,
+        visibleNodeIds: allVisible,
+        lockedNodeIds: new Set<string>(),
+      };
     }
 
     const visibleIds = new Set<string>();
+    const nextLockedNodeIds = new Set<string>();
     const unlocked = new Set(unlockedChapterTitles.map((title) => title.toLowerCase()));
     const mathRootId = state.rootIds.find((id) => {
       const title = state.nodes[id]?.title?.trim().toLowerCase();
@@ -59,18 +65,30 @@ export function Sidebar({
     });
 
     if (!mathRootId) {
-      return { visibleRootIds: [], visibleNodeIds: visibleIds };
+      return {
+        visibleRootIds: [],
+        visibleNodeIds: visibleIds,
+        lockedNodeIds: nextLockedNodeIds,
+      };
     }
 
     visibleIds.add(mathRootId);
     const chapters = state.nodes[mathRootId]?.childrenIds ?? [];
     for (const chapterId of chapters) {
       const chapterTitle = state.nodes[chapterId]?.title?.toLowerCase();
-      if (!chapterTitle || !unlocked.has(chapterTitle)) continue;
+      visibleIds.add(chapterId);
+      if (!chapterTitle || !unlocked.has(chapterTitle)) {
+        nextLockedNodeIds.add(chapterId);
+        continue;
+      }
       collectSubtreeIds(state.nodes, chapterId, visibleIds);
     }
 
-    return { visibleRootIds: [mathRootId], visibleNodeIds: visibleIds };
+    return {
+      visibleRootIds: [mathRootId],
+      visibleNodeIds: visibleIds,
+      lockedNodeIds: nextLockedNodeIds,
+    };
   }, [isStudent, state.nodes, state.rootIds, unlockedChapterTitles]);
 
   useEffect(() => {
@@ -262,6 +280,12 @@ export function Sidebar({
               depth={0}
               canManage={canManage}
               canViewNode={(id) => visibleNodeIds.has(id)}
+              isLockedNode={(id) =>
+                isStudent &&
+                visibleNodeIds.has(id) &&
+                lockedNodeIds.has(id) &&
+                !canAccessNode(state, id, unlockedChapterTitles)
+              }
             />
           ))
         )}

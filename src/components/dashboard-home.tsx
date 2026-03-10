@@ -1,9 +1,8 @@
 "use client";
 
 import { FlowLogoIcon, MoonIcon, SunIcon } from "@/components/icons";
-import { CHAPTER_ONE_TITLE } from "@/lib/student-progress";
-import type { AddStudentResult } from "@/lib/hooks/use-students";
-import type { UserRole } from "@/types/auth";
+import { CHAPTER_ONE_TITLE } from "@/lib/access";
+import type { UserAccessProfile, UserPlan, UserRole } from "@/types/auth";
 import type { StudentDailyStats } from "@/types/dashboard";
 import { useMemo, useState } from "react";
 
@@ -18,17 +17,19 @@ type DashboardHomeProps = {
   onSignOut: () => void;
   onSwitchAccount: () => void;
   stats: StudentDailyStats;
+  currentPlan?: UserPlan;
   chapterTitles?: string[];
-  students?: Array<{ name: string; email: string }>;
-  selectedStudentEmail?: string;
+  students?: UserAccessProfile[];
+  selectedStudent?: UserAccessProfile | null;
+  selectedStudentId?: string;
+  selectedStudentPlan?: UserPlan;
   selectedStudentMilestone?: string | null;
-  chapterTagsByTitle?: Record<string, Array<{ name: string; email: string }>>;
+  chapterTagsByTitle?: Record<string, Array<{ id: string; name: string; email: string }>>;
   unlockedChapterTitles?: string[];
-  onSelectStudent?: (email: string) => void;
-  onSetMilestoneChapter?: (chapterTitle: string) => void;
-  onToggleChapter?: (chapterTitle: string) => void;
-  onAddStudent?: (name: string, email: string) => Promise<AddStudentResult>;
-  onDeleteSelectedStudent?: () => Promise<void>;
+  onSelectStudent?: (studentId: string) => void;
+  onSetStudentPlan?: (plan: UserPlan) => Promise<void>;
+  onSetMilestoneChapter?: (chapterTitle: string) => Promise<void>;
+  onToggleChapter?: (chapterTitle: string) => Promise<void>;
 };
 
 export function DashboardHome({
@@ -40,27 +41,22 @@ export function DashboardHome({
   onSignOut,
   onSwitchAccount,
   stats,
+  currentPlan = "basic",
   chapterTitles = [],
   students = [],
-  selectedStudentEmail,
+  selectedStudent,
+  selectedStudentId,
+  selectedStudentPlan = "basic",
   selectedStudentMilestone,
   chapterTagsByTitle = {},
   unlockedChapterTitles = [],
   onSelectStudent,
+  onSetStudentPlan,
   onSetMilestoneChapter,
   onToggleChapter,
-  onAddStudent,
-  onDeleteSelectedStudent,
 }: DashboardHomeProps) {
   const [activeTab, setActiveTab] = useState<MetricTab>("reviewed");
-  const [newStudentName, setNewStudentName] = useState("");
-  const [newStudentEmail, setNewStudentEmail] = useState("");
-  const [latestInvitation, setLatestInvitation] = useState<{
-    name: string;
-    email: string;
-    sent: boolean;
-  } | null>(null);
-  const [studentAddError, setStudentAddError] = useState<string | null>(null);
+  const [studentSearch, setStudentSearch] = useState("");
 
   const activeMetric = useMemo(
     () =>
@@ -77,6 +73,16 @@ export function DashboardHome({
           },
     [activeTab, stats.dueToday, stats.reviewedToday],
   );
+
+  const visibleStudents = useMemo(() => {
+    const query = studentSearch.trim().toLowerCase();
+    if (!query) return students;
+
+    return students.filter((student) =>
+      `${student.name} ${student.email}`.toLowerCase().includes(query),
+    );
+  }, [studentSearch, students]);
+  const studentOptions = visibleStudents.length > 0 ? visibleStudents : students;
 
   return (
     <main className="h-screen w-screen overflow-y-auto bg-[var(--surface-app)] px-3 py-4 md:px-8 md:py-7">
@@ -97,6 +103,11 @@ export function DashboardHome({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {role === "student" ? (
+                <span className="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs font-medium uppercase tracking-[0.08em] text-zinc-600">
+                  {currentPlan} plan
+                </span>
+              ) : null}
               <button
                 type="button"
                 onClick={onOpenWorkspace}
@@ -190,6 +201,29 @@ export function DashboardHome({
           </article>
         </div>
 
+        {role === "student" ? (
+          <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-500">
+                  Your Access
+                </h2>
+                <p className="mt-2 text-lg font-semibold text-zinc-900">
+                  {currentPlan === "basic" ? "Basic Plan" : "Premium Plan"}
+                </p>
+                <p className="mt-1 max-w-2xl text-sm text-zinc-600">
+                  {currentPlan === "basic"
+                    ? "Basic accounts can access Chapter 1 only. Additional chapters stay locked until a tutor upgrades the account to Premium."
+                    : "Your tutor controls which Premium chapters are unlocked on your account."}
+                </p>
+              </div>
+              <span className="rounded-full border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600">
+                Unlocked chapters: {unlockedChapterTitles.length}
+              </span>
+            </div>
+          </article>
+        ) : null}
+
         {role === "tutor" && chapterTitles.length > 0 ? (
           <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
             <div className="mb-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3.5">
@@ -199,111 +233,79 @@ export function DashboardHome({
                     Student Chapter Access
                   </h2>
                   <p className="mt-1 text-sm leading-5 text-zinc-600">
-                    Primary flow: tag a milestone chapter to grant Chapters 1 to N.
-                    Manual lock controls remain available for custom plans.
+                    Every new user starts on Basic with Chapter 1 only. Upgrade a student to Premium before unlocking any additional chapters.
                   </p>
                 </div>
                 {students.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="search"
+                      value={studentSearch}
+                      onChange={(event) => setStudentSearch(event.target.value)}
+                      placeholder="Find user"
+                      className="w-full max-w-[220px] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+                    />
                     <label className="text-sm text-zinc-600">
-                      <span className="mr-2">Student</span>
+                      <span className="mr-2">User</span>
                       <select
-                        value={selectedStudentEmail ?? students[0].email}
+                        value={selectedStudentId ?? studentOptions[0]?.id ?? ""}
                         onChange={(event) => onSelectStudent?.(event.target.value)}
                         className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
                       >
-                        {students.map((student) => (
+                        {studentOptions.map((student) => (
                           <option
-                            key={student.email}
-                            value={student.email.trim().toLowerCase()}
+                            key={student.id}
+                            value={student.id}
                           >
-                            {student.name}
+                            {student.name} ({student.email})
                           </option>
                         ))}
                       </select>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void onDeleteSelectedStudent?.();
-                      }}
-                      className={[
-                        "rounded-md border px-2.5 py-1.5 text-xs font-medium transition",
-                        isDarkMode
-                          ? "border-zinc-200 bg-white text-rose-600 hover:bg-zinc-50"
-                          : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100",
-                      ].join(" ")}
-                    >
-                      Delete Student
-                    </button>
                   </div>
                 ) : null}
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <input
-                  type="text"
-                  value={newStudentName}
-                  onChange={(event) => setNewStudentName(event.target.value)}
-                  placeholder="New student name"
-                  className="w-full max-w-[240px] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-                />
-                <input
-                  type="email"
-                  value={newStudentEmail}
-                  onChange={(event) => setNewStudentEmail(event.target.value)}
-                  placeholder="Student real email"
-                  className="w-full max-w-[280px] rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-                />
+                <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-600">
+                  Selected: {selectedStudent?.name ?? "No student selected"}
+                </span>
+                <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-600">
+                  Email: {selectedStudent?.email ?? "n/a"}
+                </span>
                 <button
                   type="button"
-                  onClick={async () => {
-                    setStudentAddError(null);
-                    const created = await onAddStudent?.(
-                      newStudentName,
-                      newStudentEmail,
-                    );
-                    if (!created) {
-                      setStudentAddError("Unable to create student.");
-                      return;
-                    }
-                    if (!created.ok) {
-                      setStudentAddError(created.error);
-                      return;
-                    }
-                    setLatestInvitation({
-                      name: created.student.name,
-                      email: created.student.email,
-                      sent: created.invitationSent,
-                    });
-                    setNewStudentName("");
-                    setNewStudentEmail("");
+                  onClick={() => {
+                    void onSetStudentPlan?.("basic");
                   }}
-                  className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
+                  className={[
+                    "rounded-md border px-2.5 py-1.5 text-xs font-medium transition",
+                    selectedStudentPlan === "basic"
+                      ? "border-zinc-900 bg-zinc-900 text-white"
+                      : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100",
+                  ].join(" ")}
                 >
-                  Invite Student
+                  Set Basic
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void onSetStudentPlan?.("premium");
+                  }}
+                  className={[
+                    "rounded-md border px-2.5 py-1.5 text-xs font-medium transition",
+                    selectedStudentPlan === "premium"
+                      ? "border-zinc-900 bg-zinc-900 text-white"
+                      : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100",
+                  ].join(" ")}
+                >
+                  Set Premium
                 </button>
               </div>
 
-              {latestInvitation ? (
-                <div
-                  className={[
-                    "mt-2 rounded-md border px-2.5 py-2 text-xs",
-                    isDarkMode
-                      ? "border-zinc-800 bg-zinc-900 text-emerald-400"
-                      : "border-emerald-200 bg-emerald-50 text-emerald-800",
-                  ].join(" ")}
-                >
-                  <p className="font-medium">{latestInvitation.name} invited</p>
-                  <p>Email: {latestInvitation.email}</p>
-                  <p>
-                    Status: {latestInvitation.sent ? "Invitation email sent" : "Invite created"}
-                  </p>
-                </div>
-              ) : null}
-              {studentAddError ? (
+              {selectedStudentPlan === "basic" ? (
                 <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-800">
-                  {studentAddError}
+                  Basic users are restricted to Chapter 1. Upgrade to Premium before unlocking any additional chapters.
                 </div>
               ) : null}
 
@@ -320,7 +322,7 @@ export function DashboardHome({
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
               {chapterTitles.map((chapterTitle) => {
                 const isAlwaysUnlocked = chapterTitle === CHAPTER_ONE_TITLE;
-                const canUseCustomUnlock = Boolean(selectedStudentMilestone);
+                const canUseCustomUnlock = selectedStudentPlan === "premium";
                 const isUnlocked =
                   isAlwaysUnlocked || unlockedChapterTitles.includes(chapterTitle);
                 const isMilestone = selectedStudentMilestone === chapterTitle;
@@ -348,10 +350,15 @@ export function DashboardHome({
                       <div className="flex shrink-0 items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => onSetMilestoneChapter?.(chapterTitle)}
+                          onClick={() => {
+                            void onSetMilestoneChapter?.(chapterTitle);
+                          }}
+                          disabled={!canUseCustomUnlock}
                           className={[
                             "rounded-md border px-2.5 py-1 text-xs font-medium transition",
-                            "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100",
+                            canUseCustomUnlock
+                              ? "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
+                              : "cursor-not-allowed border-zinc-200 bg-white text-zinc-400",
                           ].join(" ")}
                         >
                           {isMilestone ? "Tagged" : "Tag"}
@@ -359,7 +366,9 @@ export function DashboardHome({
                         {isMilestone ? (
                           <button
                             type="button"
-                            onClick={() => onSetMilestoneChapter?.(chapterTitle)}
+                            onClick={() => {
+                              void onSetMilestoneChapter?.(chapterTitle);
+                            }}
                             className="rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-600 transition hover:bg-zinc-100"
                           >
                             Remove
@@ -372,8 +381,7 @@ export function DashboardHome({
                       <div className="mt-2.5 flex flex-wrap gap-1.5">
                         {chapterTags.map((taggedStudent) => {
                           const isCurrentStudent =
-                            taggedStudent.email.trim().toLowerCase() ===
-                            (selectedStudentEmail ?? "").trim().toLowerCase();
+                            taggedStudent.id === selectedStudentId;
                           return (
                           <span
                             key={`${chapterTitle}-${taggedStudent.email}`}
@@ -392,7 +400,9 @@ export function DashboardHome({
                     <div className="mt-2.5 flex items-center justify-end">
                       <button
                         type="button"
-                        onClick={() => onToggleChapter?.(chapterTitle)}
+                        onClick={() => {
+                          void onToggleChapter?.(chapterTitle);
+                        }}
                         disabled={isAlwaysUnlocked || !canUseCustomUnlock}
                         className={[
                           "rounded-md border px-2.5 py-1 text-xs",
@@ -409,7 +419,7 @@ export function DashboardHome({
                         {isAlwaysUnlocked
                           ? "Always Unlocked"
                           : !canUseCustomUnlock
-                            ? "Tag Required"
+                            ? "Premium Only"
                             : isUnlocked
                               ? "Unlocked"
                               : "Locked"}

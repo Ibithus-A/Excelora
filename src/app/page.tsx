@@ -5,7 +5,7 @@ import { EditorPane } from "@/components/editor-pane";
 import { SignInPortal } from "@/components/sign-in-portal";
 import { Sidebar } from "@/components/sidebar";
 import { FlowStateProvider } from "@/context/flowstate-context";
-import { normalizeEmail } from "@/lib/auth";
+import { CHAPTER_ONE_TITLE, getLockedChapterMessage } from "@/lib/access";
 import { useStudentProgress } from "@/lib/hooks/use-student-progress";
 import { useStudents } from "@/lib/hooks/use-students";
 import { accountFromUser } from "@/lib/supabase/account";
@@ -21,16 +21,15 @@ export default function HomePage() {
   const [view, setView] = useState<AppView>("workspace");
   const [isSidebarAutoOpen, setIsSidebarAutoOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthenticatedAccount | null>(null);
-  const { students, addStudent, deleteStudent } = useStudents(currentUser?.email);
-  const effectiveCurrentUser = useMemo(() => {
-    if (currentUser?.role !== "student") return currentUser;
-    const isActiveStudent = students.some(
-      (student) => normalizeEmail(student.email) === normalizeEmail(currentUser.email),
-    );
-    return isActiveStudent ? currentUser : null;
-  }, [currentUser, students]);
+  const { viewerProfile, students, updateStudentAccess } = useStudents(currentUser?.email);
+  const effectiveCurrentUser = useMemo(
+    () => (currentUser ? viewerProfile ?? currentUser : null),
+    [currentUser, viewerProfile],
+  );
   const {
-    selectedStudentEmail,
+    selectedStudentId,
+    selectedStudent,
+    selectedStudentPlan,
     activeStudentUnlocks,
     currentStudentStats,
     selectedStudentMilestone,
@@ -38,8 +37,9 @@ export default function HomePage() {
     selectStudent,
     toggleChapterForSelectedStudent,
     setMilestoneForSelectedStudent,
+    setPlanForSelectedStudent,
     chapterTitles,
-  } = useStudentProgress(effectiveCurrentUser, students);
+  } = useStudentProgress(currentUser, viewerProfile, students, updateStudentAccess);
   const { sidebarWidth, startResize, isResizing } = useSidebarResize();
   const { isDarkMode, setIsDarkMode } = useTheme();
 
@@ -129,16 +129,6 @@ export default function HomePage() {
     setView("workspace");
   };
 
-  const handleCreateStudent = async (
-    name: string,
-    email: string,
-  ) => addStudent(name, email);
-
-  const handleDeleteSelectedStudent = async () => {
-    if (!selectedStudentEmail) return;
-    await deleteStudent(selectedStudentEmail);
-  };
-
   return (
     <FlowStateProvider>
       <main className="h-screen w-screen bg-[var(--surface-app)]">
@@ -162,17 +152,19 @@ export default function HomePage() {
             onToggleDarkMode={() => setIsDarkMode((value) => !value)}
             onSignOut={handleSignOut}
             onSwitchAccount={handleSignOut}
+            currentPlan={viewerProfile?.plan ?? "basic"}
             chapterTitles={chapterTitles}
             students={students}
-            selectedStudentEmail={selectedStudentEmail}
+            selectedStudent={selectedStudent}
+            selectedStudentId={selectedStudentId}
+            selectedStudentPlan={selectedStudentPlan}
             selectedStudentMilestone={selectedStudentMilestone}
             chapterTagsByTitle={chapterTagsByTitle}
             unlockedChapterTitles={activeStudentUnlocks}
             onSelectStudent={selectStudent}
+            onSetStudentPlan={setPlanForSelectedStudent}
             onSetMilestoneChapter={setMilestoneForSelectedStudent}
             onToggleChapter={toggleChapterForSelectedStudent}
-            onAddStudent={handleCreateStudent}
-            onDeleteSelectedStudent={handleDeleteSelectedStudent}
           />
         ) : (
           <div className="relative h-full w-full overflow-hidden bg-[var(--surface-panel)]">
@@ -201,7 +193,7 @@ export default function HomePage() {
                   isDarkMode={isDarkMode}
                   onToggleDarkMode={() => setIsDarkMode((value) => !value)}
                   role={effectiveCurrentUser.role}
-                  unlockedChapterTitles={activeStudentUnlocks}
+                  unlockedChapterTitles={viewerProfile?.unlockedChapterTitles ?? [CHAPTER_ONE_TITLE]}
                 />
                 <div
                   className="absolute inset-y-0 right-0 hidden w-2 cursor-col-resize lg:block"
@@ -214,7 +206,11 @@ export default function HomePage() {
             </div>
 
             <div className="h-full">
-              <EditorPane role={effectiveCurrentUser.role} />
+              <EditorPane
+                role={effectiveCurrentUser.role}
+                unlockedChapterTitles={viewerProfile?.unlockedChapterTitles ?? [CHAPTER_ONE_TITLE]}
+                lockedChapterMessage={getLockedChapterMessage(viewerProfile)}
+              />
             </div>
           </div>
         )}

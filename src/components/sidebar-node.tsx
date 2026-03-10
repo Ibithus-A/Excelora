@@ -20,6 +20,7 @@ type SidebarNodeProps = {
   depth: number;
   canManage?: boolean;
   canViewNode?: (id: string) => boolean;
+  isLockedNode?: (id: string) => boolean;
 };
 
 export function SidebarNode({
@@ -27,6 +28,7 @@ export function SidebarNode({
   depth,
   canManage = true,
   canViewNode,
+  isLockedNode,
 }: SidebarNodeProps) {
   const {
     state,
@@ -51,6 +53,7 @@ export function SidebarNode({
   const isSelected = state.selectedId === node.id;
   const hasChildren = node.childrenIds.length > 0;
   const indentPx = 8 + depth * 13;
+  const isLocked = isLockedNode?.(node.id) ?? false;
 
   const commitTitle = () => {
     const nextTitle = draftTitle.trim() || getDefaultTitle(node.kind);
@@ -87,7 +90,9 @@ export function SidebarNode({
           isDragOver ? "bg-zinc-200/80" : "",
           isSelected
             ? "bg-zinc-100 text-zinc-900"
-            : "text-zinc-700 hover:bg-zinc-100/90",
+            : isLocked
+              ? "text-zinc-500 hover:bg-zinc-100/90"
+              : "text-zinc-700 hover:bg-zinc-100/90",
         ].join(" ")}
         data-node-kind={node.kind}
         style={{ marginLeft: `${indentPx}px` }}
@@ -182,13 +187,20 @@ export function SidebarNode({
               aria-label="Rename item"
             />
           ) : (
-            <span
-              className="truncate text-sm leading-5 hover:cursor-text"
+            <div
+              className="flex min-w-0 items-center gap-2"
               onMouseEnter={() => setIsTitleHovered(true)}
               onMouseLeave={() => setIsTitleHovered(false)}
             >
-              {node.title || "Untitled"}
-            </span>
+              <span className="truncate text-sm leading-5 hover:cursor-text">
+                {node.title || "Untitled"}
+              </span>
+              {isLocked ? (
+                <span className="rounded-full border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-zinc-500">
+                  Locked
+                </span>
+              ) : null}
+            </div>
           )}
         </button>
 
@@ -255,6 +267,7 @@ export function SidebarNode({
                 depth={depth + 1}
                 canManage={canManage}
                 canViewNode={canViewNode}
+                isLockedNode={isLockedNode}
               />
             ))}
         </div>

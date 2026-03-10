@@ -1,5 +1,6 @@
 "use client";
 
+import { canAccessNode } from "@/lib/access";
 import { EditorActionsDrawer } from "@/components/editor-actions-drawer";
 import { useFlowState } from "@/context/flowstate-context";
 import { DUPLICATE_PAGE_NAME_MESSAGE } from "@/lib/constants/messages";
@@ -20,6 +21,8 @@ type SlashOption = {
 
 type EditorPaneProps = {
   role: "tutor" | "student";
+  unlockedChapterTitles?: string[];
+  lockedChapterMessage?: string;
 };
 
 const SLASH_OPTIONS: SlashOption[] = [
@@ -94,7 +97,11 @@ function materializeTemplate(template: string) {
   };
 }
 
-export function EditorPane({ role }: EditorPaneProps) {
+export function EditorPane({
+  role,
+  unlockedChapterTitles = [],
+  lockedChapterMessage = "This chapter is locked.",
+}: EditorPaneProps) {
   const { state, updateContent, updateTitle } = useFlowState();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [slashContext, setSlashContext] = useState<{
@@ -113,6 +120,10 @@ export function EditorPane({ role }: EditorPaneProps) {
   const isStudent = role === "student";
   const canEditTitle = !isStudent;
   const canEditContent = !isStudent;
+  const isAccessBlocked =
+    isStudent && selectedNode
+      ? !canAccessNode(state, selectedNode.id, unlockedChapterTitles)
+      : false;
 
   const slashOptions = useMemo(() => {
     if (!canEditContent) return [];
@@ -139,6 +150,24 @@ export function EditorPane({ role }: EditorPaneProps) {
           <p className="mt-3 max-w-xl text-sm leading-7 text-zinc-600 md:text-base">
             Capture ideas, write notes, or organize folders. Everything is saved
             locally and ready whenever you come back.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  if (isAccessBlocked) {
+    return (
+      <section className="flex h-full items-center justify-center bg-[var(--surface-panel)] p-6 md:p-10">
+        <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
+            Chapter Locked
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900">
+            You do not have access to this chapter
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-zinc-600">
+            {lockedChapterMessage}
           </p>
         </div>
       </section>

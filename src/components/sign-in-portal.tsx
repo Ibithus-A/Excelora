@@ -2,6 +2,8 @@
 
 import { CloseIcon, FlowLogoIcon } from "@/components/icons";
 import { MoonIcon, SunIcon } from "@/components/icons";
+import { isValidEmail, normalizeStudentName } from "@/lib/auth";
+import { PASSWORD_POLICY_HINT, validatePassword } from "@/lib/security/password";
 import { accountFromUser } from "@/lib/supabase/account";
 import { createClient } from "@/lib/supabase/client";
 import type { AuthenticatedAccount } from "@/types/auth";
@@ -16,7 +18,7 @@ type SignInPortalProps = {
 };
 
 type SignInRole = "student" | "tutor";
-type AuthView = "sign-in" | "forgot-password";
+type AuthView = "sign-in" | "sign-up" | "forgot-password";
 
 export function SignInPortal({
   onClose,
@@ -27,8 +29,10 @@ export function SignInPortal({
 }: SignInPortalProps) {
   const [view, setView] = useState<AuthView>("sign-in");
   const [role, setRole] = useState<SignInRole>("student");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,9 +44,16 @@ export function SignInPortal({
     setInfo("");
     setIsSubmitting(true);
 
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!isValidEmail(normalizedEmail)) {
+      setIsSubmitting(false);
+      setError("Enter a valid email address.");
+      return;
+    }
+
     if (view === "forgot-password") {
       const redirectTo = `${window.location.origin}/reset-password?flow=recovery`;
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo,
       });
       setIsSubmitting(false);
@@ -56,8 +67,56 @@ export function SignInPortal({
       return;
     }
 
+    if (view === "sign-up") {
+      const normalizedName = normalizeStudentName(fullName) || "Student";
+      if (password !== confirmPassword) {
+        setIsSubmitting(false);
+        setError("Passwords do not match.");
+        return;
+      }
+
+      const passwordErrors = validatePassword(password, {
+        email: normalizedEmail,
+        displayName: normalizedName,
+      });
+      if (passwordErrors.length > 0) {
+        setIsSubmitting(false);
+        setError(passwordErrors[0]);
+        return;
+      }
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            full_name: normalizedName,
+          },
+        },
+      });
+
+      setIsSubmitting(false);
+
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+
+      if (data.user && data.session) {
+        onContinue(accountFromUser(data.user));
+        return;
+      }
+
+      setInfo("Account created. Check your email to confirm your sign-up before signing in.");
+      setView("sign-in");
+      setPassword("");
+      setConfirmPassword("");
+      return;
+    }
+
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email: normalizedEmail,
       password,
     });
 
@@ -93,7 +152,7 @@ export function SignInPortal({
             </div>
             <div>
               <p className="text-lg font-semibold text-zinc-900">Excelora Portal</p>
-              <p className="text-xs text-zinc-500">Tutor-managed secure sign in</p>
+              <p className="text-xs text-zinc-500">Email and password access</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -130,37 +189,94 @@ export function SignInPortal({
               type="button"
               onClick={() => {
                 setView("sign-in");
+                setError("");
+                setInfo("");
+              }}
+              className={[
+                "rounded-md px-3 py-2 text-sm transition",
+                view === "sign-in"
+                  ? "bg-white font-medium text-zinc-900 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-700",
+              ].join(" ")}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setView("sign-up");
                 setRole("student");
                 setError("");
                 setInfo("");
               }}
               className={[
                 "rounded-md px-3 py-2 text-sm transition",
-                role === "student"
+                view === "sign-up"
                   ? "bg-white font-medium text-zinc-900 shadow-sm"
                   : "text-zinc-500 hover:text-zinc-700",
               ].join(" ")}
             >
-              Student
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setView("sign-in");
-                setRole("tutor");
-                setError("");
-                setInfo("");
-              }}
-              className={[
-                "rounded-md px-3 py-2 text-sm transition",
-                role === "tutor"
-                  ? "bg-white font-medium text-zinc-900 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-700",
-              ].join(" ")}
-            >
-              Tutor
+              Create Account
             </button>
           </div>
+
+          {view === "sign-in" ? (
+            <div className="grid grid-cols-2 gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setRole("student");
+                  setError("");
+                  setInfo("");
+                }}
+                className={[
+                  "rounded-md px-3 py-2 text-sm transition",
+                  role === "student"
+                    ? "bg-white font-medium text-zinc-900 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-700",
+                ].join(" ")}
+              >
+                Student
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRole("tutor");
+                  setError("");
+                  setInfo("");
+                }}
+                className={[
+                  "rounded-md px-3 py-2 text-sm transition",
+                  role === "tutor"
+                    ? "bg-white font-medium text-zinc-900 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-700",
+                ].join(" ")}
+              >
+                Tutor
+              </button>
+            </div>
+          ) : null}
+
+          {view === "sign-up" ? (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600">
+                First Name
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(event) => {
+                  setFullName(event.target.value);
+                  setError("");
+                  setInfo("");
+                }}
+                placeholder="Alex"
+                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+                autoComplete="given-name"
+                required
+              />
+            </div>
+          ) : null}
 
           <div>
             <label className="mb-1 block text-xs font-medium text-zinc-600">
@@ -182,16 +298,18 @@ export function SignInPortal({
             <p className="mt-1 text-xs text-zinc-500">
               {view === "forgot-password"
                 ? "Enter your account email to receive reset instructions."
+                : view === "sign-up"
+                ? "New accounts are created on the Basic plan with Chapter 1 only."
                 : role === "tutor"
                 ? "Use your tutor account email."
-                : "Use the student credentials created by your tutor."}
+                : "Use your student account email and password."}
             </p>
           </div>
 
-          {view === "sign-in" ? (
+          {view !== "forgot-password" ? (
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-600">
-                Password
+                {view === "sign-up" ? "Create Password" : "Password"}
               </label>
               <input
                 type="password"
@@ -203,9 +321,31 @@ export function SignInPortal({
                 }}
                 placeholder="••••••••"
                 className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-                autoComplete="current-password"
+                autoComplete={view === "sign-up" ? "new-password" : "current-password"}
                 required
               />
+            </div>
+          ) : null}
+
+          {view === "sign-up" ? (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => {
+                  setConfirmPassword(event.target.value);
+                  setError("");
+                  setInfo("");
+                }}
+                placeholder="••••••••"
+                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+                autoComplete="new-password"
+                required
+              />
+              <p className="mt-1 text-xs text-zinc-500">{PASSWORD_POLICY_HINT}</p>
             </div>
           ) : null}
 
@@ -257,6 +397,8 @@ export function SignInPortal({
               ? "Please wait..."
               : view === "forgot-password"
                 ? "Send Reset Email"
+                : view === "sign-up"
+                  ? "Create Account"
                 : "Continue to Workspace"}
           </button>
         </form>

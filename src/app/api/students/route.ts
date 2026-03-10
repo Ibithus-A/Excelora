@@ -1,13 +1,12 @@
-import {
-  isValidEmail,
-  normalizeEmail,
-  normalizeStudentName,
-  type StudentAccount,
-} from "@/lib/auth";
+import { CHAPTER_ONE_TITLE, sanitizeUnlockedChapterTitles } from "@/lib/access";
 import { createRateLimiter } from "@/lib/security/rate-limit";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getServerUserRole } from "@/lib/supabase/roles";
+import {
+  getViewerProfile,
+  listStudentProfiles,
+  updateStudentProfileAccess,
+} from "@/lib/supabase/profiles";
 import { createClient } from "@/lib/supabase/server";
+import type { UserAccessProfile, UserPlan } from "@/types/auth";
 import type { User } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -21,7 +20,7 @@ const enforceTutorMutationRateLimit = createRateLimiter({
 function writeAuditLog(action: string, actor: User, details: Record<string, string>) {
   console.info(
     JSON.stringify({
-      event: "student_admin_action",
+      event: "student_access_update",
       action,
       actor_user_id: actor.id,
       actor_email: actor.email ?? "",
@@ -31,231 +30,104 @@ function writeAuditLog(action: string, actor: User, details: Record<string, stri
   );
 }
 
-function toStudentAccount(user: User): StudentAccount | null {
-  if (getServerUserRole(user) !== "student") return null;
-  if (!user.email_confirmed_at) return null;
-  const email = user.email ? normalizeEmail(user.email) : "";
-  if (!email) return null;
-
-  const fullName =
-    typeof user.user_metadata?.full_name === "string"
-      ? normalizeStudentName(user.user_metadata.full_name)
-      : "";
-  const fallbackName = normalizeStudentName(email.split("@")[0] ?? "");
-  const name = fullName || fallbackName || "Student";
-
-  return { name, email };
+function normalizePlan(value: unknown): UserPlan | null {
+  if (value === "basic" || value === "premium") return value;
+  return null;
 }
 
-async function getAuthenticatedUser(): Promise<User | null> {
+async function getAuthenticatedUser() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return user;
-}
 
-async function listStudents(): Promise<StudentAccount[]> {
-  const allUsers = await listAllUsers();
-  const students = allUsers
-    .map((user) => toStudentAccount(user))
-    .filter((account): account is StudentAccount => Boolean(account));
-
-  students.sort((left, right) => left.name.localeCompare(right.name));
-  return students;
-}
-
-async function listAllUsers(): Promise<User[]> {
-  const admin = createAdminClient();
-  const perPage = 1000;
-  let page = 1;
-  const users: User[] = [];
-
-  while (true) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
-    if (error) throw new Error(error.message);
-    users.push(...data.users);
-    if (data.users.length < perPage) break;
-    page += 1;
-  }
-
-  return users;
-}
-
-function resolveInviteRedirectOrigin(request: Request): string {
-  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configuredSiteUrl) {
-    try {
-      return new URL(configuredSiteUrl).origin;
-    } catch {
-      // Fallback to request origin if env value is invalid.
-    }
-  }
-  return new URL(request.url).origin;
+  return { supabase, user };
 }
 
 export async function GET() {
-  const user = await getAuthenticatedUser();
+  const { supabase, user } = await getAuthenticatedUser();
   if (!user) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  if (getServerUserRole(user) === "student") {
-    const account = toStudentAccount(user);
-    return Response.json({ students: account ? [account] : [] });
   }
 
   try {
-    const students = await listStudents();
-    return Response.json({ students });
+    const viewer = await getViewerProfile(supabase, user.id);
+    if (!viewer) {
+      return Response.json({ error: "Profile not found." }, { status: 404 });
+    }
+
+    const students = viewer.role === "tutor" ? await listStudentProfiles(supabase) : [];
+
+    return Response.json({ viewer, students });
   } catch {
-    return Response.json({ error: "Unable to load students." }, { status: 500 });
+    return Response.json({ error: "Unable to load access data." }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
-  const user = await getAuthenticatedUser();
+export async function PATCH(request: Request) {
+  const { supabase, user } = await getAuthenticatedUser();
   if (!user) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (getServerUserRole(user) !== "tutor") {
+
+  const viewer = await getViewerProfile(supabase, user.id);
+  if (!viewer) {
+    return Response.json({ error: "Profile not found." }, { status: 404 });
+  }
+  if (viewer.role !== "tutor") {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
-  const postLimit = enforceTutorMutationRateLimit(`${user.id}:POST:/api/students`);
-  if (!postLimit.allowed) {
+
+  const patchLimit = enforceTutorMutationRateLimit(`${user.id}:PATCH:/api/students`);
+  if (!patchLimit.allowed) {
     return Response.json(
       { error: "Too many requests. Please retry shortly." },
-      { status: 429, headers: { "Retry-After": String(postLimit.retryAfterSeconds) } },
+      { status: 429, headers: { "Retry-After": String(patchLimit.retryAfterSeconds) } },
     );
   }
 
   try {
     const body = (await request.json()) as {
-      name?: unknown;
-      email?: unknown;
+      userId?: unknown;
+      plan?: unknown;
+      unlockedChapterTitles?: unknown;
     };
-    if (typeof body.name !== "string") {
-      return Response.json({ error: "Student name is required." }, { status: 400 });
-    }
-    if (typeof body.email !== "string") {
-      return Response.json({ error: "Student email is required." }, { status: 400 });
-    }
-    const normalizedName = normalizeStudentName(body.name);
-    const normalizedEmail = normalizeEmail(body.email);
-    if (!normalizedName) {
-      return Response.json(
-        { error: "Student name must contain letters or numbers." },
-        { status: 400 },
-      );
-    }
-    if (!isValidEmail(normalizedEmail)) {
-      return Response.json({ error: "Student email must be valid." }, { status: 400 });
+
+    if (typeof body.userId !== "string" || !body.userId.trim()) {
+      return Response.json({ error: "Student user id is required." }, { status: 400 });
     }
 
-    const admin = createAdminClient();
-    const allUsers = await listAllUsers();
-    const existingStudents = allUsers
-      .map((candidate) => toStudentAccount(candidate))
-      .filter((candidate): candidate is StudentAccount => Boolean(candidate));
-    const existingNames = new Set(existingStudents.map((student) => student.name.toLowerCase()));
-    if (existingNames.has(normalizedName.toLowerCase())) {
-      return Response.json({ error: "A student with that name already exists." }, { status: 409 });
+    const plan = normalizePlan(body.plan);
+    if (!plan) {
+      return Response.json({ error: "Plan must be basic or premium." }, { status: 400 });
     }
 
-    const emailTaken = allUsers.some(
-      (candidate) => normalizeEmail(candidate.email ?? "") === normalizedEmail,
+    const unlockedChapterTitles = sanitizeUnlockedChapterTitles(
+      Array.isArray(body.unlockedChapterTitles) ? body.unlockedChapterTitles : [CHAPTER_ONE_TITLE],
+      plan,
     );
-    if (emailTaken) {
-      return Response.json({ error: "A user with that email already exists." }, { status: 409 });
-    }
 
-    const origin = resolveInviteRedirectOrigin(request);
-    const inviteRedirectTo = `${origin}/set-password?flow=invite`;
-
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(normalizedEmail, {
-      data: {
-        full_name: normalizedName,
-      },
-      redirectTo: inviteRedirectTo,
-    });
-
-    if (error || !data.user) {
-      return Response.json({ error: error?.message ?? "Unable to create student." }, { status: 500 });
-    }
-
-    const { error: roleUpdateError } = await admin.auth.admin.updateUserById(data.user.id, {
-      app_metadata: {
-        role: "student",
-      },
-      user_metadata: {
-        full_name: normalizedName,
-      },
-    });
-    if (roleUpdateError) {
-      return Response.json({ error: roleUpdateError.message }, { status: 500 });
-    }
-
-    writeAuditLog("create_student", user, {
-      target_user_id: data.user.id,
-      target_email: normalizedEmail,
-    });
-
-    return Response.json({
-      student: { name: normalizedName, email: normalizedEmail },
-      invitationSent: true,
-    });
-  } catch {
-    return Response.json({ error: "Unable to create student." }, { status: 500 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  const user = await getAuthenticatedUser();
-  if (!user) {
-    return Response.json({ error: "Unauthorized." }, { status: 401 });
-  }
-  if (getServerUserRole(user) !== "tutor") {
-    return Response.json({ error: "Forbidden." }, { status: 403 });
-  }
-  const deleteLimit = enforceTutorMutationRateLimit(`${user.id}:DELETE:/api/students`);
-  if (!deleteLimit.allowed) {
-    return Response.json(
-      { error: "Too many requests. Please retry shortly." },
-      { status: 429, headers: { "Retry-After": String(deleteLimit.retryAfterSeconds) } },
+    const updated = await updateStudentProfileAccess(
+      supabase,
+      body.userId,
+      plan,
+      unlockedChapterTitles,
     );
-  }
 
-  try {
-    const body = (await request.json()) as { email?: unknown };
-    if (typeof body.email !== "string") {
-      return Response.json({ error: "Student email is required." }, { status: 400 });
-    }
-
-    const targetEmail = normalizeEmail(body.email);
-    const admin = createAdminClient();
-    const allUsers = await listAllUsers();
-    const target = allUsers.find(
-      (candidate) => normalizeEmail(candidate.email ?? "") === targetEmail,
-    );
-    if (!target) {
-      return Response.json({ error: "Student not found." }, { status: 404 });
-    }
-    if (getServerUserRole(target) !== "student") {
-      return Response.json({ error: "Only student accounts can be removed here." }, { status: 400 });
-    }
-
-    const { error: deleteError } = await admin.auth.admin.deleteUser(target.id);
-    if (deleteError) {
-      return Response.json({ error: deleteError.message }, { status: 500 });
-    }
-
-    writeAuditLog("delete_student", user, {
-      target_user_id: target.id,
-      target_email: targetEmail,
+    writeAuditLog("update_student_access", user, {
+      target_user_id: updated.id,
+      target_email: updated.email,
+      plan: updated.plan,
+      unlocked_chapters: updated.unlockedChapterTitles.join(", "),
     });
 
-    return Response.json({ success: true });
-  } catch {
-    return Response.json({ error: "Unable to delete student." }, { status: 500 });
+    return Response.json({ student: updated as UserAccessProfile });
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.trim()
+        ? error.message
+        : "Unable to update student access.";
+    const status = message === "Student profile not found." ? 404 : 500;
+    return Response.json({ error: message }, { status });
   }
 }

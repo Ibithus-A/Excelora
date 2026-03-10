@@ -1,8 +1,3 @@
-export type StudentAccount = {
-  name: string;
-  email: string;
-};
-
 function toDisplayName(value: string): string {
   const token = value.trim().split(/\s+/)[0].replace(/[^a-z0-9]/gi, "");
   if (!token) return "";

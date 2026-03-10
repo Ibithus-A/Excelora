@@ -44,6 +44,7 @@ function toName(user: User, role: UserRole): string {
 export function accountFromUser(user: User): AuthenticatedAccount {
   const role = getUserRole(user);
   return {
+    id: user.id,
     role,
     name: toName(user, role),
     email: user.email ?? "",
