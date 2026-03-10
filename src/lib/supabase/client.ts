@@ -10,8 +10,8 @@ export function createClient() {
   const { url, key } = getSupabaseEnv();
   browserClient = createBrowserClient(url, key, {
     auth: {
-      // Session-scoped auth: users must sign in again after closing the tab/window.
-      storage: window.sessionStorage,
+      // PKCE email flows may complete in a different tab, so keep auth state in localStorage.
+      storage: window.localStorage,
     },
   });
   return browserClient;
