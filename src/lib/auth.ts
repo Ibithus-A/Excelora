@@ -8,6 +8,19 @@ export function normalizeStudentName(value: string): string {
   return toDisplayName(value);
 }
 
+export function normalizeFirstName(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  const source = trimmed.includes("@") ? (trimmed.split("@")[0] ?? "") : trimmed;
+  const firstToken = source
+    .replace(/[._+-]+/g, " ")
+    .split(/\s+/)
+    .find(Boolean);
+
+  return toDisplayName(firstToken ?? "");
+}
+
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }

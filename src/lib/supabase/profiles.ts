@@ -1,4 +1,4 @@
-import { normalizeEmail, normalizeStudentName } from "@/lib/auth";
+import { normalizeEmail, normalizeFirstName } from "@/lib/auth";
 import {
   CHAPTER_ONE_TITLE,
   normalizeUserPlan,
@@ -23,22 +23,12 @@ function normalizeRole(value: unknown): UserRole {
   return value === "tutor" ? "tutor" : "student";
 }
 
-function toDisplayName(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-
-  return trimmed
-    .split(/\s+/)
-    .map((segment) => `${segment[0].toUpperCase()}${segment.slice(1).toLowerCase()}`)
-    .join(" ");
-}
-
 export function profileFromRow(row: ProfileRow): UserAccessProfile {
   const role = normalizeRole(row.role);
   const email = normalizeEmail(row.email ?? "");
   const name =
-    toDisplayName(row.full_name ?? "") ||
-    normalizeStudentName(email.split("@")[0] ?? "") ||
+    normalizeFirstName(row.full_name ?? "") ||
+    normalizeFirstName(email) ||
     (role === "tutor" ? "Tutor" : "Student");
   const plan = normalizeUserPlan(row.plan) ?? "basic";
 

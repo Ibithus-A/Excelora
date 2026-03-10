@@ -32,6 +32,12 @@ export function SignInPortal({
   const [info, setInfo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const buildAuthCallbackUrl = (nextPath: string) => {
+    const url = new URL("/auth/callback", window.location.origin);
+    url.searchParams.set("next", nextPath);
+    return url.toString();
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const supabase = createClient();
@@ -47,7 +53,7 @@ export function SignInPortal({
     }
 
     if (view === "forgot-password") {
-      const redirectTo = `${window.location.origin}/reset-password?flow=recovery`;
+      const redirectTo = buildAuthCallbackUrl("/reset-password?flow=recovery");
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo,
       });
@@ -84,7 +90,7 @@ export function SignInPortal({
         email: normalizedEmail,
         password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: buildAuthCallbackUrl("/"),
           data: {
             full_name: normalizedName,
           },
