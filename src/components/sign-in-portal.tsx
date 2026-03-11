@@ -14,7 +14,7 @@ type SignInPortalProps = {
   showCloseButton?: boolean;
 };
 
-type AuthView = "sign-in" | "sign-up" | "forgot-password";
+type AuthView = "sign-in" | "sign-up";
 
 function getInitialPortalState() {
   if (typeof window === "undefined") {
@@ -28,12 +28,6 @@ function getInitialPortalState() {
     return {
       view: "sign-in" as AuthView,
       info: "Email confirmed. Sign in with your email and password.",
-    };
-  }
-  if (url.searchParams.get("reset") === "expired") {
-    return {
-      view: "forgot-password" as AuthView,
-      info: "That reset link has expired. Enter your email and we will send a new one.",
     };
   }
   return {
@@ -60,9 +54,6 @@ export function SignInPortal({
     const url = new URL(window.location.href);
     if (url.searchParams.get("confirmed") === "1") {
       url.searchParams.delete("confirmed");
-    }
-    if (url.searchParams.get("reset") === "expired") {
-      url.searchParams.delete("reset");
     }
     window.history.replaceState({}, "", url.toString());
   }, []);
@@ -93,21 +84,6 @@ export function SignInPortal({
     if (!isValidEmail(normalizedEmail)) {
       setIsSubmitting(false);
       setError("Enter a valid email address.");
-      return;
-    }
-
-    if (view === "forgot-password") {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: buildAuthCallbackUrl("/reset-password"),
-      });
-      setIsSubmitting(false);
-
-      if (resetError) {
-        setError(resetError.message);
-        return;
-      }
-
-      setInfo("Password reset email sent. Check your inbox.");
       return;
     }
 
@@ -192,7 +168,7 @@ export function SignInPortal({
             <div>
               <p className="text-lg font-semibold text-zinc-900">Excelora Portal</p>
               <p className="text-xs text-zinc-500">
-                Create your account, sign in, or reset your password
+                Create your account or sign in
               </p>
             </div>
           </div>
@@ -273,33 +249,29 @@ export function SignInPortal({
               required
             />
             <p className="mt-1 text-xs text-zinc-500">
-              {view === "forgot-password"
-                ? "We will send a secure password reset link to this address."
-                : view === "sign-up"
+              {view === "sign-up"
                   ? "You will need to confirm your email before signing in."
                   : "Use the email address on your Excelora account."}
             </p>
           </div>
 
-          {view !== "forgot-password" ? (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-600">
-                {view === "sign-up" ? "Create Password" : "Password"}
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value);
-                  resetFeedback();
-                }}
-                placeholder="••••••••"
-                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-                autoComplete={view === "sign-up" ? "new-password" : "current-password"}
-                required
-              />
-            </div>
-          ) : null}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-600">
+              {view === "sign-up" ? "Create Password" : "Password"}
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                resetFeedback();
+              }}
+              placeholder="••••••••"
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+              autoComplete={view === "sign-up" ? "new-password" : "current-password"}
+              required
+            />
+          </div>
 
           {view === "sign-up" ? (
             <div>
@@ -333,16 +305,8 @@ export function SignInPortal({
             </p>
           ) : null}
 
-          <div className="flex items-center justify-between">
-            {view === "sign-in" ? (
-              <button
-                type="button"
-                onClick={() => switchView("forgot-password")}
-                className="text-xs text-zinc-600 underline-offset-2 hover:underline"
-              >
-                Forgot password?
-              </button>
-            ) : (
+          {view === "sign-up" ? (
+            <div className="flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => switchView("sign-in")}
@@ -350,8 +314,8 @@ export function SignInPortal({
               >
                 Back to sign in
               </button>
-            )}
-          </div>
+            </div>
+          ) : null}
 
           <button
             type="submit"
@@ -360,9 +324,7 @@ export function SignInPortal({
           >
             {isSubmitting
               ? "Please wait..."
-              : view === "forgot-password"
-                ? "Send Reset Email"
-                : view === "sign-up"
+              : view === "sign-up"
                   ? "Create Account"
                   : "Sign In"}
           </button>

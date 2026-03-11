@@ -1,6 +1,8 @@
 import { CHAPTER_ONE_TITLE, sanitizeUnlockedChapterTitles } from "@/lib/access";
 import { createRateLimiter } from "@/lib/security/rate-limit";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  getStudentProfileById,
   getViewerProfile,
   listStudentProfiles,
   updateStudentProfileAccess,
@@ -28,6 +30,10 @@ function writeAuditLog(action: string, actor: User, details: Record<string, stri
       ...details,
     }),
   );
+}
+
+function getMutationRateLimitKey(userId: string, method: string) {
+  return `${userId}:${method}:/api/students`;
 }
 
 function normalizePlan(value: unknown): UserPlan | null {
@@ -78,7 +84,7 @@ export async function PATCH(request: Request) {
     return Response.json({ error: "Forbidden." }, { status: 403 });
   }
 
-  const patchLimit = enforceTutorMutationRateLimit(`${user.id}:PATCH:/api/students`);
+  const patchLimit = enforceTutorMutationRateLimit(getMutationRateLimitKey(user.id, "PATCH"));
   if (!patchLimit.allowed) {
     return Response.json(
       { error: "Too many requests. Please retry shortly." },
@@ -127,6 +133,66 @@ export async function PATCH(request: Request) {
       error instanceof Error && error.message.trim()
         ? error.message
         : "Unable to update student access.";
+    const status = message === "Student profile not found." ? 404 : 500;
+    return Response.json({ error: message }, { status });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const { supabase, user } = await getAuthenticatedUser();
+  if (!user) {
+    return Response.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const viewer = await getViewerProfile(supabase, user.id);
+  if (!viewer) {
+    return Response.json({ error: "Profile not found." }, { status: 404 });
+  }
+  if (viewer.role !== "tutor") {
+    return Response.json({ error: "Forbidden." }, { status: 403 });
+  }
+
+  const deleteLimit = enforceTutorMutationRateLimit(getMutationRateLimitKey(user.id, "DELETE"));
+  if (!deleteLimit.allowed) {
+    return Response.json(
+      { error: "Too many requests. Please retry shortly." },
+      { status: 429, headers: { "Retry-After": String(deleteLimit.retryAfterSeconds) } },
+    );
+  }
+
+  try {
+    const body = (await request.json()) as { userId?: unknown };
+    if (typeof body.userId !== "string" || !body.userId.trim()) {
+      return Response.json({ error: "Student user id is required." }, { status: 400 });
+    }
+    if (body.userId === user.id) {
+      return Response.json({ error: "You cannot delete your own tutor account." }, { status: 400 });
+    }
+
+    const student = await getStudentProfileById(supabase, body.userId);
+    if (!student) {
+      return Response.json({ error: "Student profile not found." }, { status: 404 });
+    }
+
+    const admin = createAdminClient();
+    const { error } = await admin.auth.admin.deleteUser(body.userId);
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    writeAuditLog("delete_student", user, {
+      target_user_id: student.id,
+      target_email: student.email,
+      plan: student.plan,
+      unlocked_chapters: student.unlockedChapterTitles.join(", "),
+    });
+
+    return Response.json({ deletedUserId: student.id });
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.trim()
+        ? error.message
+        : "Unable to delete student.";
     const status = message === "Student profile not found." ? 404 : 500;
     return Response.json({ error: message }, { status });
   }

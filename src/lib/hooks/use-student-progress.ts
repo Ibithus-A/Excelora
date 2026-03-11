@@ -9,6 +9,7 @@ import {
   togglePremiumChapterAccess,
 } from "@/lib/access";
 import type {
+  DeleteStudentResult,
   UpdateStudentAccessInput,
   UpdateStudentAccessResult,
 } from "@/lib/hooks/use-students";
@@ -19,11 +20,14 @@ type UpdateStudentAccess = (
   input: UpdateStudentAccessInput,
 ) => Promise<UpdateStudentAccessResult>;
 
+type DeleteStudent = (userId: string) => Promise<DeleteStudentResult>;
+
 export function useStudentProgress(
   currentUser: AuthenticatedAccount | null,
   viewerProfile: UserAccessProfile | null,
   studentAccounts: UserAccessProfile[],
   updateStudentAccess: UpdateStudentAccess,
+  deleteStudent: DeleteStudent,
 ) {
   const [selectedStudentId, setSelectedStudentId] = useState(studentAccounts[0]?.id ?? "");
 
@@ -125,6 +129,23 @@ export function useStudentProgress(
     );
   };
 
+  const deleteSelectedStudent = async () => {
+    if (!selectedStudent) {
+      return { ok: false as const, error: "No student selected." };
+    }
+
+    const deletedStudentId = selectedStudent.id;
+    const result = await deleteStudent(deletedStudentId);
+    if (!result.ok) return result;
+
+    if (deletedStudentId === resolvedSelectedStudentId) {
+      const remainingStudents = studentAccounts.filter((student) => student.id !== deletedStudentId);
+      setSelectedStudentId(remainingStudents[0]?.id ?? "");
+    }
+
+    return result;
+  };
+
   return {
     selectedStudentId: resolvedSelectedStudentId,
     selectedStudent,
@@ -137,6 +158,7 @@ export function useStudentProgress(
     toggleChapterForSelectedStudent,
     setMilestoneForSelectedStudent,
     setPlanForSelectedStudent,
+    deleteSelectedStudent,
     chapterTitles: CHAPTER_TITLES,
     students: studentAccounts,
   };

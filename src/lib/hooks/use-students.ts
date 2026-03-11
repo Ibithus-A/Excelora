@@ -68,6 +68,10 @@ export type UpdateStudentAccessResult =
   | { ok: true; student: UserAccessProfile }
   | { ok: false; error: string };
 
+export type DeleteStudentResult =
+  | { ok: true; deletedUserId: string }
+  | { ok: false; error: string };
+
 export function useStudents(currentUserEmail?: string | null) {
   const [viewerProfile, setViewerProfile] = useState<UserAccessProfile | null>(null);
   const [students, setStudents] = useState<UserAccessProfile[]>([]);
@@ -146,6 +150,44 @@ export function useStudents(currentUserEmail?: string | null) {
     [],
   );
 
+  const deleteStudent = useCallback(async (userId: string): Promise<DeleteStudentResult> => {
+    try {
+      const response = await fetch("/api/students", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
+        return {
+          ok: false,
+          error:
+            typeof payload.error === "string" && payload.error.trim()
+              ? payload.error
+              : "Unable to delete student.",
+        };
+      }
+
+      const payload = (await response.json()) as { deletedUserId?: unknown };
+      if (typeof payload.deletedUserId !== "string" || !payload.deletedUserId.trim()) {
+        return {
+          ok: false,
+          error: "Unable to delete student.",
+        };
+      }
+
+      setStudents((prev) => prev.filter((student) => student.id !== payload.deletedUserId));
+
+      return { ok: true, deletedUserId: payload.deletedUserId };
+    } catch {
+      return {
+        ok: false,
+        error: "Network error. Please try again.",
+      };
+    }
+  }, []);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void hydrateStudents();
@@ -159,6 +201,7 @@ export function useStudents(currentUserEmail?: string | null) {
     viewerProfile,
     students: stableStudents,
     updateStudentAccess,
+    deleteStudent,
     refreshStudents: hydrateStudents,
   };
 }

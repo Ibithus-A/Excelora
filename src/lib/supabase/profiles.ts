@@ -95,6 +95,21 @@ export async function updateStudentProfileAccess(
   return profileFromRow(data);
 }
 
+export async function getStudentProfileById(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<UserAccessProfile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(PROFILE_SELECT)
+    .eq("id", userId)
+    .eq("role", "student")
+    .maybeSingle<ProfileRow>();
+
+  if (error) throw new Error(error.message);
+  return data ? profileFromRow(data) : null;
+}
+
 export function defaultUnlockedChaptersForPlan(plan: "basic" | "premium") {
   return sanitizeUnlockedChapterTitles([CHAPTER_ONE_TITLE], plan);
 }

@@ -28,6 +28,7 @@ type DashboardHomeProps = {
   onSetStudentPlan?: (plan: UserPlan) => Promise<void>;
   onSetMilestoneChapter?: (chapterTitle: string) => Promise<void>;
   onToggleChapter?: (chapterTitle: string) => Promise<void>;
+  onDeleteStudent?: () => Promise<{ ok: boolean; error?: string }>;
 };
 
 export function DashboardHome({
@@ -50,10 +51,13 @@ export function DashboardHome({
   onSetStudentPlan,
   onSetMilestoneChapter,
   onToggleChapter,
+  onDeleteStudent,
 }: DashboardHomeProps) {
   const [activeTab, setActiveTab] = useState<MetricTab>("reviewed");
   const [studentSearch, setStudentSearch] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isDeletingStudent, setIsDeletingStudent] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const activeMetric = useMemo(
     () =>
@@ -78,6 +82,27 @@ export function DashboardHome({
     return students.filter((student) => student.name.toLowerCase().includes(query));
   }, [studentSearch, students]);
   const searchValue = isSearchOpen ? studentSearch : (selectedStudent?.name ?? studentSearch);
+
+  const handleDeleteStudent = async () => {
+    if (!selectedStudent || !onDeleteStudent || isDeletingStudent) return;
+    const confirmed = window.confirm(
+      `Delete ${selectedStudent.name}? This permanently removes their account and access.`,
+    );
+    if (!confirmed) return;
+
+    setDeleteError("");
+    setIsDeletingStudent(true);
+    const result = await onDeleteStudent();
+    setIsDeletingStudent(false);
+
+    if (!result.ok) {
+      setDeleteError(result.error ?? "Unable to delete student.");
+      return;
+    }
+
+    setStudentSearch("");
+    setIsSearchOpen(false);
+  };
 
   return (
     <main className="h-screen w-screen overflow-y-auto bg-[var(--surface-app)] px-3 py-4 md:px-8 md:py-7">
@@ -287,6 +312,35 @@ export function DashboardHome({
                   </button>
                 </div>
               </div>
+
+              {selectedStudent ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-rose-600">
+                      Danger Zone
+                    </p>
+                    <p className="mt-1 text-sm text-rose-700">
+                      Delete this student account permanently from Excelora.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleDeleteStudent();
+                    }}
+                    disabled={isDeletingStudent}
+                    className="inline-flex items-center justify-center rounded-md border border-rose-300 bg-white px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isDeletingStudent ? "Deleting..." : "Delete Student"}
+                  </button>
+                </div>
+              ) : null}
+
+              {deleteError ? (
+                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700">
+                  {deleteError}
+                </div>
+              ) : null}
 
               {selectedStudentPlan === "basic" ? (
                 <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-700">
