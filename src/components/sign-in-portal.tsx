@@ -77,7 +77,7 @@ export function SignInPortal({
 
     if (view === "forgot-password") {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: buildAuthCallbackUrl("/reset-password"),
+        redirectTo: new URL("/reset-password", window.location.origin).toString(),
       });
       setIsSubmitting(false);
 
