@@ -52,8 +52,6 @@ export function AuthPasswordForm({
         const hashErrorDescription = hashParams.get("error_description");
         const hashErrorCode = hashParams.get("error_code");
 
-        await supabase.auth.signOut({ scope: "local" });
-
         const resolvedErrorDescription = errorDescription ?? hashErrorDescription;
         const resolvedErrorCode = errorCode ?? hashErrorCode;
 
