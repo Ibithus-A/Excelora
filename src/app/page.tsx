@@ -42,6 +42,41 @@ export default function HomePage() {
   const { sidebarWidth, startResize, isResizing } = useSidebarResize();
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.pathname !== "/") return;
+
+    const url = new URL(window.location.href);
+    const hash = window.location.hash.startsWith("#")
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    const hashParams = new URLSearchParams(hash);
+
+    const searchType = url.searchParams.get("type");
+    const hashType = hashParams.get("type");
+    const errorCode = url.searchParams.get("error_code") ?? hashParams.get("error_code");
+    const hasCode = url.searchParams.has("code");
+    const hasTokenHash = url.searchParams.has("token_hash");
+    const hasRecoverySession =
+      (hashParams.has("access_token") && hashParams.has("refresh_token")) ||
+      Boolean(hashParams.get("token_hash"));
+
+    const isRecoveryFlow =
+      searchType === "recovery" ||
+      hashType === "recovery" ||
+      hasCode ||
+      hasTokenHash ||
+      hasRecoverySession ||
+      errorCode === "otp_expired";
+
+    if (!isRecoveryFlow) return;
+
+    const destination = new URL("/reset-password", window.location.origin);
+    destination.search = url.search;
+    destination.hash = window.location.hash;
+    window.location.replace(destination.toString());
+  }, []);
+
+  useEffect(() => {
     const supabase = createClient();
     let isMounted = true;
 

@@ -42,15 +42,27 @@ export function AuthPasswordForm({
         const type = url.searchParams.get("type");
         const errorDescription = url.searchParams.get("error_description");
         const errorCode = url.searchParams.get("error_code");
+        const hash = window.location.hash.startsWith("#")
+          ? window.location.hash.slice(1)
+          : window.location.hash;
+        const hashParams = new URLSearchParams(hash);
+        const hashAccessToken = hashParams.get("access_token");
+        const hashRefreshToken = hashParams.get("refresh_token");
+        const hashType = hashParams.get("type");
+        const hashErrorDescription = hashParams.get("error_description");
+        const hashErrorCode = hashParams.get("error_code");
 
         await supabase.auth.signOut({ scope: "local" });
 
-        if (errorDescription) {
-          setError(decodeURIComponent(errorDescription));
+        const resolvedErrorDescription = errorDescription ?? hashErrorDescription;
+        const resolvedErrorCode = errorCode ?? hashErrorCode;
+
+        if (resolvedErrorDescription) {
+          setError(decodeURIComponent(resolvedErrorDescription));
           return;
         }
 
-        if (errorCode === "otp_expired") {
+        if (resolvedErrorCode === "otp_expired") {
           setError("This reset link has expired. Request a new password reset email.");
           return;
         }
@@ -68,6 +80,22 @@ export function AuthPasswordForm({
 
           url.searchParams.delete("token_hash");
           url.searchParams.delete("type");
+          window.history.replaceState({}, "", url.toString());
+        } else if (
+          hashAccessToken &&
+          hashRefreshToken &&
+          hashType === "recovery"
+        ) {
+          const { error: setSessionError } = await supabase.auth.setSession({
+            access_token: hashAccessToken,
+            refresh_token: hashRefreshToken,
+          });
+
+          if (setSessionError) {
+            setError(setSessionError.message);
+            return;
+          }
+
           window.history.replaceState({}, "", url.toString());
         } else if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
