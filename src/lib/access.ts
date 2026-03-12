@@ -1,4 +1,9 @@
-import { A_LEVEL_MATHS_CHAPTER_TITLES, A_LEVEL_MATHS_TITLE } from "@/lib/seed";
+import {
+  A_LEVEL_MATHS_CHAPTERS,
+  A_LEVEL_MATHS_CHAPTER_TITLES,
+  A_LEVEL_MATHS_TITLE,
+  END_OF_TOPIC_ASSESSMENT_TITLE,
+} from "@/lib/seed";
 import type { StudentDailyStats } from "@/types/dashboard";
 import type { FlowState } from "@/types/flowstate";
 import type { UserAccessProfile, UserPlan } from "@/types/auth";
@@ -15,35 +20,37 @@ export function normalizeUserPlan(value: unknown): UserPlan | null {
   return null;
 }
 
-export function sanitizeUnlockedChapterTitles(
-  unlockedChapterTitles: unknown,
-  plan: UserPlan,
-): string[] {
-  if (plan === "basic") return [CHAPTER_ONE_TITLE];
-  if (!Array.isArray(unlockedChapterTitles)) return [CHAPTER_ONE_TITLE];
-
+function buildCanonicalChapterTitleMap() {
   const canonicalTitles = new Map(
     CHAPTER_TITLES.map((title) => [normalizeTitle(title), title]),
   );
-  const unique = new Set<string>([CHAPTER_ONE_TITLE]);
+  return canonicalTitles;
+}
+
+export function sanitizeChapterTitle(chapterTitle: unknown): string | null {
+  if (typeof chapterTitle !== "string") return null;
+  return buildCanonicalChapterTitleMap().get(normalizeTitle(chapterTitle)) ?? null;
+}
+
+export function sanitizeTaggedChapterTitle(taggedChapterTitle: unknown): string | null {
+  return sanitizeChapterTitle(taggedChapterTitle);
+}
+
+export function sanitizeCustomUnlockedChapterTitles(unlockedChapterTitles: unknown): string[] {
+  if (!Array.isArray(unlockedChapterTitles)) return [];
+
+  const canonicalTitles = buildCanonicalChapterTitleMap();
+  const unique = new Set<string>();
 
   for (const title of unlockedChapterTitles) {
     if (typeof title !== "string") continue;
     const canonicalTitle = canonicalTitles.get(normalizeTitle(title));
     if (!canonicalTitle) continue;
+    if (normalizeTitle(canonicalTitle) === normalizeTitle(CHAPTER_ONE_TITLE)) continue;
     unique.add(canonicalTitle);
   }
 
   return CHAPTER_TITLES.filter((title) => unique.has(title));
-}
-
-export function hasChapterAccess(
-  unlockedChapterTitles: string[],
-  chapterTitle: string | null | undefined,
-): boolean {
-  if (!chapterTitle) return true;
-  const unlocked = new Set(unlockedChapterTitles.map(normalizeTitle));
-  return unlocked.has(normalizeTitle(chapterTitle));
 }
 
 export function buildUnlocksUpToChapter(chapterTitle: string): string[] {
@@ -54,8 +61,8 @@ export function buildUnlocksUpToChapter(chapterTitle: string): string[] {
   return CHAPTER_TITLES.slice(0, maxIndex + 1);
 }
 
-export function togglePremiumChapterAccess(
-  currentUnlocks: string[],
+export function toggleCustomChapterAccess(
+  currentCustomUnlocks: string[],
   chapterTitle: string,
 ): string[] {
   const canonicalTitle =
@@ -63,25 +70,48 @@ export function togglePremiumChapterAccess(
     chapterTitle;
 
   if (normalizeTitle(canonicalTitle) === normalizeTitle(CHAPTER_ONE_TITLE)) {
-    return sanitizeUnlockedChapterTitles(currentUnlocks, "premium");
+    return sanitizeCustomUnlockedChapterTitles(currentCustomUnlocks);
   }
 
-  const next = new Set(currentUnlocks);
+  const next = new Set(currentCustomUnlocks);
   if (next.has(canonicalTitle)) {
     next.delete(canonicalTitle);
   } else {
     next.add(canonicalTitle);
   }
-  next.add(CHAPTER_ONE_TITLE);
 
   return CHAPTER_TITLES.filter((title) => next.has(title));
 }
 
-export function getHighestUnlockedChapter(unlockedChapterTitles: string[]): string {
-  const unlocked = new Set(unlockedChapterTitles.map(normalizeTitle));
-  const highest = [...CHAPTER_TITLES]
-    .reverse()
-    .find((title) => unlocked.has(normalizeTitle(title)));
+type StudentAccessShape = Pick<
+  UserAccessProfile,
+  "plan" | "taggedChapterTitle" | "customUnlockedChapterTitles"
+>;
+
+export function resolveAccessibleChapterTitles(access: StudentAccessShape | null | undefined): string[] {
+  if (!access) return [CHAPTER_ONE_TITLE];
+  if (access.plan === "basic") return [CHAPTER_ONE_TITLE];
+
+  const taggedChapterTitle = sanitizeTaggedChapterTitle(access.taggedChapterTitle);
+  const taggedUnlocks = taggedChapterTitle ? buildUnlocksUpToChapter(taggedChapterTitle) : [CHAPTER_ONE_TITLE];
+  const customUnlocks = sanitizeCustomUnlockedChapterTitles(access.customUnlockedChapterTitles);
+  const accessible = new Set<string>([...taggedUnlocks, ...customUnlocks, CHAPTER_ONE_TITLE]);
+
+  return CHAPTER_TITLES.filter((title) => accessible.has(title));
+}
+
+export function hasChapterAccess(
+  access: StudentAccessShape | null | undefined,
+  chapterTitle: string | null | undefined,
+): boolean {
+  if (!chapterTitle) return false;
+  const accessible = new Set(resolveAccessibleChapterTitles(access).map(normalizeTitle));
+  return accessible.has(normalizeTitle(chapterTitle));
+}
+
+export function getHighestAccessibleChapter(access: StudentAccessShape | null | undefined): string {
+  const accessible = new Set(resolveAccessibleChapterTitles(access).map(normalizeTitle));
+  const highest = [...CHAPTER_TITLES].reverse().find((title) => accessible.has(normalizeTitle(title)));
   return highest ?? CHAPTER_ONE_TITLE;
 }
 
@@ -117,7 +147,10 @@ function getMathRootId(state: FlowState): string | null {
   );
 }
 
-export function getChapterTitleForNode(state: FlowState, nodeId: string): string | null {
+function getChapterNodeForNode(
+  state: FlowState,
+  nodeId: string,
+): { chapterId: string; chapterTitle: string } | null {
   const mathRootId = getMathRootId(state);
   if (!mathRootId) return null;
 
@@ -127,7 +160,7 @@ export function getChapterTitleForNode(state: FlowState, nodeId: string): string
       cursor.parentId === mathRootId &&
       CHAPTER_TITLES.some((title) => normalizeTitle(title) === normalizeTitle(cursor.title))
     ) {
-      return cursor.title;
+      return { chapterId: cursor.id, chapterTitle: cursor.title };
     }
 
     if (!cursor.parentId) break;
@@ -137,23 +170,69 @@ export function getChapterTitleForNode(state: FlowState, nodeId: string): string
   return null;
 }
 
+export function getChapterTitleForNode(state: FlowState, nodeId: string): string | null {
+  return getChapterNodeForNode(state, nodeId)?.chapterTitle ?? null;
+}
+
+const STUDENT_PAGE_TITLES_BY_CHAPTER = new Map(
+  A_LEVEL_MATHS_CHAPTERS.map((chapter) => [
+    normalizeTitle(chapter.title),
+    new Set(
+      [...chapter.subtopics, END_OF_TOPIC_ASSESSMENT_TITLE].map((title) =>
+        normalizeTitle(title),
+      ),
+    ),
+  ]),
+);
+
 export function canAccessNode(
   state: FlowState,
   nodeId: string,
-  unlockedChapterTitles: string[],
+  access: StudentAccessShape | null | undefined,
 ): boolean {
-  const chapterTitle = getChapterTitleForNode(state, nodeId);
-  return hasChapterAccess(unlockedChapterTitles, chapterTitle);
+  const node = state.nodes[nodeId];
+  if (!node) return false;
+
+  const mathRootId = getMathRootId(state);
+  if (!mathRootId) return false;
+  if (node.id === mathRootId) return true;
+
+  const chapter = getChapterNodeForNode(state, nodeId);
+  if (!chapter) return false;
+  if (!hasChapterAccess(access, chapter.chapterTitle)) return false;
+
+  if (node.id === chapter.chapterId) return true;
+  if (node.kind !== "page") return false;
+  if (node.parentId !== chapter.chapterId) return false;
+
+  const allowedPageTitles = STUDENT_PAGE_TITLES_BY_CHAPTER.get(
+    normalizeTitle(chapter.chapterTitle),
+  );
+  if (!allowedPageTitles) return false;
+
+  return allowedPageTitles.has(normalizeTitle(node.title));
 }
 
-export function getLockedChapterMessage(profile: UserAccessProfile | null): string {
+export function getLockedChapterMessage(
+  profile: UserAccessProfile | null,
+  state?: FlowState,
+  nodeId?: string | null,
+): string {
   if (!profile) {
     return "This chapter is locked. Sign in to view your available chapters.";
+  }
+
+  if (state && nodeId) {
+    const node = state.nodes[nodeId];
+    const chapter = getChapterNodeForNode(state, nodeId);
+    if (node && chapter && hasChapterAccess(profile, chapter.chapterTitle)) {
+      return "Students can only open subtopic pages and Assessment pages inside chapters they can access.";
+    }
   }
 
   if (profile.plan === "basic") {
     return "This chapter is locked on the Basic Plan. Ask a tutor to upgrade your account to Premium.";
   }
 
-  return "This chapter is locked. Ask your tutor to unlock it on your Premium plan.";
+  return "This chapter is locked. Ask your tutor to tag the chapter or custom unlock it on your Premium plan.";
 }

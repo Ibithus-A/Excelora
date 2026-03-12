@@ -6,8 +6,6 @@ import type { UserAccessProfile, UserPlan, UserRole } from "@/types/auth";
 import type { StudentDailyStats } from "@/types/dashboard";
 import { useMemo, useState } from "react";
 
-type MetricTab = "reviewed" | "due";
-
 type DashboardHomeProps = {
   name: string;
   role: UserRole;
@@ -23,7 +21,8 @@ type DashboardHomeProps = {
   selectedStudentPlan?: UserPlan;
   selectedStudentMilestone?: string | null;
   chapterTagsByTitle?: Record<string, Array<{ id: string; name: string; email: string }>>;
-  unlockedChapterTitles?: string[];
+  accessibleChapterTitles?: string[];
+  customUnlockedChapterTitles?: string[];
   onSelectStudent?: (studentId: string) => void;
   onSetStudentPlan?: (plan: UserPlan) => Promise<void>;
   onSetMilestoneChapter?: (chapterTitle: string) => Promise<void>;
@@ -37,7 +36,6 @@ export function DashboardHome({
   onOpenWorkspace,
   onSignOut,
   onSwitchAccount,
-  stats,
   currentPlan = "basic",
   chapterTitles = [],
   students = [],
@@ -46,34 +44,18 @@ export function DashboardHome({
   selectedStudentPlan = "basic",
   selectedStudentMilestone,
   chapterTagsByTitle = {},
-  unlockedChapterTitles = [],
+  accessibleChapterTitles = [],
+  customUnlockedChapterTitles = [],
   onSelectStudent,
   onSetStudentPlan,
   onSetMilestoneChapter,
   onToggleChapter,
   onDeleteStudent,
 }: DashboardHomeProps) {
-  const [activeTab, setActiveTab] = useState<MetricTab>("reviewed");
   const [studentSearch, setStudentSearch] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
   const [deleteError, setDeleteError] = useState("");
-
-  const activeMetric = useMemo(
-    () =>
-      activeTab === "reviewed"
-        ? {
-            title: "Modules Reviewed Today",
-            value: stats.reviewedToday,
-            detail: "Strong momentum. Keep your streak alive.",
-          }
-        : {
-            title: "Modules to Review Today",
-            value: stats.dueToday,
-            detail: "Focus on these first for best retention.",
-          },
-    [activeTab, stats.dueToday, stats.reviewedToday],
-  );
 
   const visibleStudents = useMemo(() => {
     const query = studentSearch.trim().toLowerCase();
@@ -81,8 +63,6 @@ export function DashboardHome({
 
     return students.filter((student) => student.name.toLowerCase().includes(query));
   }, [studentSearch, students]);
-  const searchValue = isSearchOpen ? studentSearch : (selectedStudent?.name ?? studentSearch);
-
   const handleDeleteStudent = async () => {
     if (!selectedStudent || !onDeleteStudent || isDeletingStudent) return;
     const confirmed = window.confirm(
@@ -175,71 +155,61 @@ export function DashboardHome({
           </article>
 
           <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-1">
-              <button
-                type="button"
-                onClick={() => setActiveTab("reviewed")}
-                className={[
-                  "flex-1 rounded-md px-3 py-2 text-sm transition",
-                  activeTab === "reviewed"
-                    ? "bg-white font-medium text-zinc-900 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-700",
-                ].join(" ")}
-              >
-                Modules Reviewed
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("due")}
-                className={[
-                  "flex-1 rounded-md px-3 py-2 text-sm transition",
-                  activeTab === "due"
-                    ? "bg-white font-medium text-zinc-900 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-700",
-                ].join(" ")}
-              >
-                Modules to Review
-              </button>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-500">
+                Module Review
+              </h2>
+              <span className="rounded-full border border-zinc-300 bg-zinc-100 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">
+                Coming Soon
+              </span>
             </div>
 
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-xs uppercase tracking-[0.1em] text-zinc-500">{activeMetric.title}</p>
-              <p className="mt-2 text-4xl font-semibold tracking-tight text-zinc-900">
-                {activeMetric.value}
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-10 text-center">
+              <p className="text-lg font-semibold text-zinc-800">Coming Soon</p>
+              <p className="mt-2 text-sm text-zinc-600">
+                Module review tracking is planned for a future update.
               </p>
-              <p className="mt-2 text-sm text-zinc-600">{activeMetric.detail}</p>
             </div>
           </article>
         </div>
 
         {role === "tutor" && chapterTitles.length > 0 ? (
           <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
-            <div className="mb-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-sm font-semibold text-zinc-800">
-                    Student Chapter Access
-                  </h2>
-                  <p className="mt-1 text-sm leading-5 text-zinc-600">
-                    Every new user starts on Basic with Chapter 1 only. Upgrade a student to Premium before unlocking any additional chapters.
-                  </p>
-                </div>
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-500">
+                Student Management
+              </h2>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="flex flex-wrap items-start justify-start gap-4">
                 {students.length > 0 ? (
                   <div className="relative w-full max-w-[320px]">
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-zinc-500">
-                      Find A User
-                    </label>
-                    <input
-                      type="search"
-                      value={searchValue}
-                      onFocus={() => setIsSearchOpen(true)}
-                      onChange={(event) => {
-                        setStudentSearch(event.target.value);
-                        setIsSearchOpen(true);
-                      }}
-                      placeholder="Start typing a name..."
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={studentSearch}
+                        onFocus={() => setIsSearchOpen(true)}
+                        onChange={(event) => {
+                          setStudentSearch(event.target.value);
+                          setIsSearchOpen(true);
+                        }}
+                        placeholder="Start typing a name..."
+                        className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 pr-16 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+                      />
+                      {studentSearch ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStudentSearch("");
+                            setIsSearchOpen(false);
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
+                        >
+                          Clear
+                        </button>
+                      ) : null}
+                    </div>
                     {isSearchOpen && studentSearch.trim() ? (
                       <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
                         {visibleStudents.length > 0 ? (
@@ -281,70 +251,62 @@ export function DashboardHome({
                   </p>
                 </div>
 
-                <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-50 p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void onSetStudentPlan?.("basic");
-                    }}
-                    className={[
-                      "rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] transition",
-                      selectedStudentPlan === "basic"
-                        ? "bg-white text-zinc-900 shadow-sm"
-                        : "text-zinc-500 hover:text-zinc-800",
-                    ].join(" ")}
-                  >
-                    Basic
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void onSetStudentPlan?.("premium");
-                    }}
-                    className={[
-                      "rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] transition",
-                      selectedStudentPlan === "premium"
-                        ? "bg-white text-zinc-900 shadow-sm"
-                        : "text-zinc-500 hover:text-zinc-800",
-                    ].join(" ")}
-                  >
-                    Premium
-                  </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative grid grid-cols-2 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+                    <span
+                      aria-hidden="true"
+                      className={[
+                        "pointer-events-none absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-lg bg-white shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                        selectedStudentPlan === "premium" ? "translate-x-full" : "translate-x-0",
+                      ].join(" ")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void onSetStudentPlan?.("basic");
+                      }}
+                      className={[
+                        "relative z-10 rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] transition-colors duration-300",
+                        selectedStudentPlan === "basic"
+                          ? "text-zinc-900"
+                          : "text-zinc-500 hover:text-zinc-800",
+                      ].join(" ")}
+                    >
+                      Basic
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void onSetStudentPlan?.("premium");
+                      }}
+                      className={[
+                        "relative z-10 rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] transition-colors duration-300",
+                        selectedStudentPlan === "premium"
+                          ? "text-zinc-900"
+                          : "text-zinc-500 hover:text-zinc-800",
+                      ].join(" ")}
+                    >
+                      Premium
+                    </button>
+                  </div>
+                  {selectedStudent ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleDeleteStudent();
+                      }}
+                      disabled={isDeletingStudent}
+                      className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isDeletingStudent ? "Deleting..." : "Delete Student"}
+                    </button>
+                  ) : null}
                 </div>
               </div>
-
-              {selectedStudent ? (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-rose-600">
-                      Danger Zone
-                    </p>
-                    <p className="mt-1 text-sm text-rose-700">
-                      Delete this student account permanently from Excelora.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleDeleteStudent();
-                    }}
-                    disabled={isDeletingStudent}
-                    className="inline-flex items-center justify-center rounded-md border border-rose-300 bg-white px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isDeletingStudent ? "Deleting..." : "Delete Student"}
-                  </button>
-                </div>
-              ) : null}
 
               {deleteError ? (
                 <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700">
                   {deleteError}
-                </div>
-              ) : null}
-
-              {selectedStudentPlan === "basic" ? (
-                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-700">
-                  Basic users are restricted to Chapter 1. Upgrade to Premium before unlocking any additional chapters.
                 </div>
               ) : null}
 
@@ -353,7 +315,7 @@ export function DashboardHome({
                   Milestone: {selectedStudentMilestone ?? "Not tagged"}
                 </span>
                 <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1">
-                  Unlocked: {unlockedChapterTitles.length} / {chapterTitles.length}
+                  Unlocked: {accessibleChapterTitles.length} / {chapterTitles.length}
                 </span>
               </div>
             </div>
@@ -361,10 +323,19 @@ export function DashboardHome({
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
               {chapterTitles.map((chapterTitle) => {
                 const isAlwaysUnlocked = chapterTitle === CHAPTER_ONE_TITLE;
-                const canUseCustomUnlock = selectedStudentPlan === "premium";
                 const isUnlocked =
-                  isAlwaysUnlocked || unlockedChapterTitles.includes(chapterTitle);
+                  isAlwaysUnlocked || accessibleChapterTitles.includes(chapterTitle);
                 const isMilestone = selectedStudentMilestone === chapterTitle;
+                const isCustomUnlocked = customUnlockedChapterTitles.includes(chapterTitle);
+                const milestoneIndex = selectedStudentMilestone
+                  ? chapterTitles.indexOf(selectedStudentMilestone)
+                  : -1;
+                const chapterIndex = chapterTitles.indexOf(chapterTitle);
+                const isManagedByTag =
+                  milestoneIndex >= 0 &&
+                  chapterIndex >= 0 &&
+                  chapterIndex <= milestoneIndex &&
+                  !isCustomUnlocked;
                 const chapterTags = chapterTagsByTitle[chapterTitle] ?? [];
 
                 return (
@@ -387,12 +358,9 @@ export function DashboardHome({
                           onClick={() => {
                             void onSetMilestoneChapter?.(chapterTitle);
                           }}
-                          disabled={!canUseCustomUnlock}
                           className={[
                             "rounded-md border px-2.5 py-1 text-xs font-medium transition",
-                            canUseCustomUnlock
-                              ? "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100"
-                              : "cursor-not-allowed border-zinc-200 bg-white text-zinc-400",
+                            "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100",
                           ].join(" ")}
                         >
                           {isMilestone ? "Tagged" : "Tag"}
@@ -437,21 +405,21 @@ export function DashboardHome({
                         onClick={() => {
                           void onToggleChapter?.(chapterTitle);
                         }}
-                        disabled={isAlwaysUnlocked || !canUseCustomUnlock}
+                        disabled={isAlwaysUnlocked || isManagedByTag}
                         className={[
                           "rounded-md border px-2.5 py-1 text-xs",
                           isUnlocked
                             ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                             : "border-zinc-200 bg-white text-zinc-600",
-                          isAlwaysUnlocked || !canUseCustomUnlock
+                          isAlwaysUnlocked || isManagedByTag
                             ? "cursor-not-allowed opacity-70"
                             : "",
                         ].join(" ")}
                       >
                         {isAlwaysUnlocked
                           ? "Always Unlocked"
-                          : !canUseCustomUnlock
-                            ? "Premium Only"
+                          : isManagedByTag
+                            ? "Tagged Access"
                             : isUnlocked
                               ? "Unlocked"
                               : "Locked"}

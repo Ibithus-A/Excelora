@@ -1,8 +1,8 @@
-import { normalizeEmail, normalizeFirstName } from "@/lib/auth";
+import { normalizeEmail, resolveDisplayFirstName } from "@/lib/auth";
 import {
-  CHAPTER_ONE_TITLE,
   normalizeUserPlan,
-  sanitizeUnlockedChapterTitles,
+  sanitizeCustomUnlockedChapterTitles,
+  sanitizeTaggedChapterTitle,
 } from "@/lib/access";
 import type { UserAccessProfile, UserRole } from "@/types/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -13,11 +13,12 @@ type ProfileRow = {
   full_name: string | null;
   role: UserRole | null;
   plan: string | null;
+  tagged_chapter: string | null;
   unlocked_chapters: string[] | null;
 };
 
 export const PROFILE_SELECT =
-  "id, email, full_name, role, plan, unlocked_chapters";
+  "id, email, full_name, role, plan, tagged_chapter, unlocked_chapters";
 
 function normalizeRole(value: unknown): UserRole {
   return value === "tutor" ? "tutor" : "student";
@@ -26,10 +27,7 @@ function normalizeRole(value: unknown): UserRole {
 export function profileFromRow(row: ProfileRow): UserAccessProfile {
   const role = normalizeRole(row.role);
   const email = normalizeEmail(row.email ?? "");
-  const name =
-    normalizeFirstName(row.full_name ?? "") ||
-    normalizeFirstName(email) ||
-    (role === "tutor" ? "Tutor" : "Student");
+  const name = resolveDisplayFirstName(row.full_name ?? "", email, role);
   const plan = normalizeUserPlan(row.plan) ?? "basic";
 
   return {
@@ -38,7 +36,8 @@ export function profileFromRow(row: ProfileRow): UserAccessProfile {
     name,
     role,
     plan,
-    unlockedChapterTitles: sanitizeUnlockedChapterTitles(row.unlocked_chapters ?? [], plan),
+    taggedChapterTitle: sanitizeTaggedChapterTitle(row.tagged_chapter),
+    customUnlockedChapterTitles: sanitizeCustomUnlockedChapterTitles(row.unlocked_chapters ?? []),
   };
 }
 
@@ -74,13 +73,15 @@ export async function updateStudentProfileAccess(
   supabase: SupabaseClient,
   userId: string,
   plan: "basic" | "premium",
-  unlockedChapterTitles: string[],
+  taggedChapterTitle: string | null,
+  customUnlockedChapterTitles: string[],
 ): Promise<UserAccessProfile> {
   const { data, error } = await supabase
     .from("profiles")
     .update({
       plan,
-      unlocked_chapters: sanitizeUnlockedChapterTitles(unlockedChapterTitles, plan),
+      tagged_chapter: sanitizeTaggedChapterTitle(taggedChapterTitle),
+      unlocked_chapters: sanitizeCustomUnlockedChapterTitles(customUnlockedChapterTitles),
     })
     .eq("id", userId)
     .eq("role", "student")
@@ -108,8 +109,4 @@ export async function getStudentProfileById(
 
   if (error) throw new Error(error.message);
   return data ? profileFromRow(data) : null;
-}
-
-export function defaultUnlockedChaptersForPlan(plan: "basic" | "premium") {
-  return sanitizeUnlockedChapterTitles([CHAPTER_ONE_TITLE], plan);
 }

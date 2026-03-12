@@ -1,21 +1,7 @@
 import type { User } from "@supabase/supabase-js";
+import { normalizeFirstName, resolveDisplayFirstName } from "@/lib/auth";
 import { getUserRole } from "@/lib/supabase/roles";
 import type { AuthenticatedAccount, UserRole } from "@/types/auth";
-
-function toDisplayName(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-
-  return trimmed
-    .split(/\s+/)
-    .map((segment) => `${segment[0].toUpperCase()}${segment.slice(1).toLowerCase()}`)
-    .join(" ");
-}
-
-function toFirstName(value: string): string {
-  const parts = toDisplayName(value).split(/\s+/).filter(Boolean);
-  return parts[0] ?? "";
-}
 
 function resolveMetadataName(user: User): string {
   const candidates = [
@@ -27,7 +13,7 @@ function resolveMetadataName(user: User): string {
 
   for (const value of candidates) {
     if (typeof value !== "string") continue;
-    const firstName = toFirstName(value);
+    const firstName = normalizeFirstName(value);
     if (firstName) return firstName;
   }
 
@@ -36,9 +22,7 @@ function resolveMetadataName(user: User): string {
 
 function toName(user: User, role: UserRole): string {
   const normalizedMetadataName = resolveMetadataName(user);
-  if (normalizedMetadataName) return normalizedMetadataName;
-
-  return role === "tutor" ? "Tutor" : "Student";
+  return resolveDisplayFirstName(normalizedMetadataName, user.email ?? "", role);
 }
 
 export function accountFromUser(user: User): AuthenticatedAccount {

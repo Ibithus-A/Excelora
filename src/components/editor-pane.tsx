@@ -1,6 +1,6 @@
 "use client";
 
-import { canAccessNode } from "@/lib/access";
+import { canAccessNode, getLockedChapterMessage } from "@/lib/access";
 import { EditorActionsDrawer } from "@/components/editor-actions-drawer";
 import { useFlowState } from "@/context/flowstate-context";
 import { DUPLICATE_PAGE_NAME_MESSAGE } from "@/lib/constants/messages";
@@ -10,6 +10,7 @@ import {
   getNodeLockInfo,
   hasDuplicatePageTitleInParent,
 } from "@/lib/tree-utils";
+import type { UserAccessProfile } from "@/types/auth";
 import { useMemo, useRef, useState } from "react";
 
 type SlashOption = {
@@ -21,8 +22,7 @@ type SlashOption = {
 
 type EditorPaneProps = {
   role: "tutor" | "student";
-  unlockedChapterTitles?: string[];
-  lockedChapterMessage?: string;
+  viewerProfile?: UserAccessProfile | null;
 };
 
 const SLASH_OPTIONS: SlashOption[] = [
@@ -99,8 +99,7 @@ function materializeTemplate(template: string) {
 
 export function EditorPane({
   role,
-  unlockedChapterTitles = [],
-  lockedChapterMessage = "This chapter is locked.",
+  viewerProfile = null,
 }: EditorPaneProps) {
   const { state, updateContent, updateTitle } = useFlowState();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -122,8 +121,12 @@ export function EditorPane({
   const canEditContent = !isStudent;
   const isAccessBlocked =
     isStudent && selectedNode
-      ? !canAccessNode(state, selectedNode.id, unlockedChapterTitles)
+      ? !canAccessNode(state, selectedNode.id, viewerProfile)
       : false;
+  const lockedChapterMessage =
+    isAccessBlocked && selectedNode
+      ? getLockedChapterMessage(viewerProfile, state, selectedNode.id)
+      : "This chapter is locked.";
 
   const slashOptions = useMemo(() => {
     if (!canEditContent) return [];

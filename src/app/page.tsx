@@ -5,7 +5,6 @@ import { EditorPane } from "@/components/editor-pane";
 import { SignInPortal } from "@/components/sign-in-portal";
 import { Sidebar } from "@/components/sidebar";
 import { FlowStateProvider } from "@/context/flowstate-context";
-import { CHAPTER_ONE_TITLE, getLockedChapterMessage } from "@/lib/access";
 import { useStudentProgress } from "@/lib/hooks/use-student-progress";
 import { useStudents } from "@/lib/hooks/use-students";
 import { accountFromUser } from "@/lib/supabase/account";
@@ -30,6 +29,7 @@ export default function HomePage() {
     selectedStudent,
     selectedStudentPlan,
     activeStudentUnlocks,
+    selectedStudentCustomUnlocks,
     currentStudentStats,
     selectedStudentMilestone,
     chapterTagsByTitle,
@@ -123,7 +123,8 @@ export default function HomePage() {
             selectedStudentPlan={selectedStudentPlan}
             selectedStudentMilestone={selectedStudentMilestone}
             chapterTagsByTitle={chapterTagsByTitle}
-            unlockedChapterTitles={activeStudentUnlocks}
+            accessibleChapterTitles={activeStudentUnlocks}
+            customUnlockedChapterTitles={selectedStudentCustomUnlocks}
             onSelectStudent={selectStudent}
             onSetStudentPlan={setPlanForSelectedStudent}
             onSetMilestoneChapter={setMilestoneForSelectedStudent}
@@ -155,7 +156,7 @@ export default function HomePage() {
                 <Sidebar
                   onOpenDashboard={handleOpenDashboardFromSidebar}
                   role={effectiveCurrentUser.role}
-                  unlockedChapterTitles={viewerProfile?.unlockedChapterTitles ?? [CHAPTER_ONE_TITLE]}
+                  viewerProfile={viewerProfile}
                 />
                 <div
                   className="absolute inset-y-0 right-0 hidden w-2 cursor-col-resize lg:block"
@@ -170,8 +171,7 @@ export default function HomePage() {
             <div className="h-full">
               <EditorPane
                 role={effectiveCurrentUser.role}
-                unlockedChapterTitles={viewerProfile?.unlockedChapterTitles ?? [CHAPTER_ONE_TITLE]}
-                lockedChapterMessage={getLockedChapterMessage(viewerProfile)}
+                viewerProfile={viewerProfile}
               />
             </div>
           </div>

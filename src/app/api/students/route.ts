@@ -1,4 +1,7 @@
-import { CHAPTER_ONE_TITLE, sanitizeUnlockedChapterTitles } from "@/lib/access";
+import {
+  sanitizeCustomUnlockedChapterTitles,
+  sanitizeTaggedChapterTitle,
+} from "@/lib/access";
 import { createRateLimiter } from "@/lib/security/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -96,7 +99,8 @@ export async function PATCH(request: Request) {
     const body = (await request.json()) as {
       userId?: unknown;
       plan?: unknown;
-      unlockedChapterTitles?: unknown;
+      taggedChapterTitle?: unknown;
+      customUnlockedChapterTitles?: unknown;
     };
 
     if (typeof body.userId !== "string" || !body.userId.trim()) {
@@ -108,23 +112,25 @@ export async function PATCH(request: Request) {
       return Response.json({ error: "Plan must be basic or premium." }, { status: 400 });
     }
 
-    const unlockedChapterTitles = sanitizeUnlockedChapterTitles(
-      Array.isArray(body.unlockedChapterTitles) ? body.unlockedChapterTitles : [CHAPTER_ONE_TITLE],
-      plan,
+    const taggedChapterTitle = sanitizeTaggedChapterTitle(body.taggedChapterTitle);
+    const customUnlockedChapterTitles = sanitizeCustomUnlockedChapterTitles(
+      body.customUnlockedChapterTitles,
     );
 
     const updated = await updateStudentProfileAccess(
       supabase,
       body.userId,
       plan,
-      unlockedChapterTitles,
+      taggedChapterTitle,
+      customUnlockedChapterTitles,
     );
 
     writeAuditLog("update_student_access", user, {
       target_user_id: updated.id,
       target_email: updated.email,
       plan: updated.plan,
-      unlocked_chapters: updated.unlockedChapterTitles.join(", "),
+      tagged_chapter: updated.taggedChapterTitle ?? "",
+      custom_unlocked_chapters: updated.customUnlockedChapterTitles.join(", "),
     });
 
     return Response.json({ student: updated as UserAccessProfile });
@@ -184,7 +190,8 @@ export async function DELETE(request: Request) {
       target_user_id: student.id,
       target_email: student.email,
       plan: student.plan,
-      unlocked_chapters: student.unlockedChapterTitles.join(", "),
+      tagged_chapter: student.taggedChapterTitle ?? "",
+      custom_unlocked_chapters: student.customUnlockedChapterTitles.join(", "),
     });
 
     return Response.json({ deletedUserId: student.id });

@@ -4,6 +4,20 @@ function toDisplayName(value: string): string {
   return `${token[0].toUpperCase()}${token.slice(1)}`;
 }
 
+export function resolveDisplayFirstName(
+  name: string,
+  email: string,
+  role: "tutor" | "student",
+): string {
+  const normalizedName = normalizeFirstName(name);
+  if (normalizedName) return normalizedName;
+
+  const emailName = normalizeFirstName(email);
+  if (emailName) return emailName;
+
+  return role === "tutor" ? "Tutor" : "Student";
+}
+
 export function normalizeStudentName(value: string): string {
   return toDisplayName(value);
 }

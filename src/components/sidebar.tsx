@@ -5,13 +5,14 @@ import { FlowLogoIcon, FolderIcon, PlusIcon } from "@/components/icons";
 import { SidebarNode } from "@/components/sidebar-node";
 import { useFlowState } from "@/context/flowstate-context";
 import { A_LEVEL_MATHS_TITLE } from "@/lib/seed";
+import type { UserAccessProfile } from "@/types/auth";
 import type { DragEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type SidebarProps = {
   onOpenDashboard?: () => void;
   role?: "tutor" | "student";
-  unlockedChapterTitles?: string[];
+  viewerProfile?: UserAccessProfile | null;
 };
 
 function collectSubtreeIds(
@@ -35,7 +36,7 @@ function normalizeTitle(title: string) {
 export function Sidebar({
   onOpenDashboard,
   role = "tutor",
-  unlockedChapterTitles = [],
+  viewerProfile = null,
 }: SidebarProps) {
   const {
     state,
@@ -82,17 +83,17 @@ export function Sidebar({
     const chapters = state.nodes[mathRootId]?.childrenIds ?? [];
     for (const chapterId of chapters) {
       visibleIds.add(chapterId);
-      if (!canAccessNode(state, chapterId, unlockedChapterTitles)) {
-        continue;
+      for (const childId of state.nodes[chapterId]?.childrenIds ?? []) {
+        if (!canAccessNode(state, childId, viewerProfile)) continue;
+        collectSubtreeIds(state.nodes, childId, visibleIds);
       }
-      collectSubtreeIds(state.nodes, chapterId, visibleIds);
     }
 
     return {
       visibleRootIds: [mathRootId],
       visibleNodeIds: visibleIds,
     };
-  }, [isStudent, state, unlockedChapterTitles]);
+  }, [isStudent, state, viewerProfile]);
 
   useEffect(() => {
     if (!isStudent) return;
@@ -108,7 +109,11 @@ export function Sidebar({
   useEffect(() => {
     if (!isStudent) return;
 
-    const accessKey = unlockedChapterTitles.join("||");
+    const accessKey = JSON.stringify({
+      plan: viewerProfile?.plan ?? "basic",
+      taggedChapterTitle: viewerProfile?.taggedChapterTitle ?? null,
+      customUnlockedChapterTitles: viewerProfile?.customUnlockedChapterTitles ?? [],
+    });
     if (lastStudentAccessKeyRef.current === accessKey) return;
     lastStudentAccessKeyRef.current = accessKey;
 
@@ -121,7 +126,7 @@ export function Sidebar({
       const node = state.nodes[nodeId];
       if (!node || node.kind !== "folder") continue;
       if (node.parentId !== mathRootId) continue;
-      if (!canAccessNode(state, nodeId, unlockedChapterTitles)) continue;
+      if (!canAccessNode(state, nodeId, viewerProfile)) continue;
       if (!node.isExpanded) {
         toggleExpanded(nodeId);
       }
@@ -129,10 +134,10 @@ export function Sidebar({
   }, [
     isStudent,
     state,
-    unlockedChapterTitles,
     toggleExpanded,
     visibleNodeIds,
     visibleRootIds,
+    viewerProfile,
   ]);
 
   const handleRootDrop = (event: DragEvent<HTMLDivElement>) => {
@@ -305,7 +310,7 @@ export function Sidebar({
               isLockedNode={(id) =>
                 isStudent &&
                 visibleNodeIds.has(id) &&
-                !canAccessNode(state, id, unlockedChapterTitles)
+                !canAccessNode(state, id, viewerProfile)
               }
             />
           ))

@@ -1,12 +1,11 @@
 "use client";
 
 import {
-  CHAPTER_ONE_TITLE,
   CHAPTER_TITLES,
   buildStudentStats,
-  buildUnlocksUpToChapter,
-  getHighestUnlockedChapter,
-  togglePremiumChapterAccess,
+  resolveAccessibleChapterTitles,
+  sanitizeTaggedChapterTitle,
+  toggleCustomChapterAccess,
 } from "@/lib/access";
 import type {
   DeleteStudentResult,
@@ -42,15 +41,16 @@ export function useStudentProgress(
     [resolvedSelectedStudentId, studentAccounts],
   );
 
-  const activeStudentUnlocks =
+  const activeStudentAccess =
     currentUser?.role === "student"
-      ? viewerProfile?.unlockedChapterTitles ?? [CHAPTER_ONE_TITLE]
-      : selectedStudent?.unlockedChapterTitles ?? [CHAPTER_ONE_TITLE];
+      ? viewerProfile
+      : selectedStudent;
+  const activeStudentUnlocks = resolveAccessibleChapterTitles(activeStudentAccess ?? null);
 
   const statsByStudent = useMemo(() => {
     const entries = studentAccounts.map((student, index) => [
       student.id,
-      buildStudentStats(student.unlockedChapterTitles.length, index + 1),
+      buildStudentStats(resolveAccessibleChapterTitles(student).length, index + 1),
     ]);
 
     return Object.fromEntries(entries);
@@ -58,11 +58,11 @@ export function useStudentProgress(
 
   const currentStudentStats =
     currentUser?.role === "student"
-      ? buildStudentStats(viewerProfile?.unlockedChapterTitles.length ?? 1, 1)
+      ? buildStudentStats(resolveAccessibleChapterTitles(viewerProfile).length, 1)
       : statsByStudent[resolvedSelectedStudentId] ?? buildStudentStats(1, 1);
 
   const selectedStudentMilestone = selectedStudent
-    ? getHighestUnlockedChapter(selectedStudent.unlockedChapterTitles)
+    ? selectedStudent.taggedChapterTitle
     : null;
 
   const chapterTagsByTitle = useMemo(() => {
@@ -71,8 +71,8 @@ export function useStudentProgress(
     );
 
     for (const student of studentAccounts) {
-      const highestChapter = getHighestUnlockedChapter(student.unlockedChapterTitles);
-      tags[highestChapter]?.push({
+      if (!student.taggedChapterTitle) continue;
+      tags[student.taggedChapterTitle]?.push({
         id: student.id,
         name: student.name,
         email: student.email,
@@ -88,34 +88,41 @@ export function useStudentProgress(
 
   const applyStudentAccessUpdate = async (
     plan: UserPlan,
-    unlockedChapterTitles: string[],
+    taggedChapterTitle: string | null,
+    customUnlockedChapterTitles: string[],
   ) => {
     if (!selectedStudent) return;
 
     await updateStudentAccess({
       userId: selectedStudent.id,
       plan,
-      unlockedChapterTitles,
+      taggedChapterTitle,
+      customUnlockedChapterTitles,
     });
   };
 
   const toggleChapterForSelectedStudent = async (chapterTitle: string) => {
-    if (!selectedStudent || selectedStudent.plan !== "premium") return;
-    if (chapterTitle === CHAPTER_ONE_TITLE) return;
-
     await applyStudentAccessUpdate(
-      "premium",
-      togglePremiumChapterAccess(selectedStudent.unlockedChapterTitles, chapterTitle),
+      selectedStudent?.plan ?? "basic",
+      selectedStudent?.taggedChapterTitle ?? null,
+      toggleCustomChapterAccess(
+        selectedStudent?.customUnlockedChapterTitles ?? [],
+        chapterTitle,
+      ),
     );
   };
 
   const setMilestoneForSelectedStudent = async (chapterTitle: string) => {
-    if (!selectedStudent || selectedStudent.plan !== "premium") return;
+    if (!selectedStudent) return;
     if (!CHAPTER_TITLES.includes(chapterTitle)) return;
 
-    const currentMilestone = getHighestUnlockedChapter(selectedStudent.unlockedChapterTitles);
-    const nextMilestone = currentMilestone === chapterTitle ? CHAPTER_ONE_TITLE : chapterTitle;
-    await applyStudentAccessUpdate("premium", buildUnlocksUpToChapter(nextMilestone));
+    const currentMilestone = sanitizeTaggedChapterTitle(selectedStudent.taggedChapterTitle);
+    const nextMilestone = currentMilestone === chapterTitle ? null : chapterTitle;
+    await applyStudentAccessUpdate(
+      selectedStudent.plan,
+      nextMilestone,
+      selectedStudent.customUnlockedChapterTitles,
+    );
   };
 
   const setPlanForSelectedStudent = async (plan: UserPlan) => {
@@ -123,9 +130,8 @@ export function useStudentProgress(
 
     await applyStudentAccessUpdate(
       plan,
-      plan === "basic"
-        ? [CHAPTER_ONE_TITLE]
-        : selectedStudent.unlockedChapterTitles,
+      selectedStudent.taggedChapterTitle,
+      selectedStudent.customUnlockedChapterTitles,
     );
   };
 
@@ -151,6 +157,7 @@ export function useStudentProgress(
     selectedStudent,
     selectedStudentPlan: selectedStudent?.plan ?? "basic",
     activeStudentUnlocks,
+    selectedStudentCustomUnlocks: selectedStudent?.customUnlockedChapterTitles ?? [],
     currentStudentStats,
     selectedStudentMilestone,
     chapterTagsByTitle,

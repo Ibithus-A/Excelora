@@ -118,7 +118,7 @@ export function SidebarNode({
           onClick={(event) => {
             event.stopPropagation();
             selectNode(node.id);
-            if (hasChildren) toggleExpanded(node.id);
+            if (hasChildren && !isLocked) toggleExpanded(node.id);
           }}
           className="mr-1 inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-200/70 hover:text-zinc-600 disabled:opacity-30"
           disabled={!hasChildren}
@@ -141,6 +141,9 @@ export function SidebarNode({
               return;
             }
             selectNode(node.id);
+            if (!canManage && hasChildren && !isLocked) {
+              toggleExpanded(node.id);
+            }
           }}
           onDoubleClick={() => {
             if (!canManage) return;

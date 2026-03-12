@@ -1,7 +1,10 @@
 "use client";
 
-import { CHAPTER_ONE_TITLE, sanitizeUnlockedChapterTitles } from "@/lib/access";
-import { normalizeEmail } from "@/lib/auth";
+import {
+  sanitizeCustomUnlockedChapterTitles,
+  sanitizeTaggedChapterTitle,
+} from "@/lib/access";
+import { normalizeEmail, resolveDisplayFirstName } from "@/lib/auth";
 import type { UserAccessProfile, UserPlan, UserRole } from "@/types/auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -11,7 +14,8 @@ type ProfilePayload = {
   email?: unknown;
   role?: unknown;
   plan?: unknown;
-  unlockedChapterTitles?: unknown;
+  taggedChapterTitle?: unknown;
+  customUnlockedChapterTitles?: unknown;
 };
 
 function sortProfiles(students: UserAccessProfile[]) {
@@ -33,15 +37,20 @@ function sanitizeProfile(value: unknown): UserAccessProfile | null {
   if (typeof candidate.id !== "string" || typeof candidate.email !== "string") return null;
   if (typeof candidate.name !== "string") return null;
 
+  const role = sanitizeRole(candidate.role);
+  const email = normalizeEmail(candidate.email);
   const plan = sanitizePlan(candidate.plan);
 
   return {
     id: candidate.id,
-    name: candidate.name.trim() || "Student",
-    email: normalizeEmail(candidate.email),
-    role: sanitizeRole(candidate.role),
+    name: resolveDisplayFirstName(candidate.name, email, role),
+    email,
+    role,
     plan,
-    unlockedChapterTitles: sanitizeUnlockedChapterTitles(candidate.unlockedChapterTitles, plan),
+    taggedChapterTitle: sanitizeTaggedChapterTitle(candidate.taggedChapterTitle),
+    customUnlockedChapterTitles: sanitizeCustomUnlockedChapterTitles(
+      candidate.customUnlockedChapterTitles,
+    ),
   };
 }
 
@@ -61,7 +70,8 @@ function sanitizeStudents(value: unknown): UserAccessProfile[] {
 export type UpdateStudentAccessInput = {
   userId: string;
   plan: UserPlan;
-  unlockedChapterTitles: string[];
+  taggedChapterTitle: string | null;
+  customUnlockedChapterTitles: string[];
 };
 
 export type UpdateStudentAccessResult =
@@ -108,10 +118,8 @@ export function useStudents(currentUserEmail?: string | null) {
           body: JSON.stringify({
             userId: input.userId,
             plan: input.plan,
-            unlockedChapterTitles:
-              input.plan === "basic"
-                ? [CHAPTER_ONE_TITLE]
-                : input.unlockedChapterTitles,
+            taggedChapterTitle: input.taggedChapterTitle,
+            customUnlockedChapterTitles: input.customUnlockedChapterTitles,
           }),
         });
 

@@ -10,5 +10,6 @@ export type AuthenticatedAccount = {
 
 export type UserAccessProfile = AuthenticatedAccount & {
   plan: UserPlan;
-  unlockedChapterTitles: string[];
+  taggedChapterTitle: string | null;
+  customUnlockedChapterTitles: string[];
 };
