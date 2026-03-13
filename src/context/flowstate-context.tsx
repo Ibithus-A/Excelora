@@ -240,14 +240,24 @@ function stripDuplicatedSeedPageTitle(state: FlowState): FlowState {
     Object.entries(state.nodes).map(([id, node]) => {
       if (node.kind !== "page") return [id, node];
 
-      const duplicated = `${node.title}\n\nUse this space for notes and examples.`;
-      if (node.content !== duplicated) return [id, node];
+      const [firstLine = "", secondLine = "", ...rest] = node.content.split("\n");
+      const normalizedContent = node.content.trim().toLowerCase();
+      const isDuplicatedTitleOnlyContent =
+        firstLine.trim() === node.title.trim() &&
+        secondLine.trim() === "" &&
+        rest.length === 0;
+      const isLegacyPlaceholderContent = normalizedContent.includes(
+        "use this space for notes and examples",
+      );
+      if (!isDuplicatedTitleOnlyContent && !isLegacyPlaceholderContent) {
+        return [id, node];
+      }
 
       return [
         id,
         {
           ...node,
-          content: "Use this space for notes and examples.",
+          content: "",
         },
       ];
     }),
@@ -256,7 +266,7 @@ function stripDuplicatedSeedPageTitle(state: FlowState): FlowState {
   return { ...state, nodes };
 }
 
-const DEFAULT_PAGE_CONTENT = "Use this space for notes and examples.";
+const DEFAULT_PAGE_CONTENT = "";
 const CHAPTER_ONE_SECTION_TITLES = new Set([
   "1.1 argument and proof",
   "1.2 index laws",

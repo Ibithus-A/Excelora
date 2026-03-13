@@ -1,7 +1,7 @@
 "use client";
 
 import { canAccessNode } from "@/lib/access";
-import { FlowLogoIcon, FolderIcon, PlusIcon } from "@/components/icons";
+import { CloseIcon, FlowLogoIcon, FolderIcon, PlusIcon } from "@/components/icons";
 import { SidebarNode } from "@/components/sidebar-node";
 import { useFlowState } from "@/context/flowstate-context";
 import { A_LEVEL_MATHS_TITLE } from "@/lib/seed";
@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type SidebarProps = {
   onOpenDashboard?: () => void;
+  onRequestClose?: () => void;
   role?: "tutor" | "student";
   viewerProfile?: UserAccessProfile | null;
 };
@@ -35,6 +36,7 @@ function normalizeTitle(title: string) {
 
 export function Sidebar({
   onOpenDashboard,
+  onRequestClose,
   role = "tutor",
   viewerProfile = null,
 }: SidebarProps) {
@@ -194,6 +196,17 @@ export function Sidebar({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onRequestClose ? (
+              <button
+                type="button"
+                onClick={onRequestClose}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 md:hidden"
+                aria-label="Close sidebar"
+                title="Close sidebar"
+              >
+                <CloseIcon className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
             {canManage ? (
               <>
                 <button

@@ -10,6 +10,7 @@ import type { UserAccessProfile, UserPlan } from "@/types/auth";
 
 export const CHAPTER_TITLES = A_LEVEL_MATHS_CHAPTER_TITLES;
 export const CHAPTER_ONE_TITLE = "Chapter 1: Algebra 1";
+const NORMALIZED_CHAPTER_ONE_TITLE = CHAPTER_ONE_TITLE.trim().toLowerCase();
 
 function normalizeTitle(title: string) {
   return title.trim().toLowerCase();
@@ -20,16 +21,17 @@ export function normalizeUserPlan(value: unknown): UserPlan | null {
   return null;
 }
 
-function buildCanonicalChapterTitleMap() {
-  const canonicalTitles = new Map(
-    CHAPTER_TITLES.map((title) => [normalizeTitle(title), title]),
-  );
-  return canonicalTitles;
+const CANONICAL_CHAPTER_TITLE_MAP = new Map(
+  CHAPTER_TITLES.map((title) => [normalizeTitle(title), title]),
+);
+
+function findCanonicalChapterTitle(chapterTitle: string) {
+  return CANONICAL_CHAPTER_TITLE_MAP.get(normalizeTitle(chapterTitle)) ?? null;
 }
 
 export function sanitizeChapterTitle(chapterTitle: unknown): string | null {
   if (typeof chapterTitle !== "string") return null;
-  return buildCanonicalChapterTitleMap().get(normalizeTitle(chapterTitle)) ?? null;
+  return findCanonicalChapterTitle(chapterTitle);
 }
 
 export function sanitizeTaggedChapterTitle(taggedChapterTitle: unknown): string | null {
@@ -39,14 +41,13 @@ export function sanitizeTaggedChapterTitle(taggedChapterTitle: unknown): string 
 export function sanitizeCustomUnlockedChapterTitles(unlockedChapterTitles: unknown): string[] {
   if (!Array.isArray(unlockedChapterTitles)) return [];
 
-  const canonicalTitles = buildCanonicalChapterTitleMap();
   const unique = new Set<string>();
 
   for (const title of unlockedChapterTitles) {
     if (typeof title !== "string") continue;
-    const canonicalTitle = canonicalTitles.get(normalizeTitle(title));
+    const canonicalTitle = findCanonicalChapterTitle(title);
     if (!canonicalTitle) continue;
-    if (normalizeTitle(canonicalTitle) === normalizeTitle(CHAPTER_ONE_TITLE)) continue;
+    if (normalizeTitle(canonicalTitle) === NORMALIZED_CHAPTER_ONE_TITLE) continue;
     unique.add(canonicalTitle);
   }
 
@@ -65,11 +66,9 @@ export function toggleCustomChapterAccess(
   currentCustomUnlocks: string[],
   chapterTitle: string,
 ): string[] {
-  const canonicalTitle =
-    CHAPTER_TITLES.find((title) => normalizeTitle(title) === normalizeTitle(chapterTitle)) ??
-    chapterTitle;
+  const canonicalTitle = findCanonicalChapterTitle(chapterTitle) ?? chapterTitle;
 
-  if (normalizeTitle(canonicalTitle) === normalizeTitle(CHAPTER_ONE_TITLE)) {
+  if (normalizeTitle(canonicalTitle) === NORMALIZED_CHAPTER_ONE_TITLE) {
     return sanitizeCustomUnlockedChapterTitles(currentCustomUnlocks);
   }
 

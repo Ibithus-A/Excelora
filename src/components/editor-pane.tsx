@@ -2,60 +2,32 @@
 
 import { canAccessNode, getLockedChapterMessage } from "@/lib/access";
 import { EditorActionsDrawer } from "@/components/editor-actions-drawer";
+import { FolderIcon } from "@/components/icons";
 import { useFlowState } from "@/context/flowstate-context";
-import { DUPLICATE_PAGE_NAME_MESSAGE } from "@/lib/constants/messages";
-import { useAutoDismissMessage } from "@/lib/hooks/use-auto-dismiss-message";
+import { LESSON_PROGRESS_STORAGE_KEY } from "@/lib/constants/storage";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
+import { END_OF_TOPIC_ASSESSMENT_TITLE } from "@/lib/seed";
 import {
   getDefaultTitle,
+  getLessonChapterContext,
   getNodeLockInfo,
-  hasDuplicatePageTitleInParent,
 } from "@/lib/tree-utils";
 import type { UserAccessProfile } from "@/types/auth";
-import { useMemo, useRef, useState } from "react";
-
-type SlashOption = {
-  id: string;
-  label: string;
-  hint: string;
-  template?: string;
-};
+import type { CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type EditorPaneProps = {
   role: "tutor" | "student";
   viewerProfile?: UserAccessProfile | null;
+  sidebarInsetPx?: number;
 };
 
-const SLASH_OPTIONS: SlashOption[] = [
-  {
-    id: "heading-1",
-    label: "Heading 1",
-    hint: "Large section title",
-    template: "# $0",
-  },
-  {
-    id: "heading-2",
-    label: "Heading 2",
-    hint: "Medium section title",
-    template: "## $0",
-  },
-  {
-    id: "heading-3",
-    label: "Heading 3",
-    hint: "Small section title",
-    template: "### $0",
-  },
-  {
-    id: "bulleted-list",
-    label: "Bullet List",
-    hint: "Create a bulleted list",
-    template: "- $0",
-  },
-  {
-    id: "link",
-    label: "Link",
-    hint: "Insert a URL link",
-  },
-];
+type LessonProgressMap = Record<string, boolean>;
+type SurfaceTransitionMode = "fade" | "next" | "previous";
+
+const MAX_TITLE_FONT_SIZE_PX = 36;
+const MIN_TITLE_FONT_SIZE_PX = 20;
+const LEGACY_PLACEHOLDER_CONTENT = "use this space for notes and examples";
 
 const DEFAULT_LOCK_INFO = {
   isEffectivelyLocked: false,
@@ -65,59 +37,28 @@ const DEFAULT_LOCK_INFO = {
   canToggleLock: false,
 };
 
-function getSlashContext(value: string, cursor: number) {
-  const upToCursor = value.slice(0, cursor);
-  const slashIndex = upToCursor.lastIndexOf("/");
-  if (slashIndex === -1) return null;
-
-  const lineStart = upToCursor.lastIndexOf("\n") + 1;
-  if (slashIndex < lineStart) return null;
-
-  const beforeSlash = upToCursor.slice(0, slashIndex);
-  const previousChar = beforeSlash.slice(-1);
-  if (previousChar && previousChar.trim() !== "") return null;
-
-  const query = upToCursor.slice(slashIndex + 1);
-  if (/\s/.test(query)) return null;
-
-  return { start: slashIndex, query };
-}
-
-function materializeTemplate(template: string) {
-  const marker = "$0";
-  const markerIndex = template.indexOf(marker);
-
-  if (markerIndex === -1) {
-    return { text: template, caretOffset: template.length };
-  }
-
-  return {
-    text: template.replace(marker, ""),
-    caretOffset: markerIndex,
-  };
-}
-
 export function EditorPane({
   role,
   viewerProfile = null,
+  sidebarInsetPx = 0,
 }: EditorPaneProps) {
-  const { state, updateContent, updateTitle } = useFlowState();
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const [slashContext, setSlashContext] = useState<{
-    start: number;
-    query: string;
-  } | null>(null);
-  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
-  const { message: renameNotice, setMessage: setRenameNotice } =
-    useAutoDismissMessage(2400);
+  const { state, revealNode } = useFlowState();
+  const titleInputRef = useRef<HTMLDivElement | null>(null);
+  const titleMeasureRef = useRef<HTMLSpanElement | null>(null);
+  const [titleFontSizePx, setTitleFontSizePx] = useState(MAX_TITLE_FONT_SIZE_PX);
+  const [isAssistantHovered, setIsAssistantHovered] = useState(false);
+  const [surfaceTransitionMode, setSurfaceTransitionMode] =
+    useState<SurfaceTransitionMode>("fade");
+  const [lessonProgress, setLessonProgress] = usePersistedState<LessonProgressMap>({
+    key: LESSON_PROGRESS_STORAGE_KEY,
+    defaultValue: {},
+  });
   const selectedId = state.selectedId;
   const selectedNode = selectedId ? state.nodes[selectedId] : null;
   const lockInfo = selectedNode
     ? getNodeLockInfo(state, selectedNode.id)
     : DEFAULT_LOCK_INFO;
   const isStudent = role === "student";
-  const canEditTitle = !isStudent;
-  const canEditContent = !isStudent;
   const isAccessBlocked =
     isStudent && selectedNode
       ? !canAccessNode(state, selectedNode.id, viewerProfile)
@@ -126,18 +67,95 @@ export function EditorPane({
     isAccessBlocked && selectedNode
       ? getLockedChapterMessage(viewerProfile, state, selectedNode.id)
       : "This chapter is locked.";
+  const selectedNodeKind = selectedNode?.kind ?? "page";
+  const selectedNodeTitle = selectedNode?.title ?? getDefaultTitle(selectedNodeKind);
+  const titleFitKey = `${selectedNode?.id ?? ""}:${selectedNodeKind}:${selectedNodeTitle}`;
+  const visibleFolderChildItems = selectedNode
+    ? selectedNode.childrenIds
+        .map((childId) => state.nodes[childId])
+        .filter((childNode) => {
+          if (!childNode) return false;
+          if (childNode.kind !== "page" && childNode.kind !== "folder") return false;
+          if (!isStudent) return true;
+          return canAccessNode(state, childNode.id, viewerProfile);
+        })
+    : [];
+  const lessonContext = selectedNode ? getLessonChapterContext(state, selectedNode.id) : null;
+  const isLessonPage = selectedNode?.kind === "page" && Boolean(lessonContext);
+  const isAssessmentPage = Boolean(lessonContext?.isAssessmentPage);
+  const parentFolder =
+    selectedNode?.parentId && state.nodes[selectedNode.parentId]?.kind === "folder"
+      ? state.nodes[selectedNode.parentId]
+      : null;
+  const isLessonWatched = selectedNode ? Boolean(lessonProgress[selectedNode.id]) : false;
+  const completedLessonsCount = lessonContext
+    ? lessonContext.lessonIds.reduce(
+        (count, lessonId) => count + (lessonProgress[lessonId] ? 1 : 0),
+        0,
+      )
+    : 0;
+  const chapterProgressPercentage = lessonContext
+    ? Math.round((completedLessonsCount / lessonContext.lessonIds.length) * 100)
+    : 0;
+  const visiblePageContent =
+    selectedNode &&
+    !selectedNode.content.trim().toLowerCase().includes(LEGACY_PLACEHOLDER_CONTENT)
+      ? selectedNode.content.trim()
+      : "";
+  const editorShellStyle = {
+    paddingLeft: sidebarInsetPx > 0 ? `min(${sidebarInsetPx}px, 88vw)` : undefined,
+    paddingRight: isAssistantHovered ? "min(390px, 42vw)" : undefined,
+  } satisfies CSSProperties;
 
-  const slashOptions = useMemo(() => {
-    if (!canEditContent) return [];
-    if (!slashContext) return [];
+  const toggleLessonWatched = () => {
+    if (!selectedNode || !isLessonPage) return;
 
-    const query = slashContext.query.trim().toLowerCase();
-    if (!query) return SLASH_OPTIONS;
+    setLessonProgress((current) => ({
+      ...current,
+      [selectedNode.id]: !current[selectedNode.id],
+    }));
+  };
 
-    return SLASH_OPTIONS.filter((option) =>
-      `${option.label} ${option.hint}`.toLowerCase().includes(query),
-    );
-  }, [canEditContent, slashContext]);
+  const nextLessonActionId = lessonContext?.nextLessonId ?? lessonContext?.assessmentId ?? null;
+  const nextLessonActionLabel = isAssessmentPage
+    ? "Submit Assessment"
+    : lessonContext?.nextLessonId
+      ? "Next Lesson"
+      : lessonContext?.assessmentId
+        ? "Take Assessment"
+        : "Next Lesson";
+  const surfaceTransitionClass =
+    surfaceTransitionMode === "next"
+      ? "surface-transition-next"
+      : surfaceTransitionMode === "previous"
+        ? "surface-transition-previous"
+        : "surface-transition-fade";
+
+  useEffect(() => {
+    const titleInput = titleInputRef.current;
+    const titleMeasure = titleMeasureRef.current;
+    if (!titleInput || !titleMeasure) return;
+
+    const fitTitle = () => {
+      const availableWidth = titleInput.clientWidth;
+      if (!availableWidth) return;
+
+      let nextFontSize = MAX_TITLE_FONT_SIZE_PX;
+      titleMeasure.textContent = selectedNodeTitle;
+
+      while (nextFontSize > MIN_TITLE_FONT_SIZE_PX) {
+        titleMeasure.style.fontSize = `${nextFontSize}px`;
+        if (titleMeasure.scrollWidth <= availableWidth) break;
+        nextFontSize -= 1;
+      }
+
+      setTitleFontSizePx(nextFontSize);
+    };
+
+    fitTitle();
+    window.addEventListener("resize", fitTitle);
+    return () => window.removeEventListener("resize", fitTitle);
+  }, [selectedNodeTitle, titleFitKey]);
 
   if (!selectedNode) {
     return (
@@ -176,71 +194,23 @@ export function EditorPane({
     );
   }
 
-  const closeSlashMenu = () => {
-    setSlashContext(null);
-    setActiveCommandIndex(0);
-  };
-
-  const applyNextContent = (
-    nextValue: string,
-    nextCursor?: number,
-    focusCursor = true,
+  const revealWithTransition = (
+    nodeId: string | null,
+    mode: SurfaceTransitionMode = "fade",
   ) => {
-    if (!selectedNode) return;
-    if (!canEditContent) return;
-    updateContent(selectedNode.id, nextValue);
-    closeSlashMenu();
-
-    if (!focusCursor) return;
-
-    requestAnimationFrame(() => {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-      const cursor = nextCursor ?? nextValue.length;
-      textarea.focus();
-      textarea.setSelectionRange(cursor, cursor);
-    });
-  };
-
-  const applySlashOption = (option: SlashOption) => {
-    if (!canEditContent) return;
-    const textarea = textareaRef.current;
-    if (!textarea || !slashContext) return;
-
-    const value = selectedNode.content;
-    const commandStart = slashContext.start;
-    const commandEnd = textarea.selectionStart ?? commandStart;
-
-    if (option.id === "link") {
-      const url = window.prompt("Enter link URL:");
-      if (!url) {
-        closeSlashMenu();
-        return;
-      }
-
-      const label = window.prompt("Link text:", "Open link") || "Open link";
-      const text = `[${label}](${url})`;
-      const nextValue = `${value.slice(0, commandStart)}${text}${value.slice(commandEnd)}`;
-      applyNextContent(nextValue, commandStart + text.length);
-      return;
-    }
-
-    if (!option.template) {
-      closeSlashMenu();
-      return;
-    }
-
-    const { text, caretOffset } = materializeTemplate(option.template);
-
-    const nextValue = `${value.slice(0, commandStart)}${text}${value.slice(commandEnd)}`;
-    applyNextContent(nextValue, commandStart + caretOffset);
+    if (!nodeId) return;
+    setSurfaceTransitionMode(mode);
+    revealNode(nodeId);
   };
 
   return (
-    <section className="relative grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] bg-[var(--surface-panel)]">
-      <EditorActionsDrawer />
-
-      <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)]">
+    <section className="relative flex h-full min-h-0 overflow-hidden bg-[var(--surface-panel)]">
+      <div
+        className={[
+          "min-w-0 flex-1 transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        ].join(" ")}
+        style={editorShellStyle}
+      >
         <div
           className={[
             "grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] transition",
@@ -249,160 +219,244 @@ export function EditorPane({
         >
           <header
             className={[
-              "px-6 pt-14 pb-3 md:pt-16",
+              "px-4 pt-16 pb-3 md:px-6 md:pt-16",
               lockInfo.isEffectivelyLocked ? "opacity-65" : "",
             ].join(" ")}
           >
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
               <div className="min-w-0">
-                <input
-                  value={selectedNode.title}
-                  onChange={(event) => {
-                    if (!canEditTitle) return;
-                    const nextTitle = event.target.value;
-                    if (hasDuplicatePageTitleInParent(state, selectedNode.id, nextTitle)) {
-                      setRenameNotice(DUPLICATE_PAGE_NAME_MESSAGE);
-                      return;
-                    }
-                    updateTitle(selectedNode.id, nextTitle);
-                  }}
-                  onBlur={() => {
-                    if (!canEditTitle) return;
-                    const trimmed = selectedNode.title.trim();
-                    if (!trimmed) {
-                      updateTitle(selectedNode.id, getDefaultTitle(selectedNode.kind));
-                    } else if (
-                      hasDuplicatePageTitleInParent(state, selectedNode.id, trimmed)
-                    ) {
-                      setRenameNotice(DUPLICATE_PAGE_NAME_MESSAGE);
-                    } else if (trimmed !== selectedNode.title) {
-                      updateTitle(selectedNode.id, trimmed);
-                    }
-                  }}
-                  className="w-full rounded-md border border-transparent bg-transparent px-1 py-1 text-4xl font-semibold tracking-[-0.03em] text-zinc-900 outline-none placeholder:text-zinc-300"
-                  placeholder={getDefaultTitle(selectedNode.kind)}
-                  readOnly={!canEditTitle}
-                />
-
-                {renameNotice && (
-                  <p className="mt-2 inline-flex rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
-                    {renameNotice}
+                <div
+                  ref={titleInputRef}
+                  className="w-full rounded-md border border-transparent bg-transparent px-1 py-1 font-semibold leading-tight tracking-[-0.03em] text-zinc-900 outline-none placeholder:text-zinc-300"
+                  style={{ fontSize: `${titleFontSizePx}px` }}
+                >
+                  {selectedNode.title || getDefaultTitle(selectedNode.kind)}
+                </div>
+                {selectedNode.kind === "folder" && selectedNode.title === "A Level Maths" ? (
+                  <p className="mt-2 px-1 text-sm leading-7 text-zinc-500">
+                    Start the course from the sidebar to open a chapter and continue through the lessons.
                   </p>
-                )}
+                ) : null}
+                <span
+                  ref={titleMeasureRef}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute opacity-0 whitespace-nowrap px-1 py-1 font-semibold leading-tight tracking-[-0.03em]"
+                />
               </div>
             </div>
           </header>
 
           <div
             className={[
-              "scroll-slim min-h-0 overflow-y-auto px-6 py-6 transition",
+              "scroll-slim min-h-0 overflow-y-auto px-4 py-5 transition md:px-6 md:py-6",
               lockInfo.isEffectivelyLocked ? "opacity-30 blur-md" : "",
             ].join(" ")}
           >
-            <div className="relative mx-auto w-full max-w-3xl">
-              {slashContext && (
-                <div className="absolute left-0 top-0 z-20 w-full max-w-md rounded-xl border border-zinc-200 bg-white p-2 shadow-[0_18px_40px_rgba(9,9,11,0.16)]">
-                  <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-500">
-                    Insert Block
-                  </p>
-                  <ul className="space-y-1">
-                    {slashOptions.length === 0 ? (
-                      <li className="rounded-lg px-2 py-2 text-sm text-zinc-500">
-                        No matching commands
-                      </li>
-                    ) : (
-                      slashOptions.map((option, index) => (
-                        <li key={option.id}>
+            <div
+              key={selectedNode.id}
+              className={`relative mx-auto w-full max-w-3xl ${surfaceTransitionClass}`}
+            >
+              {selectedNode.kind === "folder" ? (
+                <section className="mb-8">
+                  {selectedNode.title === "A Level Maths" ? null : (
+                    <div className="space-y-1">
+                      {visibleFolderChildItems.length > 0 ? (
+                        visibleFolderChildItems.map((childNode) => (
                           <button
+                            key={childNode.id}
                             type="button"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => applySlashOption(option)}
+                            onClick={() => revealWithTransition(childNode.id)}
+                            className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-zinc-100"
+                          >
+                            {childNode.kind === "folder" ? (
+                              <FolderIcon className="h-4 w-4 shrink-0 text-zinc-500" />
+                            ) : (
+                              <span className="shrink-0 text-base font-semibold leading-none text-zinc-900">
+                                -
+                              </span>
+                            )}
+                            <span className="truncate text-[15px] text-zinc-800">
+                              {childNode.title}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="flex min-h-[240px] items-center justify-center px-2 py-2 text-center">
+                          <p className="text-sm text-zinc-500">
+                            No pages available in this folder.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+              ) : null}
+
+              {isLessonPage && lessonContext && (
+                <div className="mb-8 space-y-4">
+                  {parentFolder ? (
+                    <button
+                      type="button"
+                      onClick={() => revealWithTransition(parentFolder.id)}
+                      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50"
+                    >
+                      <span className="text-sm font-semibold leading-none text-zinc-900">-</span>
+                      Back to {parentFolder.title}
+                    </button>
+                  ) : null}
+
+                  <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+                    <div className="border-b border-zinc-200/80 bg-[linear-gradient(135deg,rgba(244,244,245,0.95),rgba(255,255,255,1))] px-4 py-4 md:px-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+                            {isAssessmentPage ? "Assessment PDF" : "Lesson Video"}
+                          </p>
+                          <p className="mt-1 text-sm text-zinc-600">
+                            {isAssessmentPage
+                              ? "PDF workspace placeholder for this assessment"
+                              : "Video module placeholder for this page"}
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">
+                          {isAssessmentPage ? "PDF" : "5-10 min"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="px-4 py-5 md:px-5">
+                      {isAssessmentPage ? (
+                        <div className="rounded-[24px] border border-dashed border-zinc-300 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(244,244,245,0.92))] p-4">
+                          <div className="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-[18px] border border-zinc-200 bg-white/80 px-5 text-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
+                              <span className="text-xl font-semibold text-zinc-700">PDF</span>
+                            </div>
+                            <div>
+                              <p className="text-base font-medium text-zinc-900">
+                                Assessment PDF placeholder
+                              </p>
+                              <p className="mt-1 text-sm text-zinc-500">
+                                Attach the assessment worksheet here when it is ready
+                              </p>
+                            </div>
+                            <div className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
+                              {END_OF_TOPIC_ASSESSMENT_TITLE}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex aspect-video items-center justify-center rounded-[24px] border border-dashed border-zinc-300 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(244,244,245,0.92))]">
+                          <div className="flex flex-col items-center gap-3 text-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
+                              <span className="ml-1 text-2xl text-zinc-700">▶</span>
+                            </div>
+                            <div>
+                              <p className="text-base font-medium text-zinc-900">
+                                Video placeholder
+                              </p>
+                              <p className="mt-1 text-sm text-zinc-500">
+                                Add the lesson recording here when it is ready
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
                             className={[
-                              "w-full rounded-lg px-2 py-2 text-left transition",
-                              index === activeCommandIndex
-                                ? "bg-zinc-100"
-                                : "hover:bg-zinc-50",
+                              "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium",
+                              isLessonWatched
+                                ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border border-zinc-200 bg-zinc-100 text-zinc-600",
                             ].join(" ")}
                           >
-                            <span className="block text-sm font-medium text-zinc-800">
-                              {option.label}
-                            </span>
-                            <span className="block text-xs text-zinc-500">{option.hint}</span>
+                            {isAssessmentPage
+                              ? isLessonWatched
+                                ? "Completed"
+                                : "Not completed yet"
+                              : isLessonWatched
+                                ? "Watched"
+                                : "Not watched yet"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={toggleLessonWatched}
+                            className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+                          >
+                            {isAssessmentPage
+                              ? isLessonWatched
+                                ? "Mark as not completed"
+                                : "Mark as completed"
+                              : isLessonWatched
+                                ? "Mark as not watched"
+                                : "Mark as watched"}
                           </button>
-                        </li>
-                      ))
-                    )}
-                  </ul>
+                        </div>
+
+                        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              revealWithTransition(lessonContext.previousLessonId, "previous")
+                            }
+                            disabled={!lessonContext.previousLessonId}
+                            className="inline-flex w-full items-center justify-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto"
+                          >
+                            Previous Lesson
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              revealWithTransition(nextLessonActionId, "next")
+                            }
+                            disabled={!nextLessonActionId}
+                            className="inline-flex w-full items-center justify-center rounded-full border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-300 sm:w-auto"
+                          >
+                            {nextLessonActionLabel}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="rounded-[24px] border border-zinc-200 bg-white px-5 py-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)]">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+                          Chapter Progress
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-600">
+                          {completedLessonsCount} of {lessonContext.lessonIds.length} subtopics
+                          completed
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium text-zinc-800">
+                        {chapterProgressPercentage}%
+                      </p>
+                    </div>
+
+                    <div className="mt-4 h-3 overflow-hidden rounded-full bg-zinc-100">
+                      <div
+                        className={[
+                          "h-full rounded-full transition-[width] duration-300",
+                          completedLessonsCount > 0
+                            ? "bg-[linear-gradient(90deg,#16a34a,#22c55e)]"
+                            : "bg-[linear-gradient(90deg,#111827,#3f3f46)]",
+                        ].join(" ")}
+                        style={{ width: `${chapterProgressPercentage}%` }}
+                      />
+                    </div>
+                  </section>
                 </div>
               )}
 
-              <textarea
-                ref={textareaRef}
-                id="note-content"
-                value={selectedNode.content}
-                onChange={(event) => {
-                  if (!canEditContent) return;
-                  const nextValue = event.target.value;
-                  updateContent(selectedNode.id, nextValue);
-
-                  const cursor = event.target.selectionStart ?? nextValue.length;
-                  const nextSlashContext = getSlashContext(nextValue, cursor);
-
-                  if (!nextSlashContext) {
-                    closeSlashMenu();
-                    return;
-                  }
-
-                  setSlashContext(nextSlashContext);
-                  setActiveCommandIndex(0);
-                }}
-                onBlur={() => {
-                  window.setTimeout(() => {
-                    closeSlashMenu();
-                  }, 120);
-                }}
-                onKeyDown={(event) => {
-                  if (!canEditContent) return;
-                  if (!slashContext) return;
-
-                  if (event.key === "Escape") {
-                    event.preventDefault();
-                    closeSlashMenu();
-                    return;
-                  }
-
-                  if (slashOptions.length === 0) return;
-
-                  if (event.key === "ArrowDown") {
-                    event.preventDefault();
-                    setActiveCommandIndex((index) => (index + 1) % slashOptions.length);
-                    return;
-                  }
-
-                  if (event.key === "ArrowUp") {
-                    event.preventDefault();
-                    setActiveCommandIndex(
-                      (index) => (index - 1 + slashOptions.length) % slashOptions.length,
-                    );
-                    return;
-                  }
-
-                  if (event.key === "Enter" || event.key === "Tab") {
-                    event.preventDefault();
-                    applySlashOption(slashOptions[activeCommandIndex]);
-                  }
-                }}
-                placeholder={
-                  selectedNode.kind === "folder"
-                    ? "Write notes for this folder... Type / for commands."
-                    : "Start writing your thoughts... Type / for commands."
-                }
-                readOnly={!canEditContent}
-                className={[
-                  "scroll-slim notion-editor min-h-[60vh] w-full resize-none bg-transparent py-1 text-[15px] leading-7 text-zinc-800 outline-none placeholder:text-zinc-400",
-                  !canEditContent ? "cursor-default opacity-75" : "",
-                ].join(" ")}
-              />
+              {visiblePageContent ? (
+                <div className="notion-editor whitespace-pre-wrap py-1 text-[15px] leading-7 text-zinc-800">
+                  {visiblePageContent}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -415,6 +469,10 @@ export function EditorPane({
           </p>
         </div>
       )}
+
+      {selectedNode.kind === "page" ? (
+        <EditorActionsDrawer onHoverChange={setIsAssistantHovered} />
+      ) : null}
     </section>
   );
 }

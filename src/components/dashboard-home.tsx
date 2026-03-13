@@ -30,6 +30,31 @@ type DashboardHomeProps = {
   onDeleteStudent?: () => Promise<{ ok: boolean; error?: string }>;
 };
 
+type ComingSoonCardProps = {
+  title: string;
+  description: string;
+};
+
+function ComingSoonCard({ title, description }: ComingSoonCardProps) {
+  return (
+    <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-500">
+          {title}
+        </h2>
+        <span className="rounded-full border border-zinc-300 bg-zinc-100 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">
+          Coming Soon
+        </span>
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-10 text-center">
+        <p className="text-lg font-semibold text-zinc-800">Coming Soon</p>
+        <p className="mt-2 text-sm text-zinc-600">{description}</p>
+      </div>
+    </article>
+  );
+}
+
 export function DashboardHome({
   name,
   role,
@@ -89,7 +114,7 @@ export function DashboardHome({
   };
 
   return (
-    <main className="h-screen w-screen overflow-y-auto bg-[var(--surface-app)] px-3 py-4 md:px-8 md:py-7">
+    <main className="min-h-dvh w-full overflow-x-hidden overflow-y-auto bg-[var(--surface-app)] px-3 py-4 md:px-8 md:py-7">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-5">
         <header className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] px-4 py-4 shadow-sm transition-all duration-200 md:px-7 md:py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -113,25 +138,25 @@ export function DashboardHome({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 type="button"
                 onClick={onOpenWorkspace}
-                className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
               >
                 Open Workspace
               </button>
               <button
                 type="button"
                 onClick={onSignOut}
-                className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
               >
                 Sign Out
               </button>
               <button
                 type="button"
                 onClick={onSwitchAccount}
-                className="inline-flex items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
               >
                 Switch Account
               </button>
@@ -140,41 +165,14 @@ export function DashboardHome({
         </header>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-500">
-                Habit Tracker
-              </h2>
-              <span className="rounded-full border border-zinc-300 bg-zinc-100 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">
-                Coming Soon
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-10 text-center">
-              <p className="text-lg font-semibold text-zinc-800">Coming Soon</p>
-              <p className="mt-2 text-sm text-zinc-600">
-                Habit tracking is planned for a future update.
-              </p>
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-500">
-                Module Review
-              </h2>
-              <span className="rounded-full border border-zinc-300 bg-zinc-100 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">
-                Coming Soon
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-10 text-center">
-              <p className="text-lg font-semibold text-zinc-800">Coming Soon</p>
-              <p className="mt-2 text-sm text-zinc-600">
-                Module review tracking is planned for a future update.
-              </p>
-            </div>
-          </article>
+          <ComingSoonCard
+            title="Habit Tracker"
+            description="Habit tracking is planned for a future update."
+          />
+          <ComingSoonCard
+            title="Module Review"
+            description="Module review tracking is planned for a future update."
+          />
         </div>
 
         {role === "tutor" && chapterTitles.length > 0 ? (
@@ -186,9 +184,9 @@ export function DashboardHome({
             </div>
 
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <div className="flex flex-wrap items-start justify-start gap-4">
+              <div className="flex flex-col items-stretch justify-start gap-4 sm:flex-row sm:flex-wrap sm:items-start">
                 {students.length > 0 ? (
-                  <div className="relative w-full max-w-[320px]">
+                  <div className="relative w-full sm:max-w-[320px]">
                     <div className="relative">
                       <input
                         type="text"
@@ -255,7 +253,7 @@ export function DashboardHome({
                 ) : null}
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3">
+              <div className="mt-4 flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
                     Selected Student
@@ -268,8 +266,8 @@ export function DashboardHome({
                   ) : null}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative grid grid-cols-2 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+                  <div className="relative grid w-full grid-cols-2 rounded-xl border border-zinc-200 bg-zinc-50 p-1 sm:w-auto">
                     <span
                       aria-hidden="true"
                       className={[
@@ -313,7 +311,7 @@ export function DashboardHome({
                         void handleDeleteStudent();
                       }}
                       disabled={isDeletingStudent}
-                      className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+                      className="inline-flex w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                     >
                       {isDeletingStudent ? "Deleting..." : "Delete Student"}
                     </button>
@@ -367,9 +365,9 @@ export function DashboardHome({
                         Current Student Chapter
                       </div>
                     ) : null}
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm text-zinc-700">{chapterTitle}</p>
-                      <div className="flex shrink-0 items-center gap-1.5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <p className="break-words text-sm text-zinc-700">{chapterTitle}</p>
+                      <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
                         <button
                           type="button"
                           onClick={() => {
@@ -429,7 +427,7 @@ export function DashboardHome({
                       </div>
                     ) : null}
 
-                    <div className="mt-2.5 flex items-center justify-end">
+                    <div className="mt-2.5 flex items-center justify-start sm:justify-end">
                       <button
                         type="button"
                         onClick={() => {

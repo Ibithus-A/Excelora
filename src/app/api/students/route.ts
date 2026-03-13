@@ -53,45 +53,66 @@ async function getAuthenticatedUser() {
   return { supabase, user };
 }
 
-export async function GET() {
-  const { supabase, user } = await getAuthenticatedUser();
-  if (!user) {
-    return Response.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  try {
-    const viewer = await getViewerProfile(supabase, user.id);
-    if (!viewer) {
-      return Response.json({ error: "Profile not found." }, { status: 404 });
-    }
-
-    const students = viewer.role === "tutor" ? await listStudentProfiles(supabase) : [];
-
-    return Response.json({ viewer, students });
-  } catch {
-    return Response.json({ error: "Unable to load access data." }, { status: 500 });
-  }
+function jsonError(message: string, status: number, headers?: HeadersInit) {
+  return Response.json({ error: message }, { status, headers });
 }
 
-export async function PATCH(request: Request) {
+async function requireAuthenticatedViewer() {
   const { supabase, user } = await getAuthenticatedUser();
   if (!user) {
-    return Response.json({ error: "Unauthorized." }, { status: 401 });
+    return { errorResponse: jsonError("Unauthorized.", 401) } as const;
   }
 
   const viewer = await getViewerProfile(supabase, user.id);
   if (!viewer) {
-    return Response.json({ error: "Profile not found." }, { status: 404 });
+    return { errorResponse: jsonError("Profile not found.", 404) } as const;
   }
-  if (viewer.role !== "tutor") {
-    return Response.json({ error: "Forbidden." }, { status: 403 });
+
+  return { supabase, user, viewer } as const;
+}
+
+async function requireTutorViewer() {
+  const viewerContext = await requireAuthenticatedViewer();
+  if ("errorResponse" in viewerContext) {
+    return viewerContext;
   }
+
+  if (viewerContext.viewer.role !== "tutor") {
+    return { errorResponse: jsonError("Forbidden.", 403) } as const;
+  }
+
+  return viewerContext;
+}
+
+export async function GET() {
+  const viewerContext = await requireAuthenticatedViewer();
+  if ("errorResponse" in viewerContext) {
+    return viewerContext.errorResponse;
+  }
+
+  try {
+    const { supabase, viewer } = viewerContext;
+    const students = viewer.role === "tutor" ? await listStudentProfiles(supabase) : [];
+
+    return Response.json({ viewer, students });
+  } catch {
+    return jsonError("Unable to load access data.", 500);
+  }
+}
+
+export async function PATCH(request: Request) {
+  const viewerContext = await requireTutorViewer();
+  if ("errorResponse" in viewerContext) {
+    return viewerContext.errorResponse;
+  }
+  const { supabase, user } = viewerContext;
 
   const patchLimit = enforceTutorMutationRateLimit(getMutationRateLimitKey(user.id, "PATCH"));
   if (!patchLimit.allowed) {
-    return Response.json(
-      { error: "Too many requests. Please retry shortly." },
-      { status: 429, headers: { "Retry-After": String(patchLimit.retryAfterSeconds) } },
+    return jsonError(
+      "Too many requests. Please retry shortly.",
+      429,
+      { "Retry-After": String(patchLimit.retryAfterSeconds) },
     );
   }
 
@@ -104,12 +125,12 @@ export async function PATCH(request: Request) {
     };
 
     if (typeof body.userId !== "string" || !body.userId.trim()) {
-      return Response.json({ error: "Student user id is required." }, { status: 400 });
+      return jsonError("Student user id is required.", 400);
     }
 
     const plan = normalizePlan(body.plan);
     if (!plan) {
-      return Response.json({ error: "Plan must be basic or premium." }, { status: 400 });
+      return jsonError("Plan must be basic or premium.", 400);
     }
 
     const taggedChapterTitle = sanitizeTaggedChapterTitle(body.taggedChapterTitle);
@@ -140,44 +161,38 @@ export async function PATCH(request: Request) {
         ? error.message
         : "Unable to update student access.";
     const status = message === "Student profile not found." ? 404 : 500;
-    return Response.json({ error: message }, { status });
+    return jsonError(message, status);
   }
 }
 
 export async function DELETE(request: Request) {
-  const { supabase, user } = await getAuthenticatedUser();
-  if (!user) {
-    return Response.json({ error: "Unauthorized." }, { status: 401 });
+  const viewerContext = await requireTutorViewer();
+  if ("errorResponse" in viewerContext) {
+    return viewerContext.errorResponse;
   }
-
-  const viewer = await getViewerProfile(supabase, user.id);
-  if (!viewer) {
-    return Response.json({ error: "Profile not found." }, { status: 404 });
-  }
-  if (viewer.role !== "tutor") {
-    return Response.json({ error: "Forbidden." }, { status: 403 });
-  }
+  const { supabase, user } = viewerContext;
 
   const deleteLimit = enforceTutorMutationRateLimit(getMutationRateLimitKey(user.id, "DELETE"));
   if (!deleteLimit.allowed) {
-    return Response.json(
-      { error: "Too many requests. Please retry shortly." },
-      { status: 429, headers: { "Retry-After": String(deleteLimit.retryAfterSeconds) } },
+    return jsonError(
+      "Too many requests. Please retry shortly.",
+      429,
+      { "Retry-After": String(deleteLimit.retryAfterSeconds) },
     );
   }
 
   try {
     const body = (await request.json()) as { userId?: unknown };
     if (typeof body.userId !== "string" || !body.userId.trim()) {
-      return Response.json({ error: "Student user id is required." }, { status: 400 });
+      return jsonError("Student user id is required.", 400);
     }
     if (body.userId === user.id) {
-      return Response.json({ error: "You cannot delete your own tutor account." }, { status: 400 });
+      return jsonError("You cannot delete your own tutor account.", 400);
     }
 
     const student = await getStudentProfileById(supabase, body.userId);
     if (!student) {
-      return Response.json({ error: "Student profile not found." }, { status: 404 });
+      return jsonError("Student profile not found.", 404);
     }
 
     const admin = createAdminClient();
@@ -201,6 +216,6 @@ export async function DELETE(request: Request) {
         ? error.message
         : "Unable to delete student.";
     const status = message === "Student profile not found." ? 404 : 500;
-    return Response.json({ error: message }, { status });
+    return jsonError(message, status);
   }
 }

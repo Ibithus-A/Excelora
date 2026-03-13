@@ -1,3 +1,4 @@
+import { END_OF_TOPIC_ASSESSMENT_TITLE } from "@/lib/seed";
 import type { FlowNode, FlowState, NodeKind } from "@/types/flowstate";
 
 function cloneState(state: FlowState): FlowState {
@@ -419,4 +420,96 @@ export function getDescendantCount(state: FlowState, id: string): number {
 
   walk(id);
   return count;
+}
+
+type LessonChapterContext = {
+  chapterId: string;
+  chapterTitle: string;
+  lessonIds: string[];
+  assessmentId: string | null;
+  isAssessmentPage: boolean;
+  currentLessonIndex: number;
+  previousLessonId: string | null;
+  nextLessonId: string | null;
+};
+
+function collectDescendantPageIds(state: FlowState, id: string, pageIds: string[]) {
+  const node = state.nodes[id];
+  if (!node) return;
+
+  if (node.kind === "page" && node.title !== END_OF_TOPIC_ASSESSMENT_TITLE) {
+    pageIds.push(node.id);
+  }
+
+  for (const childId of node.childrenIds) {
+    collectDescendantPageIds(state, childId, pageIds);
+  }
+}
+
+function getChapterNode(state: FlowState, id: string): FlowNode | null {
+  const path = getNodePath(state, id);
+  if (path.length === 0) return null;
+
+  if (path.length >= 3 && path[1]?.kind === "folder") {
+    return path[1];
+  }
+
+  for (let index = path.length - 2; index >= 0; index -= 1) {
+    if (path[index]?.kind === "folder") {
+      return path[index];
+    }
+  }
+
+  return null;
+}
+
+function getChapterAssessmentId(state: FlowState, chapterId: string): string | null {
+  const chapterNode = state.nodes[chapterId];
+  if (!chapterNode) return null;
+
+  for (const childId of chapterNode.childrenIds) {
+    const childNode = state.nodes[childId];
+    if (
+      childNode?.kind === "page" &&
+      childNode.title === END_OF_TOPIC_ASSESSMENT_TITLE
+    ) {
+      return childNode.id;
+    }
+  }
+
+  return null;
+}
+
+export function getLessonChapterContext(
+  state: FlowState,
+  id: string,
+): LessonChapterContext | null {
+  const node = state.nodes[id];
+  if (!node || node.kind !== "page") return null;
+
+  const chapterNode = getChapterNode(state, id);
+  if (!chapterNode) return null;
+
+  const lessonIds: string[] = [];
+  collectDescendantPageIds(state, chapterNode.id, lessonIds);
+  const assessmentId = getChapterAssessmentId(state, chapterNode.id);
+
+  if (lessonIds.length === 0 && assessmentId !== id) return null;
+
+  const currentLessonIndex = lessonIds.indexOf(id);
+  const isAssessmentPage = assessmentId === id;
+  if (currentLessonIndex === -1 && !isAssessmentPage) return null;
+
+  return {
+    chapterId: chapterNode.id,
+    chapterTitle: chapterNode.title,
+    lessonIds,
+    assessmentId,
+    isAssessmentPage,
+    currentLessonIndex: isAssessmentPage ? lessonIds.length : currentLessonIndex,
+    previousLessonId: isAssessmentPage
+      ? lessonIds[lessonIds.length - 1] ?? null
+      : lessonIds[currentLessonIndex - 1] ?? null,
+    nextLessonId: isAssessmentPage ? null : lessonIds[currentLessonIndex + 1] ?? null,
+  };
 }

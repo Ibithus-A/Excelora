@@ -3,7 +3,7 @@ import type { FlowNode, FlowState } from "@/types/flowstate";
 export const A_LEVEL_MATHS_TITLE = "A Level Maths";
 export const END_OF_TOPIC_ASSESSMENT_TITLE = "Assessment";
 const LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE = "End Of Topic Assessment";
-const DEFAULT_PAGE_CONTENT = "Use this space for notes and examples.";
+const DEFAULT_PAGE_CONTENT = "";
 const REMOVED_SUBTOPIC_TITLES = new Set([
   "introduction",
   "summary and review",
@@ -518,6 +518,22 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
       } else {
         next.nodes[legacyAssessmentId].title = END_OF_TOPIC_ASSESSMENT_TITLE;
       }
+    }
+
+    const assessmentIds =
+      next.nodes[chapterId]?.childrenIds.filter((childId) => {
+        const child = next.nodes[childId];
+        return (
+          child?.kind === "page" &&
+          normalizeTitle(child.title) === normalizeTitle(END_OF_TOPIC_ASSESSMENT_TITLE)
+        );
+      }) ?? [];
+
+    for (const duplicateAssessmentId of assessmentIds.slice(1)) {
+      next.nodes[chapterId].childrenIds = next.nodes[chapterId].childrenIds.filter(
+        (childId) => childId !== duplicateAssessmentId,
+      );
+      delete next.nodes[duplicateAssessmentId];
     }
 
     const allowedPageTitles = new Set(

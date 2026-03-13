@@ -15,25 +15,69 @@ type SignInPortalProps = {
   showCloseButton?: boolean;
 };
 
-type AuthView = "sign-in" | "sign-up";
+type AuthView = "sign-in" | "sign-up" | "forgot-password" | "reset-password";
 
-function getInitialPortalState() {
+type InitialPortalState = {
+  view: AuthView;
+  info: string;
+  error: string;
+  recoveryTokenHash: string | null;
+  recoveryAccessToken: string | null;
+  recoveryRefreshToken: string | null;
+};
+
+function getInitialPortalState(): InitialPortalState {
   if (typeof window === "undefined") {
     return {
-      view: "sign-in" as AuthView,
+      view: "sign-in",
       info: "",
+      error: "",
+      recoveryTokenHash: null,
+      recoveryAccessToken: null,
+      recoveryRefreshToken: null,
     };
   }
+
   const url = new URL(window.location.href);
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const recoveryType = url.searchParams.get("type") ?? hashParams.get("type");
+  const recoveryTokenHash = url.searchParams.get("token_hash");
+  const recoveryAccessToken = hashParams.get("access_token");
+  const recoveryRefreshToken = hashParams.get("refresh_token");
+  const errorDescription = url.searchParams.get("error_description") ?? "";
+
+  if (
+    recoveryType === "recovery" &&
+    (recoveryTokenHash || (recoveryAccessToken && recoveryRefreshToken))
+  ) {
+    return {
+      view: "reset-password",
+      info: "Validating your reset link...",
+      error: "",
+      recoveryTokenHash,
+      recoveryAccessToken,
+      recoveryRefreshToken,
+    };
+  }
+
   if (url.searchParams.get("confirmed") === "1") {
     return {
-      view: "sign-in" as AuthView,
+      view: "sign-in",
       info: "Email confirmed. Sign in with your email and password.",
+      error: errorDescription,
+      recoveryTokenHash: null,
+      recoveryAccessToken: null,
+      recoveryRefreshToken: null,
     };
   }
+
   return {
-    view: "sign-in" as AuthView,
+    view: "sign-in",
     info: "",
+    error: errorDescription,
+    recoveryTokenHash: null,
+    recoveryAccessToken: null,
+    recoveryRefreshToken: null,
   };
 }
 
@@ -42,21 +86,89 @@ export function SignInPortal({
   onContinue,
   showCloseButton = true,
 }: SignInPortalProps) {
-  const [view, setView] = useState<AuthView>(() => getInitialPortalState().view);
+  const initialState = getInitialPortalState();
+  const [view, setView] = useState<AuthView>(initialState.view);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [info, setInfo] = useState(() => getInitialPortalState().info);
+  const [error, setError] = useState(initialState.error);
+  const [info, setInfo] = useState(initialState.info);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecoveryReady, setIsRecoveryReady] = useState(initialState.view !== "reset-password");
 
   useEffect(() => {
     const url = new URL(window.location.href);
     if (url.searchParams.get("confirmed") === "1") {
       url.searchParams.delete("confirmed");
     }
+    if (url.searchParams.get("error_description")) {
+      url.searchParams.delete("error_description");
+    }
     window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  useEffect(() => {
+    if (initialState.view !== "reset-password") return;
+
+    let cancelled = false;
+    const supabase = createClient();
+
+    const consumeRecoveryState = async () => {
+      setError("");
+      setInfo("Validating your reset link...");
+      setIsRecoveryReady(false);
+
+      let recoveryError: string | null = null;
+
+      if (initialState.recoveryTokenHash) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: initialState.recoveryTokenHash,
+          type: "recovery",
+        });
+        recoveryError = verifyError?.message ?? null;
+      } else if (
+        initialState.recoveryAccessToken &&
+        initialState.recoveryRefreshToken
+      ) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: initialState.recoveryAccessToken,
+          refresh_token: initialState.recoveryRefreshToken,
+        });
+        recoveryError = sessionError?.message ?? null;
+      } else {
+        recoveryError = "This password reset link is invalid or incomplete.";
+      }
+
+      if (cancelled) return;
+
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("token_hash");
+      cleanUrl.searchParams.delete("type");
+      cleanUrl.searchParams.delete("error_description");
+      cleanUrl.hash = "";
+      window.history.replaceState({}, "", cleanUrl.toString());
+
+      if (recoveryError) {
+        setView("forgot-password");
+        setError(recoveryError);
+        setInfo("");
+        setIsRecoveryReady(true);
+        return;
+      }
+
+      setView("reset-password");
+      setInfo("Choose a new password for your account.");
+      setIsRecoveryReady(true);
+    };
+
+    void consumeRecoveryState();
+
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally based on the initial callback payload only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const buildAuthCallbackUrl = (nextPath: string) => {
@@ -87,6 +199,24 @@ export function SignInPortal({
     return normalized;
   };
 
+  const formatResetError = (message: string) => {
+    const normalized = message.trim();
+    if (!normalized) {
+      return "Unable to reset your password. Please try again.";
+    }
+
+    const lower = normalized.toLowerCase();
+    if (lower.includes("redirect") || lower.includes("redirect_to")) {
+      return `${normalized} Check that ${getSiteUrl()} is listed in Supabase Auth redirect URLs.`;
+    }
+
+    if (lower.includes("email rate limit")) {
+      return "Supabase is rate-limiting reset emails right now. Wait a moment, then try again.";
+    }
+
+    return normalized;
+  };
+
   const resetFeedback = () => {
     setError("");
     setInfo("");
@@ -95,6 +225,10 @@ export function SignInPortal({
   const switchView = (nextView: AuthView) => {
     setView(nextView);
     resetFeedback();
+    if (nextView !== "reset-password") {
+      setPassword("");
+      setConfirmPassword("");
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -104,9 +238,32 @@ export function SignInPortal({
     setIsSubmitting(true);
 
     const normalizedEmail = email.trim().toLowerCase();
-    if (!isValidEmail(normalizedEmail)) {
+    const needsEmail = view !== "reset-password";
+
+    if (needsEmail && !isValidEmail(normalizedEmail)) {
       setIsSubmitting(false);
       setError("Enter a valid email address.");
+      return;
+    }
+
+    if (view === "forgot-password") {
+      const { error: resetRequestError } = await supabase.auth.resetPasswordForEmail(
+        normalizedEmail,
+        {
+          redirectTo: buildAuthCallbackUrl("/"),
+        },
+      );
+
+      setIsSubmitting(false);
+
+      if (resetRequestError) {
+        setError(formatResetError(resetRequestError.message));
+        return;
+      }
+
+      setInfo(
+        `If an account exists for ${normalizedEmail}, a password reset link has been sent.`,
+      );
       return;
     }
 
@@ -162,6 +319,46 @@ export function SignInPortal({
       return;
     }
 
+    if (view === "reset-password") {
+      if (!isRecoveryReady) {
+        setIsSubmitting(false);
+        setError("Your reset link is still being validated. Please wait.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setIsSubmitting(false);
+        setError("Passwords do not match.");
+        return;
+      }
+
+      const passwordErrors = validatePassword(password);
+      if (passwordErrors.length > 0) {
+        setIsSubmitting(false);
+        setError(passwordErrors[0]);
+        return;
+      }
+
+      const { data, error: updateError } = await supabase.auth.updateUser({
+        password,
+      });
+
+      setIsSubmitting(false);
+
+      if (updateError) {
+        setError(formatResetError(updateError.message));
+        return;
+      }
+
+      if (!data.user) {
+        setError("Unable to update your password. Please try again.");
+        return;
+      }
+
+      onContinue(accountFromUser(data.user));
+      return;
+    }
+
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password,
@@ -183,8 +380,8 @@ export function SignInPortal({
   };
 
   return (
-    <section className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 p-3 backdrop-blur-[1px] md:p-4">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_20px_50px_rgba(9,9,11,0.08)] transition-all duration-200 md:p-6">
+    <section className="absolute inset-0 z-50 overflow-y-auto bg-black/30 p-3 backdrop-blur-[1px] md:flex md:items-center md:justify-center md:p-4">
+      <div className="mx-auto w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_20px_50px_rgba(9,9,11,0.08)] transition-all duration-200 md:my-0 md:p-6">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white">
@@ -218,7 +415,7 @@ export function SignInPortal({
               onClick={() => switchView("sign-in")}
               className={[
                 "rounded-md px-3 py-2 text-sm transition",
-                view === "sign-in"
+                view === "sign-in" || view === "forgot-password" || view === "reset-password"
                   ? "bg-white font-medium text-zinc-900 shadow-sm"
                   : "text-zinc-500 hover:text-zinc-700",
               ].join(" ")}
@@ -259,30 +456,41 @@ export function SignInPortal({
             </div>
           ) : null}
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-600">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-                resetFeedback();
-              }}
-              placeholder="you@example.com"
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-              autoComplete="email"
-              required
-            />
-            <p className="mt-1 text-xs text-zinc-500">
-              {view === "sign-up"
+          {view !== "reset-password" ? (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-zinc-600">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  resetFeedback();
+                }}
+                placeholder="you@example.com"
+                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+                autoComplete="email"
+                required
+              />
+              <p className="mt-1 text-xs text-zinc-500">
+                {view === "sign-up"
                   ? "You will need to confirm your email before signing in."
-                  : "Use the email address on your Excelora account."}
+                  : view === "forgot-password"
+                    ? "We will send a secure reset link to this email."
+                    : "Use the email address on your Excelora account."}
+              </p>
+            </div>
+          ) : (
+            <p className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+              Enter your new password below to finish resetting your account.
             </p>
-          </div>
+          )}
 
-          <div>
+          {view !== "forgot-password" ? (
+            <div>
             <label className="mb-1 block text-xs font-medium text-zinc-600">
-              {view === "sign-up" ? "Create Password" : "Password"}
+              {view === "sign-up" || view === "reset-password"
+                ? "Create Password"
+                : "Password"}
             </label>
             <input
               type="password"
@@ -293,12 +501,18 @@ export function SignInPortal({
               }}
               placeholder="••••••••"
               className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-              autoComplete={view === "sign-up" ? "new-password" : "current-password"}
+              autoComplete={
+                view === "sign-up" || view === "reset-password"
+                  ? "new-password"
+                  : "current-password"
+              }
               required
+              disabled={view === "reset-password" && !isRecoveryReady}
             />
-          </div>
+            </div>
+          ) : null}
 
-          {view === "sign-up" ? (
+          {view === "sign-up" || view === "reset-password" ? (
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-600">
                 Confirm Password
@@ -314,6 +528,7 @@ export function SignInPortal({
                 className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
                 autoComplete="new-password"
                 required
+                disabled={view === "reset-password" && !isRecoveryReady}
               />
               <p className="mt-1 text-xs text-zinc-500">{PASSWORD_POLICY_HINT}</p>
             </div>
@@ -330,7 +545,19 @@ export function SignInPortal({
             </p>
           ) : null}
 
-          {view === "sign-up" ? (
+          {view === "sign-in" ? (
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => switchView("forgot-password")}
+                className="text-xs text-zinc-600 underline-offset-2 hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+          ) : null}
+
+          {view !== "sign-in" ? (
             <div className="flex items-center justify-between">
               <button
                 type="button"
@@ -350,8 +577,12 @@ export function SignInPortal({
             {isSubmitting
               ? "Please wait..."
               : view === "sign-up"
-                  ? "Create Account"
-                  : "Sign In"}
+                ? "Create Account"
+                : view === "forgot-password"
+                  ? "Send Reset Link"
+                  : view === "reset-password"
+                    ? "Update Password"
+                    : "Sign In"}
           </button>
         </form>
       </div>

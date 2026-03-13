@@ -18,6 +18,21 @@ type ProfilePayload = {
   customUnlockedChapterTitles?: unknown;
 };
 
+type ErrorPayload = { error?: unknown };
+
+type StudentsResponsePayload = {
+  viewer?: unknown;
+  students?: unknown;
+};
+
+type StudentResponsePayload = {
+  student?: unknown;
+};
+
+type DeleteStudentPayload = {
+  deletedUserId?: unknown;
+};
+
 function sortProfiles(students: UserAccessProfile[]) {
   return [...students].sort((left, right) => left.name.localeCompare(right.name));
 }
@@ -67,6 +82,12 @@ function sanitizeStudents(value: unknown): UserAccessProfile[] {
   return sortProfiles(Array.from(unique.values()));
 }
 
+function toErrorMessage(payload: ErrorPayload, fallback: string) {
+  return typeof payload.error === "string" && payload.error.trim()
+    ? payload.error
+    : fallback;
+}
+
 export type UpdateStudentAccessInput = {
   userId: string;
   plan: UserPlan;
@@ -97,10 +118,7 @@ export function useStudents(currentUserEmail?: string | null) {
         return;
       }
 
-      const payload = (await response.json()) as {
-        viewer?: unknown;
-        students?: unknown;
-      };
+      const payload = (await response.json()) as StudentsResponsePayload;
 
       setViewerProfile(sanitizeProfile(payload.viewer));
       setStudents(sanitizeStudents(payload.students));
@@ -124,17 +142,14 @@ export function useStudents(currentUserEmail?: string | null) {
         });
 
         if (!response.ok) {
-          const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
+          const payload = (await response.json().catch(() => ({}))) as ErrorPayload;
           return {
             ok: false,
-            error:
-              typeof payload.error === "string" && payload.error.trim()
-                ? payload.error
-                : "Unable to update access.",
+            error: toErrorMessage(payload, "Unable to update access."),
           };
         }
 
-        const payload = (await response.json()) as { student?: unknown };
+        const payload = (await response.json()) as StudentResponsePayload;
         const student = sanitizeProfile(payload.student);
         if (!student) {
           return {
@@ -167,17 +182,14 @@ export function useStudents(currentUserEmail?: string | null) {
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
+        const payload = (await response.json().catch(() => ({}))) as ErrorPayload;
         return {
           ok: false,
-          error:
-            typeof payload.error === "string" && payload.error.trim()
-              ? payload.error
-              : "Unable to delete student.",
+          error: toErrorMessage(payload, "Unable to delete student."),
         };
       }
 
-      const payload = (await response.json()) as { deletedUserId?: unknown };
+      const payload = (await response.json()) as DeleteStudentPayload;
       if (typeof payload.deletedUserId !== "string" || !payload.deletedUserId.trim()) {
         return {
           ok: false,
