@@ -23,8 +23,6 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next") ?? "/";
-  const tokenHash = requestUrl.searchParams.get("token_hash");
-  const type = requestUrl.searchParams.get("type");
 
   if (code) {
     const supabase = await createClient();
@@ -41,13 +39,6 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.redirect(buildRedirectUrl(request.url, next));
-  }
-
-  if (tokenHash && type) {
-    const nextUrl = buildRedirectUrl(request.url, next);
-    nextUrl.searchParams.set("token_hash", tokenHash);
-    nextUrl.searchParams.set("type", type);
-    return NextResponse.redirect(nextUrl);
   }
 
   return NextResponse.redirect(buildRedirectUrl(request.url, next));

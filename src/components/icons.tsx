@@ -190,3 +190,31 @@ export function SunIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function AssistantIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M10 3.5 11 5.8l2.5.2-1.9 1.6.6 2.4L10 8.7 7.8 10l.6-2.4L6.5 6l2.5-.2L10 3.5Z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="4"
+        y="11"
+        width="12"
+        height="5"
+        rx="2.2"
+        stroke="currentColor"
+        strokeWidth="1.2"
+      />
+      <path
+        d="M7.2 13.5h.01M12.8 13.5h.01"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

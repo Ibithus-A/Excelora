@@ -6,13 +6,12 @@ import { MenuIcon } from "@/components/icons";
 import { SignInPortal } from "@/components/sign-in-portal";
 import { Sidebar } from "@/components/sidebar";
 import { FlowStateProvider } from "@/context/flowstate-context";
+import { useAuthSession } from "@/lib/hooks/use-auth-session";
 import { useStudentProgress } from "@/lib/hooks/use-student-progress";
 import { useStudents } from "@/lib/hooks/use-students";
-import { accountFromUser } from "@/lib/supabase/account";
-import { createClient } from "@/lib/supabase/client";
 import { useSidebarResize } from "@/lib/hooks/use-sidebar-resize";
 import type { AuthenticatedAccount } from "@/types/auth";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type AppView = "workspace" | "dashboard";
 const PORTAL_CONTAINER_CLASS = "relative min-h-dvh w-full overflow-hidden bg-[var(--surface-panel)]";
@@ -20,7 +19,7 @@ const PORTAL_CONTAINER_CLASS = "relative min-h-dvh w-full overflow-hidden bg-[va
 export default function HomePage() {
   const [view, setView] = useState<AppView>("workspace");
   const [isSidebarAutoOpen, setIsSidebarAutoOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<AuthenticatedAccount | null>(null);
+  const { currentUser, setAuthenticatedUser, signOut } = useAuthSession();
   const { viewerProfile, students, updateStudentAccess, deleteStudent } = useStudents(currentUser?.email);
   const effectiveCurrentUser = useMemo(
     () => (currentUser ? viewerProfile ?? currentUser : null),
@@ -44,47 +43,13 @@ export default function HomePage() {
   } = useStudentProgress(currentUser, viewerProfile, students, updateStudentAccess, deleteStudent);
   const { sidebarWidth, startResize, isResizing } = useSidebarResize();
 
-  useEffect(() => {
-    const supabase = createClient();
-    let isMounted = true;
-
-    const hydrateSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!isMounted) return;
-
-      if (data.session?.user) {
-        setCurrentUser(accountFromUser(data.session.user));
-        setView("dashboard");
-      }
-    };
-
-    void hydrateSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setCurrentUser(accountFromUser(session.user));
-        return;
-      }
-      setCurrentUser(null);
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const handleContinueFromSignIn = (account: AuthenticatedAccount) => {
-    setCurrentUser(account);
+    setAuthenticatedUser(account);
     setView("dashboard");
   };
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    setCurrentUser(null);
+    await signOut();
     setView("dashboard");
   };
 
@@ -191,7 +156,13 @@ export default function HomePage() {
               </aside>
             </div>
 
-            <div className="h-full min-h-dvh">
+            <div
+              className={["h-full min-h-dvh", isSidebarAutoOpen ? "hidden md:block" : ""].join(" ")}
+              onClick={() => {
+                if (!isSidebarAutoOpen) return;
+                setIsSidebarAutoOpen(false);
+              }}
+            >
               <EditorPane
                 role={effectiveCurrentUser.role}
                 viewerProfile={viewerProfile}

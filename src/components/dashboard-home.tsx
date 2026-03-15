@@ -80,6 +80,9 @@ export function DashboardHome({
   const [studentSearch, setStudentSearch] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
+  const [deleteConfirmationStudentId, setDeleteConfirmationStudentId] = useState<string | null>(
+    null,
+  );
   const [deleteError, setDeleteError] = useState("");
 
   const visibleStudents = useMemo(() => {
@@ -92,12 +95,11 @@ export function DashboardHome({
     });
   }, [studentSearch, students]);
 
+  const isDeleteConfirming =
+    !!selectedStudent && deleteConfirmationStudentId === selectedStudent.id;
+
   const handleDeleteStudent = async () => {
     if (!selectedStudent || !onDeleteStudent || isDeletingStudent) return;
-    const confirmed = window.confirm(
-      `Delete ${selectedStudent.name}? This permanently removes their account and access.`,
-    );
-    if (!confirmed) return;
 
     setDeleteError("");
     setIsDeletingStudent(true);
@@ -109,6 +111,7 @@ export function DashboardHome({
       return;
     }
 
+    setDeleteConfirmationStudentId(null);
     setStudentSearch("");
     setIsSearchOpen(false);
   };
@@ -305,19 +308,52 @@ export function DashboardHome({
                     </button>
                   </div>
                   {selectedStudent ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void handleDeleteStudent();
-                      }}
-                      disabled={isDeletingStudent}
-                      className="inline-flex w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-                    >
-                      {isDeletingStudent ? "Deleting..." : "Delete Student"}
-                    </button>
+                    isDeleteConfirming ? (
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleDeleteStudent();
+                          }}
+                          disabled={isDeletingStudent}
+                          className="inline-flex w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                        >
+                          {isDeletingStudent ? "Deleting..." : `Confirm Delete ${selectedStudent.name}`}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteConfirmationStudentId(null);
+                            setDeleteError("");
+                          }}
+                          disabled={isDeletingStudent}
+                          className="inline-flex w-full items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteConfirmationStudentId(selectedStudent.id);
+                          setDeleteError("");
+                        }}
+                        disabled={isDeletingStudent}
+                        className="inline-flex w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                      >
+                        Delete Student
+                      </button>
+                    )
                   ) : null}
                 </div>
               </div>
+
+              {isDeleteConfirming && selectedStudent ? (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                  Deleting {selectedStudent.name} will permanently remove their account and access.
+                </div>
+              ) : null}
 
               {deleteError ? (
                 <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700">

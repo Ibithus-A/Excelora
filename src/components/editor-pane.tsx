@@ -47,6 +47,7 @@ export function EditorPane({
   const titleMeasureRef = useRef<HTMLSpanElement | null>(null);
   const [titleFontSizePx, setTitleFontSizePx] = useState(MAX_TITLE_FONT_SIZE_PX);
   const [isAssistantHovered, setIsAssistantHovered] = useState(false);
+  const [mobileAssistantNodeId, setMobileAssistantNodeId] = useState<string | null>(null);
   const [surfaceTransitionMode, setSurfaceTransitionMode] =
     useState<SurfaceTransitionMode>("fade");
   const [lessonProgress, setLessonProgress] = usePersistedState<LessonProgressMap>({
@@ -130,6 +131,7 @@ export function EditorPane({
       : surfaceTransitionMode === "previous"
         ? "surface-transition-previous"
         : "surface-transition-fade";
+  const isMobileAssistantOpen = !!selectedId && mobileAssistantNodeId === selectedId;
 
   useEffect(() => {
     const titleInput = titleInputRef.current;
@@ -471,7 +473,13 @@ export function EditorPane({
       )}
 
       {selectedNode.kind === "page" ? (
-        <EditorActionsDrawer onHoverChange={setIsAssistantHovered} />
+        <EditorActionsDrawer
+          onHoverChange={setIsAssistantHovered}
+          isMobileOpen={isMobileAssistantOpen}
+          onMobileOpenChange={(isOpen) => {
+            setMobileAssistantNodeId(isOpen ? selectedNode.id : null);
+          }}
+        />
       ) : null}
     </section>
   );
