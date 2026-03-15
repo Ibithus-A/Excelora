@@ -3,9 +3,11 @@
 import { CloseIcon, FlowLogoIcon } from "@/components/icons";
 import {
   buildAuthCallbackUrl,
+  buildPasswordResetCallbackUrl,
   clearPortalUrlState,
   formatSignUpError,
   getInitialPortalState,
+  getPasswordResetInfoMessage,
   type AuthView,
 } from "@/lib/auth-portal";
 import { isValidEmail, normalizeStudentName } from "@/lib/auth";
@@ -62,6 +64,25 @@ export function SignInPortal({
     if (!isValidEmail(normalizedEmail)) {
       setIsSubmitting(false);
       setError("Enter a valid email address.");
+      return;
+    }
+
+    if (view === "forgot-password") {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: buildPasswordResetCallbackUrl(),
+      });
+
+      setIsSubmitting(false);
+
+      if (resetError) {
+        setError(resetError.message);
+        return;
+      }
+
+      setInfo(getPasswordResetInfoMessage());
+      setView("sign-in");
+      setPassword("");
+      setConfirmPassword("");
       return;
     }
 
@@ -231,11 +252,14 @@ export function SignInPortal({
             <p className="mt-1 text-xs text-zinc-500">
               {view === "sign-up"
                 ? "You will need to confirm your email before signing in."
-                : "Use the email address on your Excelora account."}
+                : view === "forgot-password"
+                  ? "We will email you a secure link to set a new password."
+                  : "Use the email address on your Excelora account."}
             </p>
           </div>
 
-          <div>
+          {view !== "forgot-password" ? (
+            <div>
             <label className="mb-1 block text-xs font-medium text-zinc-600">
               {view === "sign-up" ? "Create Password" : "Password"}
             </label>
@@ -252,6 +276,7 @@ export function SignInPortal({
               required
             />
           </div>
+          ) : null}
 
           {view === "sign-up" ? (
             <div>
@@ -285,6 +310,18 @@ export function SignInPortal({
             </p>
           ) : null}
 
+          {view === "sign-in" ? (
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => switchView("forgot-password")}
+                className="text-xs text-zinc-600 underline-offset-2 hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+          ) : null}
+
           {view !== "sign-in" ? (
             <div className="flex items-center justify-between">
               <button
@@ -306,7 +343,9 @@ export function SignInPortal({
               ? "Please wait..."
               : view === "sign-up"
                 ? "Create Account"
-                : "Sign In"}
+                : view === "forgot-password"
+                  ? "Email Reset Link"
+                  : "Sign In"}
           </button>
         </form>
       </div>

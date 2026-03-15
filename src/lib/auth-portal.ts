@@ -1,6 +1,6 @@
 import { getSiteUrl } from "@/lib/supabase/env";
 
-export type AuthView = "sign-in" | "sign-up";
+export type AuthView = "sign-in" | "sign-up" | "forgot-password";
 
 export type InitialPortalState = {
   view: AuthView;
@@ -11,6 +11,8 @@ export type InitialPortalState = {
 const EMAIL_CONFIRMED_QUERY_PARAM = "confirmed";
 const ERROR_DESCRIPTION_QUERY_PARAM = "error_description";
 const CONFIRMED_INFO_MESSAGE = "Email confirmed. Sign in with your email and password.";
+const PASSWORD_RESET_INFO_MESSAGE =
+  "Check your inbox for a password reset link if that email is registered.";
 const DEFAULT_SIGN_UP_ERROR_MESSAGE = "Unable to create your account. Please try again.";
 const SIGN_UP_RATE_LIMIT_ERROR_MESSAGE =
   "Supabase is rate-limiting confirmation emails right now. Wait a moment, then try again.";
@@ -60,6 +62,14 @@ export function buildAuthCallbackUrl(nextPath: string) {
   const url = new URL("/auth/callback", getSiteUrl());
   url.searchParams.set("next", nextPath);
   return url.toString();
+}
+
+export function buildPasswordResetCallbackUrl() {
+  return buildAuthCallbackUrl("/reset-password?recovery=1");
+}
+
+export function getPasswordResetInfoMessage() {
+  return PASSWORD_RESET_INFO_MESSAGE;
 }
 
 export function formatSignUpError(message: string) {

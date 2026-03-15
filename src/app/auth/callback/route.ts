@@ -23,6 +23,17 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next") ?? "/";
+  const tokenHash = requestUrl.searchParams.get("token_hash");
+  const type = requestUrl.searchParams.get("type");
+  const errorDescription = requestUrl.searchParams.get("error_description");
+
+  if (tokenHash && type === "recovery") {
+    const redirectUrl = buildRedirectUrl(request.url, next, errorDescription ?? undefined);
+    redirectUrl.searchParams.set("token_hash", tokenHash);
+    redirectUrl.searchParams.set("type", type);
+    redirectUrl.searchParams.set("recovery", "1");
+    return NextResponse.redirect(redirectUrl);
+  }
 
   if (code) {
     const supabase = await createClient();
