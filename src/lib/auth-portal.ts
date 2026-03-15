@@ -9,10 +9,13 @@ export type InitialPortalState = {
 };
 
 const EMAIL_CONFIRMED_QUERY_PARAM = "confirmed";
+const PASSWORD_RESET_QUERY_PARAM = "password_reset";
 const ERROR_DESCRIPTION_QUERY_PARAM = "error_description";
 const CONFIRMED_INFO_MESSAGE = "Email confirmed. Sign in with your email and password.";
 const PASSWORD_RESET_INFO_MESSAGE =
   "Check your inbox for a password reset link if that email is registered.";
+const PASSWORD_RESET_COMPLETE_MESSAGE =
+  "Password updated. Sign in with your new password.";
 const DEFAULT_SIGN_UP_ERROR_MESSAGE = "Unable to create your account. Please try again.";
 const SIGN_UP_RATE_LIMIT_ERROR_MESSAGE =
   "Supabase is rate-limiting confirmation emails right now. Wait a moment, then try again.";
@@ -42,6 +45,14 @@ export function getInitialPortalState(): InitialPortalState {
     };
   }
 
+  if (url.searchParams.get(PASSWORD_RESET_QUERY_PARAM) === "1") {
+    return {
+      view: "sign-in",
+      info: PASSWORD_RESET_COMPLETE_MESSAGE,
+      error: "",
+    };
+  }
+
   return {
     view: "sign-in",
     info: "",
@@ -54,6 +65,7 @@ export function clearPortalUrlState() {
 
   const url = new URL(window.location.href);
   url.searchParams.delete(EMAIL_CONFIRMED_QUERY_PARAM);
+  url.searchParams.delete(PASSWORD_RESET_QUERY_PARAM);
   url.searchParams.delete(ERROR_DESCRIPTION_QUERY_PARAM);
   window.history.replaceState({}, "", url.toString());
 }
@@ -65,7 +77,9 @@ export function buildAuthCallbackUrl(nextPath: string) {
 }
 
 export function buildPasswordResetCallbackUrl() {
-  return buildAuthCallbackUrl("/reset-password?recovery=1");
+  const url = new URL("/reset-password", getSiteUrl());
+  url.searchParams.set("recovery", "1");
+  return url.toString();
 }
 
 export function getPasswordResetInfoMessage() {

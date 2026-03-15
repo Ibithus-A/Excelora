@@ -5,11 +5,13 @@ import {
   getPasswordResetInfoMessage,
 } from "@/lib/auth-portal";
 import { PASSWORD_POLICY_HINT, validatePassword } from "@/lib/security/password";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseEnv } from "@/lib/supabase/env";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { createClient, type SupportedStorage } from "@supabase/supabase-js";
 
 type RecoveryStatus = "verifying" | "ready" | "invalid";
+type SubmissionStatus = "idle" | "success";
 
 function getRecoveryContext() {
   if (typeof window === "undefined") {
@@ -49,6 +51,22 @@ function cleanRecoveryUrl() {
   window.history.replaceState({}, "", url.toString());
 }
 
+function createEphemeralStorage(): SupportedStorage {
+  const memory = new Map<string, string>();
+
+  return {
+    getItem(key) {
+      return memory.get(key) ?? null;
+    },
+    setItem(key, value) {
+      memory.set(key, value);
+    },
+    removeItem(key) {
+      memory.delete(key);
+    },
+  };
+}
+
 export default function ResetPasswordPage() {
   const [status, setStatus] = useState<RecoveryStatus>("verifying");
   const [error, setError] = useState("");
@@ -56,8 +74,21 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<SubmissionStatus>("idle");
 
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => {
+    const { url, key } = getSupabaseEnv();
+
+    return createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        storage: createEphemeralStorage(),
+        storageKey: "excelora-reset-password",
+      },
+    });
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -160,16 +191,18 @@ export default function ResetPasswordPage() {
 
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
-    setIsSubmitting(false);
-
     if (updateError) {
+      setIsSubmitting(false);
       setError(updateError.message);
       return;
     }
 
+    await supabase.auth.signOut();
+    setIsSubmitting(false);
+    setSubmissionStatus("success");
     setPassword("");
     setConfirmPassword("");
-    setInfo("Password updated. You can continue into your account now.");
+    setInfo("Password updated. Sign in with your new password.");
   };
 
   return (
@@ -198,6 +231,20 @@ export default function ResetPasswordPage() {
             ) : null}
             <Link
               href="/"
+              className="inline-flex w-full items-center justify-center rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
+            >
+              Back to sign in
+            </Link>
+          </div>
+        ) : submissionStatus === "success" ? (
+          <div className="space-y-3">
+            {info ? (
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                {info}
+              </p>
+            ) : null}
+            <Link
+              href="/?password_reset=1"
               className="inline-flex w-full items-center justify-center rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
             >
               Back to sign in
