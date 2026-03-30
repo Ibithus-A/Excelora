@@ -5,6 +5,18 @@ import { createClient } from "@/lib/supabase/client";
 import type { AuthenticatedAccount } from "@/types/auth";
 import { useCallback, useEffect, useState } from "react";
 
+function isMissingRefreshTokenError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const normalizedMessage = error.message.toLowerCase();
+  return (
+    normalizedMessage.includes("invalid refresh token") &&
+    normalizedMessage.includes("refresh token not found")
+  );
+}
+
 export function useAuthSession() {
   const [currentUser, setCurrentUser] = useState<AuthenticatedAccount | null>(null);
 
@@ -13,10 +25,22 @@ export function useAuthSession() {
     let isMounted = true;
 
     const hydrateSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!isMounted) return;
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!isMounted) return;
 
-      setCurrentUser(data.session?.user ? accountFromUser(data.session.user) : null);
+        setCurrentUser(data.session?.user ? accountFromUser(data.session.user) : null);
+      } catch (error) {
+        if (isMissingRefreshTokenError(error)) {
+          await supabase.auth.signOut({ scope: "local" });
+
+          if (!isMounted) return;
+          setCurrentUser(null);
+          return;
+        }
+
+        throw error;
+      }
     };
 
     void hydrateSession();
