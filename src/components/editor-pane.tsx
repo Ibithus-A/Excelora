@@ -33,6 +33,15 @@ function resolveSubtopicPdfUrl(title: string): string {
   return `/assets/${encodeURIComponent(title.trim())}.pdf`;
 }
 
+function resolveAssessmentPdfUrl(chapterTitle: string): string {
+  // Chapter titles look like "Chapter 1: Algebra and Functions". We qualify
+  // the assessment PDF filename with the chapter number so different chapters
+  // don't collide on /assets/Assessment.pdf.
+  const match = chapterTitle.match(/chapter\s+(\d+)/i);
+  const label = match ? `Chapter ${match[1]} Assessment` : `${chapterTitle} Assessment`;
+  return `/assets/${encodeURIComponent(label)}.pdf`;
+}
+
 const DEFAULT_LOCK_INFO = {
   isEffectivelyLocked: false,
   isLockedBySelf: false,
@@ -455,23 +464,27 @@ export function EditorPane({
 
                     <div className="px-4 py-5 md:px-5">
                       {isAssessmentPage ? (
-                        <div className="rounded-[24px] border border-dashed border-zinc-300 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(244,244,245,0.92))] p-4">
-                          <div className="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-[18px] border border-zinc-200 bg-white/80 px-5 text-center">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
-                              <span className="text-xl font-semibold text-zinc-700">PDF</span>
+                        <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(244,244,245,0.92))]">
+                          <object
+                            key={`${selectedNode.id}-${pdfZoom}`}
+                            data={`${resolveAssessmentPdfUrl(lessonContext.chapterTitle)}#toolbar=0&navpanes=0&view=FitH&zoom=${pdfZoom}`}
+                            type="application/pdf"
+                            className="block h-[720px] w-full bg-white"
+                          >
+                            <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 p-6 text-center">
+                              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
+                                <span className="text-xl font-semibold text-zinc-700">PDF</span>
+                              </div>
+                              <div>
+                                <p className="text-base font-medium text-zinc-900">
+                                  {END_OF_TOPIC_ASSESSMENT_TITLE} coming soon
+                                </p>
+                                <p className="mt-1 text-sm text-zinc-500">
+                                  The assessment worksheet will appear here shortly.
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-base font-medium text-zinc-900">
-                                Assessment PDF placeholder
-                              </p>
-                              <p className="mt-1 text-sm text-zinc-500">
-                                Attach the assessment worksheet here when it is ready
-                              </p>
-                            </div>
-                            <div className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
-                              {END_OF_TOPIC_ASSESSMENT_TITLE}
-                            </div>
-                          </div>
+                          </object>
                         </div>
                       ) : (
                         <div className="flex aspect-video items-center justify-center rounded-[24px] border border-dashed border-zinc-300 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(244,244,245,0.92))]">

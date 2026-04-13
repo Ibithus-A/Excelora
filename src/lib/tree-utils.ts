@@ -450,6 +450,10 @@ function getChapterNode(state: FlowState, id: string): FlowNode | null {
   const path = getNodePath(state, id);
   if (path.length === 0) return null;
 
+  // Expected layout: courseRoot > subject > chapter > page.
+  if (path.length >= 4 && path[2]?.kind === "folder") {
+    return path[2];
+  }
   if (path.length >= 3 && path[1]?.kind === "folder") {
     return path[1];
   }

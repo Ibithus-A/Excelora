@@ -1,6 +1,7 @@
 import {
   A_LEVEL_MATHS_CHAPTERS,
   A_LEVEL_MATHS_CHAPTER_TITLES,
+  A_LEVEL_MATHS_SUBJECT_TITLES,
   A_LEVEL_MATHS_TITLE,
   END_OF_TOPIC_ASSESSMENT_TITLE,
 } from "@/lib/seed";
@@ -9,7 +10,8 @@ import type { FlowState } from "@/types/flowstate";
 import type { UserAccessProfile, UserPlan } from "@/types/auth";
 
 export const CHAPTER_TITLES = A_LEVEL_MATHS_CHAPTER_TITLES;
-export const CHAPTER_ONE_TITLE = "Chapter 1: Algebra 1";
+export const CHAPTER_ONE_TITLE = A_LEVEL_MATHS_CHAPTER_TITLES[0] ?? "Chapter 1";
+const SUBJECT_TITLE_SET = new Set(A_LEVEL_MATHS_SUBJECT_TITLES.map((t) => t.trim().toLowerCase()));
 const NORMALIZED_CHAPTER_ONE_TITLE = CHAPTER_ONE_TITLE.trim().toLowerCase();
 
 function normalizeTitle(title: string) {
@@ -154,6 +156,16 @@ function getMathRootId(state: FlowState): string | null {
   );
 }
 
+function isSubjectFolder(state: FlowState, nodeId: string): boolean {
+  const node = state.nodes[nodeId];
+  if (!node || node.kind !== "folder") return false;
+  if (!node.parentId) return false;
+  const mathRootId = getMathRootId(state);
+  if (!mathRootId) return false;
+  if (node.parentId !== mathRootId) return false;
+  return SUBJECT_TITLE_SET.has(normalizeTitle(node.title));
+}
+
 function getChapterNodeForNode(
   state: FlowState,
   nodeId: string,
@@ -163,8 +175,10 @@ function getChapterNodeForNode(
 
   let cursor = state.nodes[nodeId];
   while (cursor) {
+    const parent = cursor.parentId ? state.nodes[cursor.parentId] : null;
     if (
-      cursor.parentId === mathRootId &&
+      parent &&
+      isSubjectFolder(state, parent.id) &&
       CHAPTER_TITLES.some((title) => normalizeTitle(title) === normalizeTitle(cursor.title))
     ) {
       return { chapterId: cursor.id, chapterTitle: cursor.title };
@@ -203,6 +217,7 @@ export function canAccessNode(
   const mathRootId = getMathRootId(state);
   if (!mathRootId) return false;
   if (node.id === mathRootId) return true;
+  if (isSubjectFolder(state, node.id)) return true;
 
   const chapter = getChapterNodeForNode(state, nodeId);
   if (!chapter) return false;

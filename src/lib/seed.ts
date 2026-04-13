@@ -4,252 +4,168 @@ export const A_LEVEL_MATHS_TITLE = "A Level Maths";
 export const END_OF_TOPIC_ASSESSMENT_TITLE = "Assessment";
 const LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE = "End Of Topic Assessment";
 const DEFAULT_PAGE_CONTENT = "";
-const REMOVED_SUBTOPIC_TITLES = new Set([
-  "introduction",
-  "summary and review",
-  "exploration",
-]);
-const LEGACY_CHAPTER_TITLES = new Set([
-  "chapter 2: algebra 2",
-  "chapter 3: coordinate geometry",
-  "chapter 4: calculus 1",
-  "chapter 5: trigonometry",
-  "chapter 7: units and kinematics",
-  "chapter 8: forces and newton's laws",
-  "chapter 9: working with data",
-  "chapter 10: statistical measures",
-  "chapter 11: probability and statistical distributions",
-  "chapter 12: algebra 3",
-  "chapter 13: calculus 2",
-  "chapter 14: trigonometry 2",
-  "chapter 15: calculus 3",
-  "chapter 16: vectors 2",
-  "chapter 18: motion in two dimensions",
-  "chapter 19: momentum and collisions",
-  "chapter 20: statistics 2",
-]);
 
 type ChapterDef = {
   title: string;
   subtopics: string[];
 };
 
-function toCapitalizedWords(title: string): string {
-  return title
-    .trim()
-    .replace(/\s+/g, " ")
-    .split(" ")
-    .map((word) => {
-      if (!word) return word;
-      return word
-        .split("-")
-        .map((segment) => {
-          if (!segment) return segment;
-          const firstLetterIndex = segment.search(/[a-zA-Z]/);
-          if (firstLetterIndex === -1) return segment;
-          const prefix = segment.slice(0, firstLetterIndex);
-          const letter = segment.charAt(firstLetterIndex).toUpperCase();
-          const suffix = segment.slice(firstLetterIndex + 1).toLowerCase();
-          return `${prefix}${letter}${suffix}`;
-        })
-        .join("-");
-    })
-    .join(" ");
-}
+type SubjectDef = {
+  title: string;
+  chapters: ChapterDef[];
+};
 
-export const A_LEVEL_MATHS_CHAPTERS: ChapterDef[] = [
+export const PURE_MATHEMATICS_TITLE = "Pure Mathematics";
+export const MECHANICS_TITLE = "Mechanics";
+export const STATISTICS_TITLE = "Statistics";
+
+export const A_LEVEL_MATHS_SUBJECTS: SubjectDef[] = [
   {
-    title: "Chapter 1: Algebra 1",
-    subtopics: [
-      "1.1 Argument and proof",
-      "1.2 Index laws",
-      "1.3 Surds",
-      "1.4 Quadratic functions",
-      "1.5 Lines and circles",
-      "1.6 Simultaneous equations",
-      "1.7 Inequalities",
+    title: PURE_MATHEMATICS_TITLE,
+    chapters: [
+      {
+        title: "Chapter 1: Algebra and Functions",
+        subtopics: [
+          "1.1 Laws of Indices",
+          "1.2 Surds and Rationalising Denominators",
+          "1.3 Quadratic Functions",
+          "1.4 Simultaneous Equations",
+          "1.5 Inequalities",
+          "1.6 Polynomials and Algebraic Division",
+          "1.7 Graphs of Functions",
+          "1.8 The Modulus Function",
+          "1.9 Composite and Inverse Functions",
+          "1.10 Transformations of Graphs",
+          "1.11 Partial Fractions",
+          "1.12 Functions in Modelling",
+        ],
+      },
+      {
+        title: "Chapter 2: Proof",
+        subtopics: [
+          "2.1 The Structure of Mathematical Proof",
+          "2.2 Proof by Deduction",
+          "2.3 Proof by Exhaustion",
+          "2.4 Disproof by Counter Example",
+          "2.5 Proof by Contradiction",
+        ],
+      },
+      {
+        title: "Chapter 3: Coordinate Geometry",
+        subtopics: [
+          "3.1 Straight Lines",
+          "3.2 Circles",
+          "3.3 Parametric Equations",
+          "3.4 Parametric Equations in Modelling",
+        ],
+      },
+      {
+        title: "Chapter 4: Sequences and Series",
+        subtopics: [
+          "4.1 Arithmetic Sequences and Series",
+          "4.2 Geometric Sequences and Series",
+          "4.3 Sigma Notation and Recurrence Relations",
+          "4.4 Binomial Expansion - Positive Integer n",
+          "4.5 Binomial Expansion - Rational n",
+          "4.6 Sequences and Series in Modelling",
+        ],
+      },
+      {
+        title: "Chapter 5: Trigonometry",
+        subtopics: [
+          "5.1 Radians, Arc Length and Sector Area",
+          "5.2 Sine Rule, Cosine Rule and Area of a Triangle",
+          "5.3 Exact Trigonometric Values",
+          "5.4 Trigonometric Graphs and Symmetry",
+          "5.5 Small Angle Approximations",
+          "5.6 Reciprocal and Inverse Trigonometric Functions",
+          "5.7 Trigonometric Identities",
+          "5.8 The R cos Form",
+          "5.9 Solving Trigonometric Equations",
+          "5.10 Trigonometry in Modelling",
+        ],
+      },
+      {
+        title: "Chapter 6: Exponentials and Logarithms",
+        subtopics: [
+          "6.1 Exponential Functions",
+          "6.2 Logarithms and Their Laws",
+          "6.3 Logarithmic Graphs for Estimating Parameters",
+          "6.4 Exponential Growth and Decay",
+        ],
+      },
+      {
+        title: "Chapter 7: Differentiation",
+        subtopics: [
+          "7.1 Differentiation from First Principles",
+          "7.2 Standard Derivatives and Basic Rules",
+          "7.3 Chain Rule, Product Rule and Quotient Rule",
+          "7.4 Applications of Differentiation",
+          "7.5 Implicit and Parametric Differentiation",
+          "7.6 Constructing Differential Equations",
+        ],
+      },
+      {
+        title: "Chapter 8: Integration",
+        subtopics: [
+          "8.1 Standard Integrals",
+          "8.2 Definite Integrals and Areas",
+          "8.3 Integration by Substitution",
+          "8.4 Integration by Parts",
+          "8.5 Integration Using Partial Fractions",
+          "8.6 Differential Equations",
+        ],
+      },
+      {
+        title: "Chapter 9: Numerical Methods",
+        subtopics: [
+          "9.1 Locating Roots by Sign Change",
+          "9.2 Fixed Point Iteration",
+          "9.3 The Newton-Raphson Method",
+          "9.4 The Trapezium Rule",
+        ],
+      },
+      {
+        title: "Chapter 10: Vectors",
+        subtopics: [
+          "10.1 Vectors in Two and Three Dimensions",
+          "10.2 Position Vectors and Distance",
+          "10.3 Vector Problems in Pure Mathematics",
+        ],
+      },
     ],
   },
   {
-    title: "Chapter 2: Polynomials and the binomial theorem",
-    subtopics: [
-      "2.1 Expanding and factorising",
-      "2.2 The binomial theorem",
-      "2.3 Algebraic division",
-      "2.4 Curve sketching",
-    ],
+    title: MECHANICS_TITLE,
+    chapters: [],
   },
   {
-    title: "Chapter 3: Trigonometry",
-    subtopics: [
-      "3.1 Sine, cosine and tangent",
-      "3.2 The sine and cosine rules",
-    ],
-  },
-  {
-    title: "Chapter 4: Differentiation and integration",
-    subtopics: [
-      "4.1 Differentiation from first principles",
-      "4.2 Differentiating ax^n and Leibniz notation",
-      "4.3 Rates of change",
-      "4.4 Tangents and normals",
-      "4.5 Turning points",
-      "4.6 Integration",
-      "4.7 Area under a curve",
-    ],
-  },
-  {
-    title: "Chapter 5: Exponentials and logarithms",
-    subtopics: [
-      "5.1 The laws of logarithms",
-      "5.2 Exponential functions",
-      "5.3 Exponential processes",
-      "5.4 Curve fitting",
-    ],
-  },
-  {
-    title: "Chapter 6: Vectors",
-    subtopics: [
-      "6.1 Definitions and properties",
-      "6.2 Components of a vector",
-    ],
-  },
-  {
-    title: "Chapter 7: Units and kinematics",
-    subtopics: [
-      "7.1 Standard units and basic dimensions",
-      "7.2 Motion in a straight line - definitions and graphs",
-      "7.3 Equations of motion for constant acceleration",
-      "7.4 Motion with variable acceleration",
-    ],
-  },
-  {
-    title: "Chapter 8: Forces and Newton's laws",
-    subtopics: [
-      "8.1 Forces 1",
-      "8.2 Dynamics 1",
-      "8.3 Motion under gravity",
-      "8.4 Systems of forces",
-    ],
-  },
-  {
-    title: "Chapter 9: Collecting, representing and interpreting data",
-    subtopics: [
-      "9.1 Sampling",
-      "9.2 Central tendency and spread",
-      "9.3 Single-variable data",
-      "9.4 Bivariate data",
-    ],
-  },
-  {
-    title: "Chapter 10: Probability and discrete random variables",
-    subtopics: [
-      "10.1 Probability",
-      "10.2 Binomial distribution",
-    ],
-  },
-  {
-    title: "Chapter 11: Hypothesis testing 1",
-    subtopics: [
-      "11.1 Formulating a test",
-      "11.2 The critical region",
-    ],
-  },
-  {
-    title: "Chapter 12: Algebra 2",
-    subtopics: [
-      "12.1 Further mathematical proof",
-      "12.2 Functions",
-      "12.3 Parametric equations",
-      "12.4 Algebraic fractions",
-      "12.5 Partial fractions",
-      "12.6 Vectors in 3D",
-    ],
-  },
-  {
-    title: "Chapter 13: Sequences",
-    subtopics: [
-      "13.1 The binomial series",
-      "13.2 Introduction to sequences",
-      "13.3 Arithmetic sequences",
-      "13.4 Geometric sequences",
-    ],
-  },
-  {
-    title: "Chapter 14: Trigonometric identities",
-    subtopics: [
-      "14.1 Radians",
-      "14.2 Reciprocal and inverse trigonometric functions",
-      "14.3 Compound angles",
-      "14.4 Equivalent forms for a cos theta + b sin theta",
-    ],
-  },
-  {
-    title: "Chapter 15: Differentiation 2",
-    subtopics: [
-      "15.1 The shapes of functions",
-      "15.2 Trigonometric functions",
-      "15.3 Exponential and logarithmic functions",
-      "15.4 The product and quotient rules",
-      "15.5 The chain rule",
-      "15.6 Inverse functions",
-      "15.7 Implicit differentiation",
-      "15.8 Parametric functions",
-    ],
-  },
-  {
-    title: "Chapter 16: Integration and differential equations",
-    subtopics: [
-      "16.1 Standard integrals",
-      "16.2 Integration by substitution",
-      "16.3 Integration by parts",
-      "16.4 Integrating rational functions",
-      "16.5 Differential equations",
-    ],
-  },
-  {
-    title: "Chapter 17: Numerical methods",
-    subtopics: [
-      "17.1 Simple root finding",
-      "17.2 Iterative root finding",
-      "17.3 Newton-Raphson root finding",
-      "17.4 Numerical integration",
-    ],
-  },
-  {
-    title: "Chapter 18: Motion in two dimensions",
-    subtopics: [
-      "18.1 Two-dimensional motion with constant acceleration",
-      "18.2 Two-dimensional motion with variable acceleration",
-      "18.3 Motion under gravity 2",
-      "18.4 Motion under forces",
-    ],
-  },
-  {
-    title: "Chapter 19: Forces 2",
-    subtopics: [
-      "19.1 Statics",
-      "19.2 Dynamics 2",
-      "19.3 Moments",
-    ],
-  },
-  {
-    title: "Chapter 20: Probability and continuous random variables",
-    subtopics: [
-      "20.1 Conditional probability",
-      "20.2 Modelling with probability",
-      "20.3 The Normal distribution",
-      "20.4 Using the Normal distribution as an approximation to the binomial",
-    ],
-  },
-  {
-    title: "Chapter 21: Hypothesis testing 2",
-    subtopics: [
-      "21.1 Testing correlation",
-      "21.2 Testing a Normal distribution",
-    ],
+    title: STATISTICS_TITLE,
+    chapters: [],
   },
 ];
+
+export const A_LEVEL_MATHS_SUBJECT_TITLES = A_LEVEL_MATHS_SUBJECTS.map(
+  (subject) => subject.title,
+);
+
+export const A_LEVEL_MATHS_CHAPTERS: ChapterDef[] = A_LEVEL_MATHS_SUBJECTS.flatMap(
+  (subject) => subject.chapters,
+);
+
+export const A_LEVEL_MATHS_CHAPTER_TITLES = A_LEVEL_MATHS_CHAPTERS.map(
+  (chapter) => chapter.title,
+);
+
+export function getSubjectTitleForChapter(chapterTitle: string): string | null {
+  const normalized = chapterTitle.trim().toLowerCase();
+  for (const subject of A_LEVEL_MATHS_SUBJECTS) {
+    if (subject.chapters.some((c) => c.title.trim().toLowerCase() === normalized)) {
+      return subject.title;
+    }
+  }
+  return null;
+}
 
 function makeNode(
   id: string,
@@ -277,10 +193,6 @@ function makeNode(
 function normalizeTitle(title: string) {
   return title.trim().toLowerCase();
 }
-
-export const A_LEVEL_MATHS_CHAPTER_TITLES = A_LEVEL_MATHS_CHAPTERS.map(
-  (chapter) => chapter.title,
-);
 
 function makeNodeId(title: string, nodes: Record<string, FlowNode>, seed: { value: number }) {
   const slug = title
@@ -336,27 +248,6 @@ function attachChildren(
     if (!parent.childrenIds.includes(childId)) {
       parent.childrenIds.push(childId);
     }
-  }
-}
-
-function reparentNode(
-  nodes: Record<string, FlowNode>,
-  nodeId: string,
-  nextParentId: string,
-) {
-  const node = nodes[nodeId];
-  if (!node) return;
-
-  const previousParentId = node.parentId;
-  if (previousParentId && nodes[previousParentId]) {
-    nodes[previousParentId].childrenIds = nodes[previousParentId].childrenIds.filter(
-      (childId) => childId !== nodeId,
-    );
-  }
-
-  node.parentId = nextParentId;
-  if (!nodes[nextParentId].childrenIds.includes(nodeId)) {
-    nodes[nextParentId].childrenIds.push(nodeId);
   }
 }
 
@@ -436,17 +327,24 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
     delete next.nodes[duplicateRootId];
   }
 
+  // Purge any children of the course root that aren't one of the new subject
+  // folders. The prior tree layout placed chapters directly under the course
+  // root; those need to be removed so the new subject > chapter hierarchy can
+  // take their place cleanly.
   const courseRootNode = next.nodes[courseRootId];
   if (courseRootNode) {
+    const subjectTitleSet = new Set(
+      A_LEVEL_MATHS_SUBJECT_TITLES.map(normalizeTitle),
+    );
     const idsToRemove = new Set<string>();
-
     for (const childId of courseRootNode.childrenIds) {
       const child = next.nodes[childId];
-      if (!child || child.kind !== "folder") continue;
-      if (!LEGACY_CHAPTER_TITLES.has(normalizeTitle(child.title))) continue;
+      if (!child) continue;
+      if (child.kind === "folder" && subjectTitleSet.has(normalizeTitle(child.title))) {
+        continue;
+      }
       collectSubtreeIds(next.nodes, child.id, idsToRemove);
     }
-
     if (idsToRemove.size > 0) {
       courseRootNode.childrenIds = courseRootNode.childrenIds.filter(
         (childId) => !idsToRemove.has(childId),
@@ -457,153 +355,163 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
     }
   }
 
-  for (const chapter of A_LEVEL_MATHS_CHAPTERS) {
-    const normalizedSubtopics = chapter.subtopics.map((subtopic) =>
-      toCapitalizedWords(subtopic),
-    );
-
-    const matchingChapterIds =
+  for (const subject of A_LEVEL_MATHS_SUBJECTS) {
+    const matchingSubjectIds =
       next.nodes[courseRootId]?.childrenIds.filter((childId) => {
         const child = next.nodes[childId];
         return (
           child?.kind === "folder" &&
-          normalizeTitle(child.title) === normalizeTitle(chapter.title)
+          normalizeTitle(child.title) === normalizeTitle(subject.title)
         );
       }) ?? [];
 
-    const existingChapterId = matchingChapterIds[0];
-
-    const chapterId = existingChapterId ?? createFolder(chapter.title, courseRootId);
-    if (next.nodes[chapterId].title !== chapter.title) {
-      next.nodes[chapterId].title = chapter.title;
-    }
-    if (normalizeTitle(chapter.title) === normalizeTitle("Chapter 1: Algebra 1")) {
-      next.nodes[chapterId].isExpanded = true;
+    const subjectId = matchingSubjectIds[0] ?? createFolder(subject.title, courseRootId);
+    if (next.nodes[subjectId].title !== subject.title) {
+      next.nodes[subjectId].title = subject.title;
     }
 
-    for (const duplicateChapterId of matchingChapterIds.slice(1)) {
-      const duplicateChapter = next.nodes[duplicateChapterId];
-      if (!duplicateChapter) continue;
-      attachChildren(next.nodes, chapterId, duplicateChapter.childrenIds);
+    for (const duplicateSubjectId of matchingSubjectIds.slice(1)) {
+      const duplicate = next.nodes[duplicateSubjectId];
+      if (!duplicate) continue;
+      attachChildren(next.nodes, subjectId, duplicate.childrenIds);
       next.nodes[courseRootId].childrenIds = next.nodes[courseRootId].childrenIds.filter(
-        (childId) => childId !== duplicateChapterId,
+        (childId) => childId !== duplicateSubjectId,
       );
-      delete next.nodes[duplicateChapterId];
+      delete next.nodes[duplicateSubjectId];
     }
 
-    const legacyAssessmentId = next.nodes[chapterId]?.childrenIds.find((childId) => {
-      const child = next.nodes[childId];
-      return (
-        child?.kind === "page" &&
-        normalizeTitle(child.title) === normalizeTitle(LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE)
-      );
-    });
-    if (legacyAssessmentId) {
-      const hasCurrentAssessment = next.nodes[chapterId]?.childrenIds.some((childId) => {
-        const child = next.nodes[childId];
-        return (
-          child?.kind === "page" &&
-          normalizeTitle(child.title) === normalizeTitle(END_OF_TOPIC_ASSESSMENT_TITLE)
-        );
-      });
-
-      if (hasCurrentAssessment) {
-        next.nodes[chapterId].childrenIds = next.nodes[chapterId].childrenIds.filter(
-          (childId) => childId !== legacyAssessmentId,
-        );
-        delete next.nodes[legacyAssessmentId];
-      } else {
-        next.nodes[legacyAssessmentId].title = END_OF_TOPIC_ASSESSMENT_TITLE;
-      }
-    }
-
-    const assessmentIds =
-      next.nodes[chapterId]?.childrenIds.filter((childId) => {
-        const child = next.nodes[childId];
-        return (
-          child?.kind === "page" &&
-          normalizeTitle(child.title) === normalizeTitle(END_OF_TOPIC_ASSESSMENT_TITLE)
-        );
-      }) ?? [];
-
-    for (const duplicateAssessmentId of assessmentIds.slice(1)) {
-      next.nodes[chapterId].childrenIds = next.nodes[chapterId].childrenIds.filter(
-        (childId) => childId !== duplicateAssessmentId,
-      );
-      delete next.nodes[duplicateAssessmentId];
-    }
-
-    const allowedPageTitles = new Set(
-      [...normalizedSubtopics, END_OF_TOPIC_ASSESSMENT_TITLE, LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE].map(
-        (title) => normalizeTitle(title),
-      ),
+    // Purge any chapter folders inside this subject whose title is not in the
+    // current chapter list. Keeps stale chapters from prior seed revisions out.
+    const subjectChapterTitles = new Set(
+      subject.chapters.map((c) => normalizeTitle(c.title)),
     );
-    next.nodes[chapterId].childrenIds = next.nodes[chapterId].childrenIds.filter((childId) => {
+    const staleChapterIds = new Set<string>();
+    for (const childId of next.nodes[subjectId].childrenIds) {
       const child = next.nodes[childId];
-      if (!child || child.kind !== "page") return true;
-      if (REMOVED_SUBTOPIC_TITLES.has(normalizeTitle(child.title))) {
-        delete next.nodes[childId];
-        return false;
+      if (!child) continue;
+      if (child.kind === "folder" && subjectChapterTitles.has(normalizeTitle(child.title))) {
+        continue;
       }
-      if (allowedPageTitles.has(normalizeTitle(child.title))) return true;
-      if (child.content !== DEFAULT_PAGE_CONTENT) return true;
-      delete next.nodes[childId];
-      return false;
-    });
+      collectSubtreeIds(next.nodes, child.id, staleChapterIds);
+    }
+    if (staleChapterIds.size > 0) {
+      next.nodes[subjectId].childrenIds = next.nodes[subjectId].childrenIds.filter(
+        (childId) => !staleChapterIds.has(childId),
+      );
+      for (const id of staleChapterIds) {
+        delete next.nodes[id];
+      }
+    }
 
-    for (const subtopic of normalizedSubtopics) {
-      const existingSubtopicId = next.nodes[chapterId]?.childrenIds.find((childId) => {
-        const child = next.nodes[childId];
-        return child?.kind === "page" && normalizeTitle(child.title) === normalizeTitle(subtopic);
-      });
-      if (!existingSubtopicId) {
-        const matchingPageId = Object.keys(next.nodes).find((nodeId) => {
-          const node = next.nodes[nodeId];
+    for (const chapter of subject.chapters) {
+      const matchingChapterIds =
+        next.nodes[subjectId]?.childrenIds.filter((childId) => {
+          const child = next.nodes[childId];
           return (
-            node.kind === "page" &&
-            normalizeTitle(node.title) === normalizeTitle(subtopic)
+            child?.kind === "folder" &&
+            normalizeTitle(child.title) === normalizeTitle(chapter.title)
+          );
+        }) ?? [];
+
+      const chapterId = matchingChapterIds[0] ?? createFolder(chapter.title, subjectId);
+      if (next.nodes[chapterId].title !== chapter.title) {
+        next.nodes[chapterId].title = chapter.title;
+      }
+
+      for (const duplicateChapterId of matchingChapterIds.slice(1)) {
+        const duplicate = next.nodes[duplicateChapterId];
+        if (!duplicate) continue;
+        attachChildren(next.nodes, chapterId, duplicate.childrenIds);
+        next.nodes[subjectId].childrenIds = next.nodes[subjectId].childrenIds.filter(
+          (childId) => childId !== duplicateChapterId,
+        );
+        delete next.nodes[duplicateChapterId];
+      }
+
+      const legacyAssessmentId = next.nodes[chapterId]?.childrenIds.find((childId) => {
+        const child = next.nodes[childId];
+        return (
+          child?.kind === "page" &&
+          normalizeTitle(child.title) === normalizeTitle(LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE)
+        );
+      });
+      if (legacyAssessmentId) {
+        const hasCurrentAssessment = next.nodes[chapterId]?.childrenIds.some((childId) => {
+          const child = next.nodes[childId];
+          return (
+            child?.kind === "page" &&
+            normalizeTitle(child.title) === normalizeTitle(END_OF_TOPIC_ASSESSMENT_TITLE)
           );
         });
 
-        if (matchingPageId) {
-          reparentNode(next.nodes, matchingPageId, chapterId);
-          if (next.nodes[matchingPageId].title !== subtopic) {
-            next.nodes[matchingPageId].title = subtopic;
-          }
+        if (hasCurrentAssessment) {
+          next.nodes[chapterId].childrenIds = next.nodes[chapterId].childrenIds.filter(
+            (childId) => childId !== legacyAssessmentId,
+          );
+          delete next.nodes[legacyAssessmentId];
+        } else {
+          next.nodes[legacyAssessmentId].title = END_OF_TOPIC_ASSESSMENT_TITLE;
+        }
+      }
+
+      const allowedPageTitles = new Set(
+        [...chapter.subtopics, END_OF_TOPIC_ASSESSMENT_TITLE, LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE].map(
+          (title) => normalizeTitle(title),
+        ),
+      );
+      next.nodes[chapterId].childrenIds = next.nodes[chapterId].childrenIds.filter((childId) => {
+        const child = next.nodes[childId];
+        if (!child || child.kind !== "page") return true;
+        if (allowedPageTitles.has(normalizeTitle(child.title))) return true;
+        if (child.content !== DEFAULT_PAGE_CONTENT) return true;
+        delete next.nodes[childId];
+        return false;
+      });
+
+      for (const subtopic of chapter.subtopics) {
+        const existingSubtopicId = next.nodes[chapterId]?.childrenIds.find((childId) => {
+          const child = next.nodes[childId];
+          return child?.kind === "page" && normalizeTitle(child.title) === normalizeTitle(subtopic);
+        });
+        if (!existingSubtopicId) {
+          createPage(subtopic, chapterId);
           continue;
         }
 
-        createPage(subtopic, chapterId);
-        continue;
+        if (next.nodes[existingSubtopicId].title !== subtopic) {
+          next.nodes[existingSubtopicId].title = subtopic;
+        }
       }
 
-      if (next.nodes[existingSubtopicId].title !== subtopic) {
-        next.nodes[existingSubtopicId].title = subtopic;
+      const hasAssessment = next.nodes[chapterId]?.childrenIds.some((childId) => {
+        const child = next.nodes[childId];
+        return (
+          child?.kind === "page" &&
+          normalizeTitle(child.title) === normalizeTitle(END_OF_TOPIC_ASSESSMENT_TITLE)
+        );
+      });
+      if (!hasAssessment) {
+        createPage(END_OF_TOPIC_ASSESSMENT_TITLE, chapterId);
       }
-    }
 
-    const hasAssessment = next.nodes[chapterId]?.childrenIds.some((childId) => {
-      const child = next.nodes[childId];
-      return (
-        child?.kind === "page" &&
-        normalizeTitle(child.title) === normalizeTitle(END_OF_TOPIC_ASSESSMENT_TITLE)
+      next.nodes[chapterId].childrenIds = orderChildrenByTitle(
+        next.nodes,
+        next.nodes[chapterId].childrenIds,
+        [...chapter.subtopics, END_OF_TOPIC_ASSESSMENT_TITLE],
       );
-    });
-    if (!hasAssessment) {
-      createPage(END_OF_TOPIC_ASSESSMENT_TITLE, chapterId);
     }
 
-    next.nodes[chapterId].childrenIds = orderChildrenByTitle(
+    next.nodes[subjectId].childrenIds = orderChildrenByTitle(
       next.nodes,
-      next.nodes[chapterId].childrenIds,
-      [...normalizedSubtopics, END_OF_TOPIC_ASSESSMENT_TITLE],
+      next.nodes[subjectId].childrenIds,
+      subject.chapters.map((chapter) => chapter.title),
     );
   }
 
   next.nodes[courseRootId].childrenIds = orderChildrenByTitle(
     next.nodes,
     next.nodes[courseRootId].childrenIds,
-    A_LEVEL_MATHS_CHAPTERS.map((chapter) => chapter.title),
+    A_LEVEL_MATHS_SUBJECT_TITLES,
   );
 
   if (!next.selectedId) {
