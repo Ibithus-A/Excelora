@@ -1,6 +1,12 @@
 "use client";
 
-import { FlowLogoIcon } from "@/components/icons";
+import {
+  BookmarkIcon,
+  FlowLogoIcon,
+  LockIcon,
+  TrashIcon,
+  UnlockIcon,
+} from "@/components/icons";
 import { CHAPTER_ONE_TITLE } from "@/lib/access";
 import type { UserAccessProfile, UserPlan, UserRole } from "@/types/auth";
 import type { StudentDailyStats } from "@/types/dashboard";
@@ -29,31 +35,6 @@ type DashboardHomeProps = {
   onToggleChapter?: (chapterTitle: string) => Promise<void>;
   onDeleteStudent?: () => Promise<{ ok: boolean; error?: string }>;
 };
-
-type ComingSoonCardProps = {
-  title: string;
-  description: string;
-};
-
-function ComingSoonCard({ title, description }: ComingSoonCardProps) {
-  return (
-    <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-500">
-          {title}
-        </h2>
-        <span className="rounded-full border border-zinc-300 bg-zinc-100 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">
-          Coming Soon
-        </span>
-      </div>
-
-      <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-10 text-center">
-        <p className="text-lg font-semibold text-zinc-800">Coming Soon</p>
-        <p className="mt-2 text-sm text-zinc-600">{description}</p>
-      </div>
-    </article>
-  );
-}
 
 export function DashboardHome({
   name,
@@ -167,114 +148,105 @@ export function DashboardHome({
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <ComingSoonCard
-            title="Habit Tracker"
-            description="Habit tracking is planned for a future update."
-          />
-          <ComingSoonCard
-            title="Module Review"
-            description="Module review tracking is planned for a future update."
-          />
-        </div>
-
         {role === "tutor" && chapterTitles.length > 0 ? (
           <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
-            <div className="mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-500">
                 Student Management
               </h2>
+              {students.length > 0 ? (
+                <span className="text-xs text-zinc-500">
+                  {students.length} student{students.length === 1 ? "" : "s"}
+                </span>
+              ) : null}
             </div>
 
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-              <div className="flex flex-col items-stretch justify-start gap-4 sm:flex-row sm:flex-wrap sm:items-start">
-                {students.length > 0 ? (
-                  <div className="relative w-full sm:max-w-[320px]">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={studentSearch}
-                        onFocus={() => setIsSearchOpen(true)}
-                        onChange={(event) => {
-                          setStudentSearch(event.target.value);
-                          setIsSearchOpen(true);
-                        }}
-                        placeholder="Search student by name or email..."
-                        className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 pr-16 text-sm text-zinc-800 outline-none focus:border-zinc-400"
-                      />
-                      {studentSearch ? (
+            {students.length > 0 ? (
+              <div className="relative mt-4 w-full sm:max-w-[360px]">
+                <input
+                  type="text"
+                  value={studentSearch}
+                  onFocus={() => setIsSearchOpen(true)}
+                  onChange={(event) => {
+                    setStudentSearch(event.target.value);
+                    setIsSearchOpen(true);
+                  }}
+                  placeholder="Search student by name or email..."
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 pr-16 text-sm text-zinc-800 outline-none transition focus:border-zinc-400"
+                />
+                {studentSearch ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentSearch("");
+                      setIsSearchOpen(false);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+                {isSearchOpen ? (
+                  <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
+                    {visibleStudents.length > 0 ? (
+                      visibleStudents.slice(0, 6).map((student) => (
                         <button
+                          key={student.id}
                           type="button"
                           onClick={() => {
-                            setStudentSearch("");
+                            onSelectStudent?.(student.id);
+                            setStudentSearch(student.name);
                             setIsSearchOpen(false);
                           }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
+                          className="flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2.5 text-left text-sm text-zinc-700 transition last:border-b-0 hover:bg-zinc-50"
                         >
-                          Clear
+                          <span className="min-w-0">
+                            <span className="block truncate">{student.name}</span>
+                            <span className="block truncate text-xs text-zinc-500">
+                              {student.email}
+                            </span>
+                          </span>
+                          {student.id === selectedStudentId ? (
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+                              Selected
+                            </span>
+                          ) : null}
                         </button>
-                      ) : null}
-                    </div>
-                    {isSearchOpen ? (
-                      <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-                        {visibleStudents.length > 0 ? (
-                          visibleStudents.slice(0, 6).map((student) => (
-                            <button
-                              key={student.id}
-                              type="button"
-                              onClick={() => {
-                                onSelectStudent?.(student.id);
-                                setStudentSearch(student.name);
-                                setIsSearchOpen(false);
-                              }}
-                              className="flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2.5 text-left text-sm text-zinc-700 transition last:border-b-0 hover:bg-zinc-50"
-                            >
-                              <span className="min-w-0">
-                                <span className="block truncate">{student.name}</span>
-                                <span className="block truncate text-xs text-zinc-500">
-                                  {student.email}
-                                </span>
-                              </span>
-                              {student.id === selectedStudentId ? (
-                                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
-                                  Selected
-                                </span>
-                              ) : null}
-                            </button>
-                          ))
-                        ) : (
-                          <p className="px-3 py-2.5 text-sm text-zinc-500">No matching users found.</p>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-                {students.length > 0 ? (
-                  <div className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-600">
-                    {students.length} student{students.length === 1 ? "" : "s"}
+                      ))
+                    ) : (
+                      <p className="px-3 py-2.5 text-sm text-zinc-500">No matching users found.</p>
+                    )}
                   </div>
                 ) : null}
               </div>
+            ) : null}
 
-              <div className="mt-4 flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
-                    Selected Student
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-zinc-900">
-                    {selectedStudent?.name ?? "No student selected"}
-                  </p>
-                  {selectedStudent ? (
-                    <p className="mt-1 text-xs text-zinc-500">{selectedStudent.email}</p>
-                  ) : null}
+            <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4 md:p-5">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white">
+                    {selectedStudent ? selectedStudent.name.charAt(0).toUpperCase() : "—"}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[15px] font-semibold text-zinc-900">
+                      {selectedStudent?.name ?? "No student selected"}
+                    </p>
+                    {selectedStudent ? (
+                      <p className="truncate text-xs text-zinc-500">{selectedStudent.email}</p>
+                    ) : (
+                      <p className="text-xs text-zinc-500">
+                        Search above to load a student's workspace.
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-                  <div className="relative grid w-full grid-cols-2 rounded-xl border border-zinc-200 bg-zinc-50 p-1 sm:w-auto">
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="relative grid grid-cols-2 rounded-full border border-zinc-200 bg-zinc-50 p-0.5">
                     <span
                       aria-hidden="true"
                       className={[
-                        "pointer-events-none absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-lg bg-white shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                        "pointer-events-none absolute bottom-0.5 left-0.5 top-0.5 w-[calc(50%-2px)] rounded-full bg-white shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
                         selectedStudentPlan === "premium" ? "translate-x-full" : "translate-x-0",
                       ].join(" ")}
                     />
@@ -284,7 +256,7 @@ export function DashboardHome({
                         void onSetStudentPlan?.("basic");
                       }}
                       className={[
-                        "relative z-10 rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] transition-colors duration-300",
+                        "relative z-10 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors duration-300",
                         selectedStudentPlan === "basic"
                           ? "text-zinc-900"
                           : "text-zinc-500 hover:text-zinc-800",
@@ -298,7 +270,7 @@ export function DashboardHome({
                         void onSetStudentPlan?.("premium");
                       }}
                       className={[
-                        "relative z-10 rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] transition-colors duration-300",
+                        "relative z-10 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors duration-300",
                         selectedStudentPlan === "premium"
                           ? "text-zinc-900"
                           : "text-zinc-500 hover:text-zinc-800",
@@ -308,50 +280,74 @@ export function DashboardHome({
                     </button>
                   </div>
                   {selectedStudent ? (
-                    isDeleteConfirming ? (
-                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void handleDeleteStudent();
-                          }}
-                          disabled={isDeletingStudent}
-                          className="inline-flex w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-                        >
-                          {isDeletingStudent ? "Deleting..." : `Confirm Delete ${selectedStudent.name}`}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDeleteConfirmationStudentId(null);
-                            setDeleteError("");
-                          }}
-                          disabled={isDeletingStudent}
-                          className="inline-flex w-full items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDeleteConfirmationStudentId(selectedStudent.id);
-                          setDeleteError("");
-                        }}
-                        disabled={isDeletingStudent}
-                        className="inline-flex w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-                      >
-                        Delete Student
-                      </button>
-                    )
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteConfirmationStudentId(selectedStudent.id);
+                        setDeleteError("");
+                      }}
+                      disabled={isDeletingStudent || isDeleteConfirming}
+                      aria-label={`Delete ${selectedStudent.name}`}
+                      title="Delete student"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
                   ) : null}
                 </div>
               </div>
 
+              {selectedStudent ? (
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className={[
+                        "h-1.5 w-1.5 rounded-full",
+                        selectedStudentMilestone ? "bg-emerald-500" : "bg-zinc-300",
+                      ].join(" ")}
+                    />
+                    Current chapter:{" "}
+                    <span className="text-zinc-800">
+                      {selectedStudentMilestone ?? "Not tagged"}
+                    </span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
+                    {accessibleChapterTitles.length} of {chapterTitles.length} chapters unlocked
+                  </span>
+                </div>
+              ) : null}
+
               {isDeleteConfirming && selectedStudent ? (
-                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
-                  Deleting {selectedStudent.name} will permanently remove their account and access.
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-800">
+                  <span>
+                    Permanently delete{" "}
+                    <span className="font-semibold">{selectedStudent.name}</span>? This cannot be
+                    undone.
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteConfirmationStudentId(null);
+                        setDeleteError("");
+                      }}
+                      disabled={isDeletingStudent}
+                      className="inline-flex items-center justify-center rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleDeleteStudent();
+                      }}
+                      disabled={isDeletingStudent}
+                      className="inline-flex items-center justify-center rounded-full border border-rose-600 bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isDeletingStudent ? "Deleting…" : "Delete"}
+                    </button>
+                  </div>
                 </div>
               ) : null}
 
@@ -360,18 +356,24 @@ export function DashboardHome({
                   {deleteError}
                 </div>
               ) : null}
-
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
-                <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1">
-                  Milestone: {selectedStudentMilestone ?? "Not tagged"}
-                </span>
-                <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1">
-                  Unlocked: {accessibleChapterTitles.length} / {chapterTitles.length}
-                </span>
-              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+            <div className="mt-8 flex items-end justify-between border-b border-zinc-200 pb-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-500">
+                  Chapter Access
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Tag the current chapter or toggle locks for any subtopic.
+                </p>
+              </div>
+              <p className="text-xs font-medium text-zinc-600">
+                {accessibleChapterTitles.length}
+                <span className="text-zinc-400"> / {chapterTitles.length} unlocked</span>
+              </p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-2.5 md:grid-cols-2">
               {chapterTitles.map((chapterTitle) => {
                 const isAlwaysUnlocked = chapterTitle === CHAPTER_ONE_TITLE;
                 const isUnlocked =
@@ -389,52 +391,88 @@ export function DashboardHome({
                   !isCustomUnlocked;
                 const chapterTags = chapterTagsByTitle[chapterTitle] ?? [];
 
+                const lockDisabled = isAlwaysUnlocked || isManagedByTag;
+                const lockLabel = isAlwaysUnlocked
+                  ? "Always unlocked"
+                  : isManagedByTag
+                    ? "Unlocked via current chapter tag"
+                    : isUnlocked
+                      ? "Unlocked · click to lock"
+                      : "Locked · click to unlock";
+
                 return (
                   <div
                     key={chapterTitle}
-                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 transition"
+                    className={[
+                      "group rounded-xl border bg-white px-3.5 py-2.5 transition",
+                      isMilestone
+                        ? "border-emerald-200 shadow-[0_1px_0_rgba(16,185,129,0.08)]"
+                        : "border-zinc-200 hover:border-zinc-300",
+                    ].join(" ")}
                   >
-                    {isMilestone ? (
-                      <div
-                        className="mb-2 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-emerald-700"
-                      >
-                        Current Student Chapter
-                      </div>
-                    ) : null}
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <p className="break-words text-sm text-zinc-700">{chapterTitle}</p>
-                      <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
+                    <div className="flex items-center gap-3">
+                      <span
+                        aria-hidden
+                        className={[
+                          "h-1.5 w-1.5 shrink-0 rounded-full transition",
+                          isMilestone
+                            ? "bg-emerald-500"
+                            : isUnlocked
+                              ? "bg-zinc-300"
+                              : "bg-zinc-200",
+                        ].join(" ")}
+                      />
+                      <p className="min-w-0 flex-1 truncate text-sm text-zinc-800">
+                        {chapterTitle}
+                      </p>
+                      <div className="flex shrink-0 items-center gap-1">
                         <button
                           type="button"
                           onClick={() => {
                             void onSetMilestoneChapter?.(chapterTitle);
                           }}
+                          aria-label={isMilestone ? "Remove current chapter tag" : "Tag as current chapter"}
+                          aria-pressed={isMilestone}
+                          title={isMilestone ? "Current chapter · click to remove" : "Tag as current chapter"}
                           className={[
-                            "rounded-md border px-2.5 py-1 text-xs font-medium transition",
-                            "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-100",
+                            "inline-flex h-7 w-7 items-center justify-center rounded-full border transition",
+                            isMilestone
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                              : "border-transparent text-zinc-400 hover:border-zinc-200 hover:bg-zinc-50 hover:text-zinc-700",
                           ].join(" ")}
                         >
-                          {isMilestone ? "Tagged" : "Tag"}
+                          <BookmarkIcon className="h-3.5 w-3.5" />
                         </button>
-                        {isMilestone ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void onSetMilestoneChapter?.(chapterTitle);
-                            }}
-                            className="rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-600 transition hover:bg-zinc-100"
-                          >
-                            Remove
-                          </button>
-                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void onToggleChapter?.(chapterTitle);
+                          }}
+                          disabled={lockDisabled}
+                          aria-label={lockLabel}
+                          aria-pressed={isUnlocked}
+                          title={lockLabel}
+                          className={[
+                            "inline-flex h-7 w-7 items-center justify-center rounded-full border transition",
+                            isUnlocked
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700",
+                            lockDisabled ? "cursor-not-allowed opacity-60" : "",
+                          ].join(" ")}
+                        >
+                          {isUnlocked ? (
+                            <UnlockIcon className="h-3.5 w-3.5" />
+                          ) : (
+                            <LockIcon className="h-3.5 w-3.5" />
+                          )}
+                        </button>
                       </div>
                     </div>
 
                     {chapterTags.length > 0 ? (
-                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      <div className="mt-2 flex flex-wrap gap-1.5 pl-[18px]">
                         {chapterTags.map((taggedStudent) => {
-                          const isCurrentStudent =
-                            taggedStudent.id === selectedStudentId;
+                          const isCurrentStudent = taggedStudent.id === selectedStudentId;
                           const studentInitial = taggedStudent.name.charAt(0).toUpperCase();
                           return (
                             <button
@@ -446,49 +484,22 @@ export function DashboardHome({
                                 setIsSearchOpen(false);
                               }}
                               className={[
-                                "inline-flex items-center gap-2 rounded-full border px-2 py-1 pr-2.5 text-[11px] font-medium transition hover:bg-zinc-100",
+                                "inline-flex items-center gap-1.5 rounded-full border px-1 py-0.5 pr-2 text-[11px] font-medium transition",
                                 isCurrentStudent
                                   ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                  : "border-zinc-200 bg-white text-zinc-700",
+                                  : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
                               ].join(" ")}
                               title={`${taggedStudent.name} (${taggedStudent.email})`}
                             >
-                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-[10px] font-semibold text-white">
+                              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-900 text-[9px] font-semibold text-white">
                                 {studentInitial}
                               </span>
-                              <span>{taggedStudent.name}</span>
+                              <span className="truncate">{taggedStudent.name}</span>
                             </button>
                           );
                         })}
                       </div>
                     ) : null}
-
-                    <div className="mt-2.5 flex items-center justify-start sm:justify-end">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void onToggleChapter?.(chapterTitle);
-                        }}
-                        disabled={isAlwaysUnlocked || isManagedByTag}
-                        className={[
-                          "rounded-md border px-2.5 py-1 text-xs",
-                          isUnlocked
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-zinc-200 bg-white text-zinc-600",
-                          isAlwaysUnlocked || isManagedByTag
-                            ? "cursor-not-allowed opacity-70"
-                            : "",
-                        ].join(" ")}
-                      >
-                        {isAlwaysUnlocked
-                          ? "Always Unlocked"
-                          : isManagedByTag
-                            ? "Tagged Access"
-                            : isUnlocked
-                              ? "Unlocked"
-                              : "Locked"}
-                      </button>
-                    </div>
                   </div>
                 );
               })}

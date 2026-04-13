@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readPdfTextForNode } from "@/lib/pdf-text";
+import { readPdfTextForSubtopic } from "@/lib/pdf-text";
 
 type AssistantMessage = {
   role: "user" | "assistant";
@@ -9,7 +9,6 @@ type AssistantMessage = {
 type ArthurRequestBody = {
   pageTitle?: string;
   pageContent?: string;
-  pageNodeId?: string;
   messages?: AssistantMessage[];
 };
 
@@ -38,15 +37,14 @@ export async function POST(request: Request) {
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const pageTitle = body.pageTitle?.trim() ?? "Untitled page";
     const pageContent = body.pageContent?.trim() ?? "";
-    const pageNodeId = body.pageNodeId?.trim() ?? "";
     const latestUserMessage = messages[messages.length - 1];
 
     let lessonNotes = "";
-    if (pageNodeId) {
+    if (pageTitle) {
       try {
-        lessonNotes = (await readPdfTextForNode(pageNodeId)) ?? "";
+        lessonNotes = (await readPdfTextForSubtopic(pageTitle)) ?? "";
       } catch (error) {
-        console.error("[arthur] pdf extraction failed", pageNodeId, error);
+        console.error("[arthur] pdf extraction failed", pageTitle, error);
       }
     }
 

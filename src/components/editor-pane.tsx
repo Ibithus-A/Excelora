@@ -29,6 +29,10 @@ const MAX_TITLE_FONT_SIZE_PX = 36;
 const MIN_TITLE_FONT_SIZE_PX = 20;
 const LEGACY_PLACEHOLDER_CONTENT = "use this space for notes and examples";
 
+function resolveSubtopicPdfUrl(title: string): string {
+  return `/assets/${encodeURIComponent(title.trim())}.pdf`;
+}
+
 const DEFAULT_LOCK_INFO = {
   isEffectivelyLocked: false,
   isLockedBySelf: false,
@@ -55,6 +59,7 @@ export function EditorPane({
     defaultValue: {},
   });
   const [lessonView, setLessonView] = useState<"notes" | "video">("notes");
+  const [pdfZoom, setPdfZoom] = useState(100);
   const selectedId = state.selectedId;
   const selectedNode = selectedId ? state.nodes[selectedId] : null;
   const lockInfo = selectedNode
@@ -200,6 +205,7 @@ export function EditorPane({
 
   useEffect(() => {
     setLessonView("notes");
+    setPdfZoom(100);
   }, [selectedId]);
 
   const revealWithTransition = (
@@ -333,21 +339,57 @@ export function EditorPane({
                               Read the notes below, or watch the full walkthrough
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setLessonView("video")}
-                            className="inline-flex items-center gap-2 rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-800"
-                          >
-                            <span className="ml-0.5 leading-none">▶</span>
-                            Watch the video here
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <div
+                              role="group"
+                              aria-label="Zoom PDF"
+                              className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white/80 p-1 shadow-sm"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setPdfZoom((z) => Math.max(50, z - 10))}
+                                disabled={pdfZoom <= 50}
+                                aria-label="Zoom out"
+                                title="Zoom out"
+                                className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+                                  <path d="M4.5 10h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                                </svg>
+                              </button>
+                              <span className="min-w-[3ch] text-center text-[11px] font-medium tabular-nums text-zinc-600">
+                                {pdfZoom}%
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setPdfZoom((z) => Math.min(200, z + 10))}
+                                disabled={pdfZoom >= 200}
+                                aria-label="Zoom in"
+                                title="Zoom in"
+                                className="flex h-7 w-7 items-center justify-center rounded-full text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+                                  <path d="M10 4.5v11M4.5 10h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                                </svg>
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setLessonView("video")}
+                              className="inline-flex items-center gap-2 rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-800"
+                            >
+                              <span className="ml-0.5 leading-none">▶</span>
+                              Watch the video here
+                            </button>
+                          </div>
                         </div>
                       </div>
 
                       <div className="px-4 py-5 md:px-5">
                         <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(244,244,245,0.92))]">
                           <object
-                            data={`/pdfs/${selectedNode.id}.pdf#view=FitH`}
+                            key={`${selectedNode.id}-${pdfZoom}`}
+                            data={`${resolveSubtopicPdfUrl(selectedNode.title)}#toolbar=0&navpanes=0&view=FitH&zoom=${pdfZoom}`}
                             type="application/pdf"
                             className="block h-[720px] w-full bg-white"
                           >
