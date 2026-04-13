@@ -1,12 +1,21 @@
 "use client";
 
 import { ArrowUpIcon, AssistantIcon, CloseIcon } from "@/components/icons";
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
+import katex from "katex";
+import { FormEvent, KeyboardEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type AssistantMessage = {
   role: "user" | "assistant";
   content: string;
 };
+
+type MessageSegment =
+  | { type: "text"; content: string }
+  | { type: "math"; content: string; displayMode: boolean };
+
+type AssistantBlock =
+  | { type: "divider" }
+  | { type: "paragraph"; content: string };
 
 type EditorActionsDrawerProps = {
   pageTitle: string;
@@ -242,18 +251,22 @@ function DrawerContent({
                   <div
                     key={`${message.role}-${index}`}
                     className={[
-                      "max-w-[92%] rounded-[12px] px-3 py-2 text-sm leading-6 shadow-sm",
+                      "max-w-[92%] rounded-[16px] px-4 py-3.5 text-sm leading-6 shadow-sm",
                       message.role === "assistant"
-                        ? "mr-auto border border-zinc-200 bg-white text-zinc-800"
-                        : "ml-auto bg-zinc-900 text-white",
+                        ? "assistant-message mr-auto border border-zinc-200/90 bg-[var(--surface-sidebar)] text-zinc-800"
+                        : "user-message ml-auto bg-zinc-900 text-white",
                     ].join(" ")}
                   >
-                    {message.content}
+                    {message.role === "assistant" ? (
+                      <RenderedAssistantMessage content={message.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                    )}
                   </div>
                 ))}
                 {isSending ? (
-                  <div className="mr-auto rounded-[12px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-500 shadow-sm">
-                    Arthur is thinking...
+                  <div className="mr-auto max-w-[92%] rounded-[16px] border border-zinc-200/90 bg-[var(--surface-sidebar)] px-4 py-3.5 shadow-sm">
+                    <ArthurThinkingSkeleton />
                   </div>
                 ) : null}
               </div>
@@ -289,5 +302,218 @@ function DrawerContent({
         </div>
       </div>
     </div>
+  );
+}
+
+function RenderedAssistantMessage({ content }: { content: string }) {
+  const blocks = useMemo(() => parseAssistantBlocks(content), [content]);
+
+  return (
+    <div className="space-y-3.5 text-[14px] leading-[1.75] tracking-[-0.005em]">
+      {blocks.map((block, index) =>
+        block.type === "divider" ? (
+          <div key={`divider-${index}`} className="flex items-center py-1.5" aria-hidden="true">
+            <span className="h-px w-full bg-zinc-200" />
+          </div>
+        ) : (
+          <p key={`paragraph-${index}`} className="whitespace-pre-wrap break-words text-zinc-700">
+            {renderParagraph(block.content, `paragraph-${index}`)}
+          </p>
+        ),
+      )}
+    </div>
+  );
+}
+
+function ArthurThinkingSkeleton() {
+  return (
+    <div aria-label="Arthur is thinking" aria-live="polite" className="space-y-3">
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.08em] text-zinc-400">
+        <span className="loading-dot h-2 w-2 rounded-full bg-zinc-300" />
+        Arthur is thinking
+      </div>
+      <div className="space-y-2">
+        <div className="loading-skeleton h-3 w-24 rounded-full" />
+        <div className="loading-skeleton h-3 w-full rounded-full" />
+        <div className="loading-skeleton h-3 w-[88%] rounded-full" />
+        <div className="loading-skeleton h-3 w-[68%] rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+function parseAssistantBlocks(content: string) {
+  const normalized = normalizeAssistantContent(content);
+
+  const chunks = normalized.split(/\n{2,}/).map((chunk) => chunk.trim()).filter(Boolean);
+
+  return chunks.map<AssistantBlock>((chunk) => {
+    if (/^([-_])\1{2,}$/.test(chunk)) {
+      return { type: "divider" as const };
+    }
+
+    return {
+      type: "paragraph" as const,
+      content: chunk
+        .split("\n")
+        .map((line) => {
+          const trimmed = line.trim();
+          if (/^([-_])\1{2,}$/.test(trimmed)) {
+            return "";
+          }
+
+          return trimmed.replace(/^([-*]|\d+\.)\s+/, "");
+        })
+        .filter(Boolean)
+        .join(" "),
+    };
+  });
+}
+
+function renderInlineSegments(content: string, keyPrefix: string) {
+  return splitMessageSegments(content).map((segment, index) => {
+    if (segment.type === "math") {
+      return <MathSegment key={`${keyPrefix}-math-${index}`} segment={segment} />;
+    }
+
+    return renderFormattedText(segment.content, `${keyPrefix}-text-${index}`);
+  });
+}
+
+function splitMessageSegments(content: string): MessageSegment[] {
+  const segments: MessageSegment[] = [];
+  const mathPattern = /(\$\$[\s\S]+?\$\$|\$[^$\n]+\$)/g;
+  let lastIndex = 0;
+
+  for (const match of content.matchAll(mathPattern)) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      segments.push({ type: "text", content: content.slice(lastIndex, index) });
+    }
+
+    const token = match[0];
+    const displayMode = token.startsWith("$$");
+    segments.push({
+      type: "math",
+      content: token.slice(displayMode ? 2 : 1, displayMode ? -2 : -1).trim(),
+      displayMode,
+    });
+    lastIndex = index + token.length;
+  }
+
+  if (lastIndex < content.length) {
+    segments.push({ type: "text", content: content.slice(lastIndex) });
+  }
+
+  return segments;
+}
+
+function renderFormattedText(content: string, keyPrefix: string) {
+  const nodes: ReactNode[] = [];
+  const pattern = /(\*\*[^*\n]+\*\*|`[^`\n]+`)/g;
+  let lastIndex = 0;
+
+  for (const match of content.matchAll(pattern)) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      nodes.push(content.slice(lastIndex, index));
+    }
+
+    const token = match[0];
+    if (token.startsWith("**")) {
+      nodes.push(
+        <strong key={`${keyPrefix}-${index}`} className="font-semibold text-zinc-900">
+          {token.slice(2, -2)}
+        </strong>,
+      );
+    } else if (token.startsWith("`")) {
+      nodes.push(
+        <code
+          key={`${keyPrefix}-${index}`}
+          className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[0.92em] text-zinc-800"
+        >
+          {token.slice(1, -1)}
+        </code>,
+      );
+    }
+
+    lastIndex = index + token.length;
+  }
+
+  if (lastIndex < content.length) {
+    nodes.push(content.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+function renderParagraph(content: string, keyPrefix: string) {
+  const labelMatch = content.match(/^(Step\s*\d+\.|Question\.|Solution\.|Answer\.)\s+(.*)$/);
+  if (!labelMatch) {
+    return renderInlineSegments(content, keyPrefix);
+  }
+
+  return (
+    <>
+      <span className="mr-1.5 font-semibold text-zinc-900">{labelMatch[1]}</span>
+      {renderInlineSegments(labelMatch[2], `${keyPrefix}-rest`)}
+    </>
+  );
+}
+
+function normalizeAssistantContent(content: string) {
+  return content
+    .replace(/\r\n/g, "\n")
+    .replace(/\\\[/g, "$$")
+    .replace(/\\\]/g, "$$")
+    .replace(/\\\((.*?)\\\)/gs, (_, math: string) => `$${math.trim()}$`)
+    .replace(/\\([*_`])/g, "$1")
+    .replace(/\*{3,}/g, "")
+    .replace(/\*\*\s*(Worked Example|Worked example)\s*:?\s*\*\*/g, "\n\nWorked example.")
+    .replace(/\*\*\s*(Another Question|Your Turn|Try this)\s*:?\s*\*\*/g, "\n\n$1.")
+    .replace(/\*\*\s*(Question|Solution|Answer)\s*:?\s*\*\*/g, "\n\n$1. ")
+    .replace(/\*\*\s*(Step\s*\d+)\s*:?\s*\*\*/gi, "\n\n$1. ")
+    .replace(/(?<!\*)\b(Step\s*\d+)\s*:\s*/gi, "\n\n$1. ")
+    .replace(/(?<!\*)\b(Question|Solution|Answer)\s*:\s*/g, "\n\n$1. ")
+    .replace(/\b(Worked example)\s*:\s*/gi, "\n\nWorked example. ")
+    .replace(/\b(Another Question|Your Turn|Try this)\s*:\s*/g, "\n\n$1. ")
+    .replace(/^\*\s+/gm, "")
+    .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:;]|$)/g, "$1$2")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^[-*]\s+/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function MathSegment({ segment }: { segment: Extract<MessageSegment, { type: "math" }> }) {
+  const html = useMemo(() => {
+    try {
+      return katex.renderToString(segment.content, {
+        displayMode: segment.displayMode,
+        throwOnError: false,
+        strict: "ignore",
+      });
+    } catch {
+      return null;
+    }
+  }, [segment.content, segment.displayMode]);
+
+  if (!html) {
+    return (
+      <code className="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[0.92em] text-zinc-800">
+        {segment.content}
+      </code>
+    );
+  }
+
+  return (
+    <span
+      className={segment.displayMode ? "my-2 block overflow-x-auto" : "inline-block align-middle"}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }

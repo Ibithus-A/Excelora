@@ -21,6 +21,13 @@ Treat the lesson notes as the authoritative source for this subtopic — quote, 
 If the page content and lesson notes are both sparse or missing, say that you are working from limited context.
 Prefer helpful study actions like explanation, recap, quizzes, worked examples, and revision support.
 Do not claim to see anything outside the provided page context, lesson notes, and user messages.
+Format answers so they are easy to scan in a narrow chat panel:
+- Use short paragraphs with natural prose.
+- Avoid Markdown markers such as #, -, *, or numbered list formatting in the final answer.
+- If you need structure, use short lead-ins like "Here is the idea." or "Step 1." inside normal sentences.
+- When writing maths, prefer plain notation like (27t^3)/(3t - 1) unless LaTeX is genuinely helpful.
+- Never output escaped Markdown or escaped LaTeX like \\( ... \\), \\[ ... \\], or literal backslashes before formatting characters unless the user explicitly asks for raw syntax.
+- If you give a worked solution, present it like a clean tutor reply, not like notes or a markdown document.
 `.trim();
 
 export async function POST(request: Request) {
@@ -122,7 +129,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ message: text });
+    return NextResponse.json({ message: normalizeArthurResponse(text) });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.error("[arthur] route exception", error);
@@ -131,4 +138,27 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+function normalizeArthurResponse(input: string) {
+  return input
+    .replace(/\r\n/g, "\n")
+    .replace(/\\\[/g, "$$")
+    .replace(/\\\]/g, "$$")
+    .replace(/\\\((.*?)\\\)/gs, "$$$1$")
+    .replace(/\\([*_`])/g, "$1")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/\*\*\s*(Worked Example|Worked example)\s*:?\s*\*\*/g, "\n\nWorked example.")
+    .replace(/\*\*\s*(Another Question|Your Turn|Try this)\s*:?\s*\*\*/g, "\n\n$1.")
+    .replace(/\*\*\s*(Question|Solution|Answer)\s*:?\s*\*\*/g, "\n\n$1. ")
+    .replace(/\*\*\s*(Step\s*\d+)\s*:?\s*\*\*/gi, "\n\n$1. ")
+    .replace(/(?<!\*)\b(Step\s*\d+)\s*:\s*/gi, "\n\n$1. ")
+    .replace(/(?<!\*)\b(Question|Solution|Answer)\s*:\s*/g, "\n\n$1. ")
+    .replace(/\b(Worked example)\s*:\s*/gi, "\n\nWorked example. ")
+    .replace(/\b(Another Question|Your Turn|Try this)\s*:\s*/g, "\n\n$1. ")
+    .replace(/\*{2,}/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
