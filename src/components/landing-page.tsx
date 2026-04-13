@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ChevronRightIcon, AssistantIcon, FolderIcon } from "@/components/icons";
 
 type LandingPageProps = {
@@ -8,6 +9,8 @@ type LandingPageProps = {
 };
 
 export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
+  const copyrightYear = new Date().getFullYear();
+
   return (
     <div className="relative min-h-dvh w-full overflow-hidden bg-[var(--surface-app)]">
       <div
@@ -16,9 +19,11 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
       />
 
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
-        <img
+        <Image
           src="/assets/excelora-logo.svg"
           alt="Excelora"
+          width={120}
+          height={32}
           className="h-8 w-auto select-none"
           draggable={false}
         />
@@ -53,8 +58,8 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
             Built for focus.
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-zinc-600 md:text-lg">
-            Excelora is a calm, notion-style workspace pairing chapter notes, video walkthroughs,
-            and a private AI tutor — Arthur — that reads your lesson materials and answers in depth.
+            Excelora is a calm study workspace pairing chapter notes, video walkthroughs,
+            and Arthur — a quiet tutor that reads the same lesson you do and answers in depth.
           </p>
         </div>
 
@@ -69,31 +74,10 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
                 excelora · workspace
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
+            <div className="grid grid-cols-1 md:grid-cols-[210px_minmax(0,1fr)_300px]">
               <WorkspaceSidebarMock activeIndex={2} />
-              <div className="p-6 md:p-8">
-                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
-                  Lesson Notes
-                </p>
-                <h3 className="mt-1.5 text-2xl font-semibold tracking-tight text-zinc-900">
-                  Differentiation from first principles
-                </h3>
-                <div className="mt-5 space-y-2">
-                  <div className="h-2.5 w-[92%] rounded-full bg-zinc-100" />
-                  <div className="h-2.5 w-[85%] rounded-full bg-zinc-100" />
-                  <div className="h-2.5 w-[78%] rounded-full bg-zinc-100" />
-                  <div className="h-2.5 w-[60%] rounded-full bg-zinc-100" />
-                </div>
-                <div className="mt-6 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white">
-                    <span className="leading-none">▶</span>
-                    Watch the video
-                  </span>
-                  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
-                    Premium
-                  </span>
-                </div>
-              </div>
+              <HeroVideoPane />
+              <HeroArthurPane />
             </div>
           </div>
         </div>
@@ -110,30 +94,30 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
           </h2>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 items-start gap-5 md:grid-cols-6">
+        <div className="mt-12 grid grid-cols-1 items-stretch gap-5 md:grid-cols-2">
           <FeatureCard
-            className="md:col-span-3"
+            className="h-full"
             tint="bg-[#e8efe9]"
             eyebrow="Notes"
-            title="Clean, readable, inline."
+            title="The real notes, shown properly."
             preview={<NotesPreview />}
           />
           <FeatureCard
-            className="md:col-span-3"
+            className="h-full"
             tint="bg-[#eef2f7]"
             eyebrow="Video"
             title="Walkthroughs, one click away."
             preview={<VideoPreview />}
           />
           <FeatureCard
-            className="md:col-span-4"
+            className="h-full"
             tint="bg-[#f3eee6]"
-            eyebrow="Arthur AI"
-            title="An assistant that reads the PDF."
+            eyebrow="Arthur"
+            title="Arthur stays grounded in the same lesson."
             preview={<ArthurPreview />}
           />
           <FeatureCard
-            className="md:col-span-2"
+            className="h-full"
             tint="bg-[#eef0ea]"
             eyebrow="Progress"
             title="Chapter by chapter."
@@ -226,7 +210,7 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
               </span>
             </div>
             <p className="mt-2 text-sm text-white/70">
-              Notes, video walkthroughs, Arthur AI, and 1:1 tutor sessions.
+              Notes, video walkthroughs, Arthur, and 1:1 tutor sessions.
             </p>
             <ul className="mt-6 flex-1 space-y-2.5 text-sm text-white/90">
               {PREMIUM_PERKS.map((perk) => (
@@ -255,7 +239,7 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
             Ready to find your flow?
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-zinc-600 md:text-base">
-            Create your account in seconds. Bring your syllabus, bring your questions — Arthur handles the rest.
+            Create your account in seconds. Bring your syllabus and your questions — Arthur is already reading along.
           </p>
           <button
             type="button"
@@ -267,6 +251,20 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
           </button>
         </div>
       </section>
+
+      <footer className="relative z-10 border-t border-zinc-200 bg-white/70">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-6 py-6 text-center md:flex-row md:text-left">
+          <Image
+            src="/assets/excelora-logo.svg"
+            alt="Excelora"
+            width={105}
+            height={28}
+            className="h-7 w-auto select-none"
+            draggable={false}
+          />
+          <p className="text-sm text-zinc-500">© {copyrightYear} Excelora. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -301,7 +299,7 @@ function FeatureCard({
           {title}
         </h3>
       </div>
-      <div className={["relative overflow-hidden px-6 pb-7 pt-2", tint].join(" ")}>
+      <div className={["relative flex-1 overflow-hidden px-6 pb-7 pt-2", tint].join(" ")}>
         {preview}
       </div>
     </article>
@@ -321,7 +319,9 @@ function StepCard({
 }) {
   return (
     <div className="flex flex-col overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.04)]">
-      <div className="border-b border-zinc-200 bg-[var(--surface-sidebar)] p-5">{preview}</div>
+      <div className="flex h-[200px] items-start overflow-hidden border-b border-zinc-200 bg-[var(--surface-sidebar)] p-5">
+        {preview}
+      </div>
       <div className="p-6">
         <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-xs font-semibold text-zinc-700">
           {step}
@@ -334,6 +334,100 @@ function StepCard({
 }
 
 /* ---------- Workspace surface mocks ---------- */
+
+function HeroVideoPane() {
+  return (
+    <div className="border-b border-zinc-200 p-6 md:border-b-0 md:border-r md:p-7">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+            Lesson Video
+          </p>
+          <h3 className="mt-1 text-[17px] font-semibold tracking-tight text-zinc-900">
+            Differentiation · First principles
+          </h3>
+        </div>
+        <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-600">
+          06:12
+        </span>
+      </div>
+      <div className="relative mt-5 overflow-hidden rounded-[16px] border border-zinc-200 bg-zinc-950 shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
+        <div className="relative flex aspect-[16/10] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_45%),linear-gradient(135deg,#0f172a,#1f2937_55%,#374151)]">
+          <div className="absolute inset-x-5 top-5 rounded-[12px] border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/60">
+              On screen
+            </p>
+            <p className="mt-1.5 text-[13px] leading-5 text-white/90">
+              Expand <span className="font-serif italic">(x+h)²</span>, cancel the{" "}
+              <span className="font-serif italic">x²</span> terms, divide through by{" "}
+              <span className="font-serif italic">h</span>.
+            </p>
+          </div>
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-lg text-zinc-900 shadow-[0_10px_25px_rgba(255,255,255,0.18)]">
+            ▶
+          </div>
+          <div className="absolute inset-x-4 bottom-4 rounded-[12px] border border-white/10 bg-black/30 px-3 py-2 backdrop-blur-sm">
+            <div className="flex items-center gap-2.5">
+              <span className="text-[11px] text-white">▶</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
+                <div className="h-full w-[42%] rounded-full bg-white" />
+              </div>
+              <span className="text-[10px] text-white/70">2:34 / 6:12</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-5 flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white">
+          <span className="leading-none">▶</span>
+          Watch the video
+        </span>
+        <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+          Premium
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function HeroArthurPane() {
+  return (
+    <div className="flex flex-col bg-[var(--surface-sidebar)]">
+      <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <div className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white">
+            <AssistantIcon className="h-4 w-4 text-zinc-800" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-zinc-900">Arthur</p>
+            <p className="text-[11px] text-zinc-500">Open beside your lesson</p>
+          </div>
+        </div>
+        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-emerald-700">
+          Live
+        </span>
+      </div>
+      <div className="flex-1 space-y-2.5 px-4 py-4">
+        <div className="rounded-[12px] border border-zinc-200 bg-white px-3 py-2 text-[12px] leading-5 text-zinc-600 shadow-sm">
+          Pause anywhere and ask Arthur about the step on screen.
+        </div>
+        <div className="ml-auto max-w-[88%] rounded-[12px] bg-zinc-900 px-3 py-2 text-[12px] leading-5 text-white">
+          Why does the <span className="font-serif italic">x²</span> cancel here?
+        </div>
+        <div className="rounded-[12px] border border-zinc-200 bg-white px-3 py-2 text-[12px] leading-[1.55] text-zinc-700 shadow-sm">
+          Expanding <span className="font-serif italic">(x+h)²</span> gives{" "}
+          <span className="font-serif italic">x² + 2xh + h²</span>. Subtracting the original{" "}
+          <span className="font-serif italic">x²</span> cancels it out.
+        </div>
+      </div>
+      <div className="border-t border-zinc-200 px-4 py-3">
+        <div className="rounded-full border border-dashed border-zinc-300 bg-white/70 px-3 py-2 text-[11px] text-zinc-500">
+          Ask Arthur…
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function WorkspaceSidebarMock({ activeIndex }: { activeIndex: number }) {
   const items = ["Algebra", "Functions", "Differentiation", "Integration", "Vectors"];
@@ -365,48 +459,25 @@ function NotesPreview() {
     <div className="overflow-hidden rounded-[14px] border border-zinc-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
       <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-2.5">
         <p className="truncate text-[11px] font-medium tracking-wide text-zinc-500">
-          Implicit &amp; Parametric Differentiation.pdf
+          Excelora · Ch.07 Differentiation.pdf
         </p>
         <span className="ml-3 inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-900 bg-zinc-900 px-2.5 py-[3px] text-[10px] font-medium text-white">
           <span className="leading-none">▶</span> Watch
         </span>
       </div>
-      <div className="px-6 pb-5 pt-5 font-serif text-zinc-900">
-        <h4 className="border-b border-zinc-300 pb-1.5 text-[18px] font-semibold tracking-tight">
-          Implicit and Parametric Differentiation
-        </h4>
-        <div className="mt-3 rounded-[6px] bg-zinc-100 px-4 py-3 text-[12.5px] leading-[1.7]">
-          <p>
-            <span className="font-semibold">Implicit:</span> Differentiate each term w.r.t.{" "}
-            <Var>x</Var>, using chain rule for <Var>y</Var>-terms:{" "}
-            <DFrac top={<>d</>} bot={<>d<Var>x</Var></>} /> (<Var>y</Var>
-            <sup className="text-[9px]">n</sup>) = <Var>n</Var>
-            <Var>y</Var>
-            <sup className="text-[9px]">n−1</sup>{" "}
-            <DFrac top={<>d<Var>y</Var></>} bot={<>d<Var>x</Var></>} />.
-          </p>
-          <p className="mt-2">
-            <span className="font-semibold">Parametric:</span>{" "}
-            <DFrac top={<>d<Var>y</Var></>} bot={<>d<Var>x</Var></>} /> ={" "}
-            <DFrac top={<>d<Var>y</Var>/d<Var>t</Var></>} bot={<>d<Var>x</Var>/d<Var>t</Var></>} />.
-          </p>
+      <div className="bg-[linear-gradient(180deg,#fafaf9_0%,#f4f4f3_100%)] p-4">
+        <div className="overflow-hidden rounded-[12px] border border-zinc-200 bg-white shadow-[0_16px_30px_rgba(15,23,42,0.08)]">
+          <Image
+            src="/assets/excelora-differentiation-preview.png"
+            alt="Screenshot of the Differentiation from First Principles PDF"
+            width={848}
+            height={1200}
+            className="h-[320px] w-full object-cover object-top"
+            draggable={false}
+          />
         </div>
       </div>
     </div>
-  );
-}
-
-function Var({ children }: { children: React.ReactNode }) {
-  return <span className="italic">{children}</span>;
-}
-
-function DFrac({ top, bot }: { top: React.ReactNode; bot: React.ReactNode }) {
-  return (
-    <span className="relative mx-[1px] inline-flex flex-col items-center align-middle text-[10.5px] leading-[1.15]">
-      <span className="px-1 pb-[1px]">{top}</span>
-      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-zinc-800" />
-      <span className="px-1 pt-[1px]">{bot}</span>
-    </span>
   );
 }
 
@@ -459,25 +530,23 @@ function ArthurPreview() {
         </span>
       </div>
       <div className="space-y-2.5 p-5">
-        <div className="ml-auto max-w-[78%] rounded-[14px] bg-zinc-900 px-3.5 py-2 text-[13px] leading-6 text-white">
-          Walk me through the stationary point for{" "}
-          <span className="font-serif italic">3x²⁄y − 5y = 2(x+8)</span>.
+        <div className="ml-auto max-w-[82%] rounded-[14px] bg-zinc-900 px-3.5 py-2 text-[13px] leading-6 text-white">
+          Walk me through differentiating{" "}
+          <span className="font-serif italic">y = sin(3x² + 1)</span> using the chain rule.
         </div>
         <div className="mr-auto max-w-[92%] rounded-[14px] border border-zinc-200 bg-white px-3.5 py-2.5 text-[13px] leading-[1.65] text-zinc-800 shadow-sm">
-          <p className="font-medium text-zinc-900">Step 1 — differentiate implicitly.</p>
+          <p className="font-medium text-zinc-900">Identify the inner and outer functions.</p>
+          <p className="mt-0.5">
+            Outer: <span className="font-serif italic">sin(u)</span>. Inner:{" "}
+            <span className="font-serif italic">u = 3x² + 1</span>.
+          </p>
+          <p className="mt-2 font-medium text-zinc-900">Differentiate each layer.</p>
           <p className="mt-0.5 font-serif italic">
-            6x⁄y − (3x²⁄y²)(dy⁄dx) − 5(dy⁄dx) = 2
+            du/dx = 6x &nbsp;·&nbsp; d/du (sin u) = cos u
           </p>
-          <p className="mt-2 font-medium text-zinc-900">Step 2 — set dy⁄dx = 0.</p>
+          <p className="mt-2 font-medium text-zinc-900">Multiply and substitute back.</p>
           <p className="mt-0.5">
-            <span className="font-serif italic">6x⁄y = 2</span> ⇒{" "}
-            <span className="font-serif italic">y = 3x</span>.
-          </p>
-          <p className="mt-2 font-medium text-zinc-900">Step 3 — substitute back.</p>
-          <p className="mt-0.5">
-            Into the original curve gives{" "}
-            <span className="font-serif italic">x = −1</span>, so the stationary point is{" "}
-            <strong>(−1,&nbsp;−3)</strong>.
+            <span className="font-serif italic">dy/dx = cos(u) · 6x = 6x cos(3x² + 1)</span>.
           </p>
         </div>
       </div>
@@ -504,15 +573,17 @@ function ProgressPreview() {
             style={{ width: "63%" }}
           />
         </div>
-        <ul className="mt-5 space-y-1.5 text-sm">
+        <ul className="mt-5 space-y-2 text-sm">
           {[
-            { label: "The chain rule", done: true },
-            { label: "Product rule", done: true },
-            { label: "Quotient rule", done: false },
+            { label: "First principles", done: true },
+            { label: "Worked example: x²", done: true },
+            { label: "Arthur recap", done: true },
+            { label: "Practice questions", done: false },
+            { label: "Video walkthrough", done: false },
           ].map((row) => (
             <li
               key={row.label}
-              className="flex items-center justify-between rounded-lg px-2 py-1.5"
+              className="flex items-center justify-between rounded-lg bg-zinc-50/80 px-2.5 py-2"
             >
               <span className="text-zinc-800">{row.label}</span>
               <span
@@ -535,7 +606,7 @@ function ProgressPreview() {
 
 function StepSidebarPreview() {
   return (
-    <div className="rounded-[14px] border border-zinc-200 bg-white p-3 shadow-sm">
+    <div className="w-full rounded-[14px] border border-zinc-200 bg-white p-3 shadow-sm">
       <p className="px-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500">
         A Level Maths
       </p>
@@ -559,15 +630,14 @@ function StepSidebarPreview() {
 
 function StepReadPreview() {
   return (
-    <div className="rounded-[14px] border border-zinc-200 bg-white p-3 shadow-sm">
+    <div className="w-full rounded-[14px] border border-zinc-200 bg-white p-3 shadow-sm">
       <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500">
-        Chain rule
+        Product rule
       </p>
-      <div className="mt-2 space-y-1.5">
-        <div className="h-2 w-[92%] rounded-full bg-zinc-100" />
-        <div className="h-2 w-[80%] rounded-full bg-zinc-100" />
-        <div className="h-2 w-[68%] rounded-full bg-zinc-100" />
-      </div>
+      <p className="mt-2 text-[12px] leading-5 text-zinc-600">
+        Read the worked example for <span className="italic">y = x² sin x</span>, or ask Arthur
+        why each term appears.
+      </p>
       <div className="mt-3 flex gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-full border border-zinc-900 bg-zinc-900 px-2 py-0.5 text-[10px] font-medium text-white">
           ▶ Watch
@@ -582,7 +652,7 @@ function StepReadPreview() {
 
 function StepProgressPreview() {
   return (
-    <div className="rounded-[14px] border border-zinc-200 bg-white p-3 shadow-sm">
+    <div className="w-full rounded-[14px] border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-end justify-between">
         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500">
           Chapter
@@ -595,7 +665,11 @@ function StepProgressPreview() {
           style={{ width: "63%" }}
         />
       </div>
-      <p className="mt-3 text-[11px] text-zinc-500">5 of 8 subtopics watched</p>
+      <p className="mt-2.5 text-[11px] text-zinc-500">5 of 8 subtopics watched</p>
+      <div className="mt-2.5 flex items-center justify-between rounded-md bg-zinc-50 px-2.5 py-1.5 text-[11px]">
+        <span className="text-zinc-700">Chain rule</span>
+        <span className="text-emerald-700">Done</span>
+      </div>
     </div>
   );
 }
@@ -609,6 +683,6 @@ const BASIC_PERKS = [
 const PREMIUM_PERKS = [
   "Everything in Basic",
   "Video walkthroughs for every subtopic",
-  "Arthur AI tutor, grounded in your notes",
+  "Arthur, grounded in the same notes you read",
   "1:1 tutor sessions",
 ];
