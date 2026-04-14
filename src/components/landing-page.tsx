@@ -788,23 +788,23 @@ function ProgressPreview() {
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
               Chapter Progress
             </p>
-            <p className="mt-1 text-sm text-zinc-600">5 of 8 subtopics completed</p>
+            <p className="mt-1 text-sm text-zinc-600">3 of 5 subtopics completed</p>
           </div>
-          <p className="text-sm font-medium text-zinc-800">63%</p>
+          <p className="text-sm font-medium text-zinc-800">60%</p>
         </div>
         <div className="mt-4 h-3 overflow-hidden rounded-full bg-zinc-100">
           <div
             className="h-full rounded-full bg-[linear-gradient(90deg,#16a34a,#22c55e)]"
-            style={{ width: "63%" }}
+            style={{ width: "60%" }}
           />
         </div>
         <ul className="mt-5 space-y-2 text-sm">
           {[
-            { label: "First principles", done: true },
-            { label: "Worked example: x²", done: true },
-            { label: "Arthur recap", done: true },
-            { label: "Practice questions", done: false },
-            { label: "Video walkthrough", done: false },
+            { label: "7.1 Differentiation from First Principles", done: true },
+            { label: "7.2 Standard Derivatives and Basic Rules", done: true },
+            { label: "7.3 Chain Rule, Product Rule and Quotient Rule", done: true },
+            { label: "7.4 Applications of Differentiation", done: false },
+            { label: "7.5 Implicit and Parametric Differentiation", done: false },
           ].map((row) => (
             <li
               key={row.label}
