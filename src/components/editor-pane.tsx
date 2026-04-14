@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { canAccessNode, getLockedChapterMessage } from "@/lib/access";
 import { EditorActionsDrawer } from "@/components/editor-actions-drawer";
 import { FolderIcon } from "@/components/icons";
@@ -7,6 +8,7 @@ import { useFlowState } from "@/context/flowstate-context";
 import { LESSON_PROGRESS_STORAGE_KEY } from "@/lib/constants/storage";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { END_OF_TOPIC_ASSESSMENT_TITLE } from "@/lib/seed";
+import { getDocumentProxy } from "unpdf";
 import {
   getDefaultTitle,
   getLessonChapterContext,
@@ -29,13 +31,27 @@ type LessonSurfaceState = {
   view: "notes" | "video";
   pdfZoom: number;
 };
+type PdfPageImage = {
+  src: string;
+  width: number;
+  height: number;
+};
 
 const MAX_TITLE_FONT_SIZE_PX = 36;
 const MIN_TITLE_FONT_SIZE_PX = 20;
 const LEGACY_PLACEHOLDER_CONTENT = "use this space for notes and examples";
+const pdfBufferCache = new Map<string, Uint8Array>();
 
 function resolveSubtopicPdfUrl(title: string): string {
   return `/assets/${encodeURIComponent(title.trim())}.pdf`;
+}
+
+function resolveSubtopicVideoUrl(title: string): string {
+  return `/assets/videos/${encodeURIComponent(title.trim())}.mp4`;
+}
+
+function resolveSubtopicVideoPosterUrl(title: string): string {
+  return `/assets/videos/${encodeURIComponent(title.trim())}.jpg`;
 }
 
 function resolveAssessmentPdfUrl(chapterTitle: string): string {
@@ -253,7 +269,10 @@ export function EditorPane({
               lockInfo.isEffectivelyLocked ? "opacity-65" : "",
             ].join(" ")}
           >
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+            <div
+              key={`title-${selectedNode.id}`}
+              className={`mx-auto flex w-full max-w-3xl flex-col gap-3 ${surfaceTransitionClass}`}
+            >
               <div className="min-w-0">
                 <div
                   ref={titleInputRef}
@@ -427,33 +446,13 @@ export function EditorPane({
 
                       <div className="px-4 py-5 md:px-5">
                         <div className="overflow-hidden rounded-none bg-white">
-                          <div className="pdf-viewport">
-                            <div aria-hidden className="pdf-mask pdf-mask-top-left" />
-                            <div aria-hidden className="pdf-mask pdf-mask-top-right" />
-                            <div aria-hidden className="pdf-mask pdf-mask-bottom-left" />
-                            <div aria-hidden className="pdf-mask pdf-mask-bottom-right" />
-                            <div aria-hidden className="pdf-mask pdf-mask-right-edge" />
-                            <object
-                              key={`${selectedNode.id}-${pdfZoom}`}
-                              data={`${resolveSubtopicPdfUrl(selectedNode.title)}#toolbar=0&navpanes=0&view=FitH&zoom=${pdfZoom}`}
-                              type="application/pdf"
-                              className="pdf-object bg-white"
-                            >
-                            <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 p-6 text-center">
-                              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
-                                <span className="text-xl font-semibold text-zinc-700">PDF</span>
-                              </div>
-                              <div>
-                                <p className="text-base font-medium text-zinc-900">
-                                  Notes coming soon
-                                </p>
-                                <p className="mt-1 text-sm text-zinc-500">
-                                  The notes for this subtopic will appear here shortly.
-                                </p>
-                              </div>
-                            </div>
-                            </object>
-                          </div>
+                          <PdfCanvasDocument
+                            key={`${selectedNode.id}-${pdfZoom}`}
+                            pdfUrl={resolveSubtopicPdfUrl(selectedNode.title)}
+                            zoom={pdfZoom}
+                            emptyTitle="Notes coming soon"
+                            emptyBody="The notes for this subtopic will appear here shortly."
+                          />
                         </div>
 
                         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -486,16 +485,16 @@ export function EditorPane({
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
-                            {isAssessmentPage ? "Assessment PDF" : "Lesson Video"}
+                            {isAssessmentPage ? "Assessment PDF" : "Lesson Resources"}
                           </p>
                           <p className="mt-1 text-sm text-zinc-600">
                             {isAssessmentPage
                               ? "PDF workspace placeholder for this assessment"
-                              : "Video module placeholder for this page"}
+                              : "Additional premium resources will appear here later"}
                           </p>
                         </div>
                         <span className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">
-                          {isAssessmentPage ? "PDF" : "Coming Soon"}
+                          {isAssessmentPage ? "PDF" : "Premium"}
                         </span>
                       </div>
                     </div>
@@ -503,53 +502,29 @@ export function EditorPane({
                     <div className="px-4 py-5 md:px-5">
                       {isAssessmentPage ? (
                         <div className="overflow-hidden rounded-none bg-white">
-                          <div className="pdf-viewport">
-                            <div aria-hidden className="pdf-mask pdf-mask-top-left" />
-                            <div aria-hidden className="pdf-mask pdf-mask-top-right" />
-                            <div aria-hidden className="pdf-mask pdf-mask-bottom-left" />
-                            <div aria-hidden className="pdf-mask pdf-mask-bottom-right" />
-                            <div aria-hidden className="pdf-mask pdf-mask-right-edge" />
-                            <object
-                              key={`${selectedNode.id}-${pdfZoom}`}
-                              data={`${resolveAssessmentPdfUrl(lessonContext.chapterTitle)}#toolbar=0&navpanes=0&view=FitH&zoom=${pdfZoom}`}
-                              type="application/pdf"
-                              className="pdf-object bg-white"
-                            >
-                            <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 p-6 text-center">
-                              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
-                                <span className="text-xl font-semibold text-zinc-700">PDF</span>
-                              </div>
-                              <div>
-                                <p className="text-base font-medium text-zinc-900">
-                                  {END_OF_TOPIC_ASSESSMENT_TITLE} coming soon
-                                </p>
-                                <p className="mt-1 text-sm text-zinc-500">
-                                  The assessment worksheet will appear here shortly.
-                                </p>
-                              </div>
-                            </div>
-                            </object>
-                          </div>
+                          <PdfCanvasDocument
+                            key={`${selectedNode.id}-${pdfZoom}`}
+                            pdfUrl={resolveAssessmentPdfUrl(lessonContext.chapterTitle)}
+                            zoom={pdfZoom}
+                            emptyTitle={`${END_OF_TOPIC_ASSESSMENT_TITLE} coming soon`}
+                            emptyBody="The assessment worksheet will appear here shortly."
+                          />
                         </div>
                       ) : (
-                        <div className="flex aspect-video items-center justify-center rounded-[24px] border border-dashed border-zinc-300 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(244,244,245,0.92))]">
-                          <div className="flex flex-col items-center gap-3 text-center">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
-                              <span className="ml-1 text-2xl text-zinc-700">▶</span>
-                            </div>
-                            <div>
-                              <span className="inline-flex items-center rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white">
-                                Coming Soon
-                              </span>
-                              <p className="mt-3 text-base font-medium text-zinc-900">
-                                Video walkthrough in the works
-                              </p>
-                              <p className="mt-1 text-sm text-zinc-500">
-                                Premium lesson recordings will appear here shortly.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+                        <LessonVideoPlayer
+                          key={selectedNode.id}
+                          videoUrl={resolveSubtopicVideoUrl(selectedNode.title)}
+                          posterUrl={resolveSubtopicVideoPosterUrl(selectedNode.title)}
+                          lessonTitle={selectedNode.title}
+                          isLessonWatched={isLessonWatched}
+                          onVideoComplete={() => {
+                            if (isLessonWatched || !selectedNode) return;
+                            setLessonProgress((current) => ({
+                              ...current,
+                              [selectedNode.id]: true,
+                            }));
+                          }}
+                        />
                       )}
 
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -674,5 +649,225 @@ export function EditorPane({
         />
       ) : null}
     </section>
+  );
+}
+
+function PdfCanvasDocument({
+  pdfUrl,
+  zoom,
+  emptyTitle,
+  emptyBody,
+}: {
+  pdfUrl: string;
+  zoom: number;
+  emptyTitle: string;
+  emptyBody: string;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [renderWidth, setRenderWidth] = useState(0);
+  const [pageImages, setPageImages] = useState<PdfPageImage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setRenderWidth(containerRef.current?.clientWidth ?? 0);
+  }, [pdfUrl, zoom]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const renderPdf = async () => {
+      if (!renderWidth) return;
+
+      setIsLoading(true);
+      setHasError(false);
+      setPageImages([]);
+
+      try {
+        let buffer = pdfBufferCache.get(pdfUrl);
+
+        if (!buffer) {
+          const response = await fetch(pdfUrl);
+          if (!response.ok) {
+            throw new Error("Unable to load PDF.");
+          }
+
+          buffer = new Uint8Array(await response.arrayBuffer());
+          pdfBufferCache.set(pdfUrl, buffer);
+        }
+
+        const pdf = await getDocumentProxy(buffer.slice());
+        const zoomScale = Math.max(0.5, zoom / 100);
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const baseViewport = page.getViewport({ scale: 1 });
+          const fitScale = renderWidth / baseViewport.width;
+          const viewport = page.getViewport({ scale: fitScale * zoomScale });
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          if (!context) {
+            throw new Error("Canvas unavailable.");
+          }
+
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+
+          await page.render({
+            canvasContext: context,
+            viewport,
+          }).promise;
+
+          const renderedPage = {
+            src: canvas.toDataURL("image/png"),
+            width: canvas.width,
+            height: canvas.height,
+          };
+          page.cleanup();
+
+          if (isCancelled) return;
+
+          setPageImages((current) => [...current, renderedPage]);
+          if (pageNumber === 1) {
+            setIsLoading(false);
+          }
+
+          await new Promise<void>((resolve) => {
+            window.requestAnimationFrame(() => resolve());
+          });
+        }
+      } catch (error) {
+        if (isCancelled) return;
+        console.error("[pdf-render] Failed to render PDF:", pdfUrl, error);
+        setHasError(true);
+        setPageImages([]);
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void renderPdf();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [renderWidth, pdfUrl, zoom]);
+
+  return (
+    <div ref={containerRef} className="pdf-canvas-shell">
+      {isLoading ? (
+        <div className="pdf-loading-state">
+          <div className="loading-skeleton h-12 w-40 rounded-xl" />
+          <div className="loading-skeleton h-[520px] w-full rounded-[20px]" />
+        </div>
+      ) : null}
+
+      {!isLoading && !hasError ? (
+        <div className="pdf-canvas-stack">
+          {pageImages.map((src, index) => (
+            <Image
+              key={`${pdfUrl}-page-${index + 1}`}
+              src={src.src}
+              alt={`PDF page ${index + 1}`}
+              width={src.width}
+              height={src.height}
+              className="pdf-canvas-page"
+              draggable={false}
+              unoptimized
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {hasError ? (
+        <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 p-6 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
+            <span className="text-xl font-semibold text-zinc-700">PDF</span>
+          </div>
+          <div>
+            <p className="text-base font-medium text-zinc-900">{emptyTitle}</p>
+            <p className="mt-1 text-sm text-zinc-500">{emptyBody}</p>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function LessonVideoPlayer({
+  videoUrl,
+  posterUrl,
+  lessonTitle,
+  isLessonWatched,
+  onVideoComplete,
+}: {
+  videoUrl: string;
+  posterUrl: string;
+  lessonTitle: string;
+  isLessonWatched: boolean;
+  onVideoComplete: () => void;
+}) {
+  const [isVideoAvailable, setIsVideoAvailable] = useState(true);
+
+  if (!isVideoAvailable) {
+    return (
+      <div className="flex aspect-video items-center justify-center rounded-[24px] border border-dashed border-zinc-300 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),rgba(244,244,245,0.92))]">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
+            <span className="ml-1 text-2xl text-zinc-700">▶</span>
+          </div>
+          <div>
+            <span className="inline-flex items-center rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white">
+              Coming soon
+            </span>
+            <p className="mt-3 text-base font-medium text-zinc-900">Video walkthrough coming soon</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              This lesson’s full walkthrough will appear here once the video course is released.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-zinc-950 shadow-[0_24px_60px_rgba(15,23,42,0.16)]">
+      <div className="border-b border-white/10 bg-[linear-gradient(135deg,rgba(24,24,27,0.96),rgba(39,39,42,0.92))] px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">
+              Lesson Video
+            </p>
+            <p className="mt-1 text-sm font-medium text-white">{lessonTitle}</p>
+          </div>
+          <span
+            className={[
+              "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em]",
+              isLessonWatched
+                ? "border border-emerald-400/40 bg-emerald-500/15 text-emerald-200"
+                : "border border-white/15 bg-white/10 text-white/70",
+            ].join(" ")}
+          >
+            {isLessonWatched ? "Watched" : "Premium"}
+          </span>
+        </div>
+      </div>
+      <div className="bg-black">
+        <video
+          key={videoUrl}
+          controls
+          preload="metadata"
+          poster={posterUrl}
+          className="block aspect-video w-full bg-black"
+          onEnded={onVideoComplete}
+          onError={() => setIsVideoAvailable(false)}
+        >
+          <source src={videoUrl} type="video/mp4" />
+          Your browser does not support embedded videos.
+        </video>
+      </div>
+    </div>
   );
 }

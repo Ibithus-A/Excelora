@@ -47,7 +47,7 @@ export default function HomePage() {
   const handleContinueFromSignIn = (account: AuthenticatedAccount) => {
     setAuthenticatedUser(account);
     setSignInView(null);
-    setView("dashboard");
+    setView(account.role === "student" ? "workspace" : "dashboard");
   };
 
   const handleSignOut = async () => {

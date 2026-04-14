@@ -9,9 +9,136 @@ type LandingPageProps = {
   onGetStarted: () => void;
 };
 
+type WorkspaceShowcaseItem = {
+  sidebarLabel: string;
+  videoTitle: string;
+  videoLength: string;
+  onScreenText: React.ReactNode;
+  userQuestion: React.ReactNode;
+  assistantReply: React.ReactNode;
+};
+
+const WORKSPACE_SHOWCASE_ITEMS: WorkspaceShowcaseItem[] = [
+  {
+    sidebarLabel: "Algebra",
+    videoTitle: "Algebra · Laws of indices",
+    videoLength: "05:18",
+    onScreenText: (
+      <>
+        Rewrite each term with a common base, then use{" "}
+        <span className="font-serif italic">a^m × a^n = a^{"{m+n}"}</span>.
+      </>
+    ),
+    userQuestion: (
+      <>
+        Why does <span className="font-serif italic">a^m × a^n</span> become{" "}
+        <span className="font-serif italic">a^{"{m+n}"}</span>?
+      </>
+    ),
+    assistantReply: (
+      <>
+        Because the base stays the same and the powers combine, so{" "}
+        <span className="font-serif italic">a^m × a^n = a^{"{m+n}"}</span>.
+      </>
+    ),
+  },
+  {
+    sidebarLabel: "Functions",
+    videoTitle: "Functions · Composite functions",
+    videoLength: "06:04",
+    onScreenText: (
+      <>
+        Find the inner function first, then substitute its output into the outer:
+        <span className="font-serif italic"> f(g(x))</span>.
+      </>
+    ),
+    userQuestion: (
+      <>
+        How do I start <span className="font-serif italic">f(g(x))</span> here?
+      </>
+    ),
+    assistantReply: (
+      <>
+        Begin with <span className="font-serif italic">g(x)</span>, then place that full result
+        into <span className="font-serif italic">f</span>.
+      </>
+    ),
+  },
+  {
+    sidebarLabel: "Differentiation",
+    videoTitle: "Differentiation · First principles",
+    videoLength: "06:12",
+    onScreenText: (
+      <>
+        Expand <span className="font-serif italic">(x+h)²</span>, cancel the{" "}
+        <span className="font-serif italic">x²</span> terms, divide through by{" "}
+        <span className="font-serif italic">h</span>.
+      </>
+    ),
+    userQuestion: (
+      <>
+        Why does the <span className="font-serif italic">x²</span> cancel here?
+      </>
+    ),
+    assistantReply: (
+      <>
+        Expanding <span className="font-serif italic">(x+h)²</span> gives{" "}
+        <span className="font-serif italic">x² + 2xh + h²</span>. Subtracting the original{" "}
+        <span className="font-serif italic">x²</span> cancels it out.
+      </>
+    ),
+  },
+  {
+    sidebarLabel: "Integration",
+    videoTitle: "Integration · By substitution",
+    videoLength: "07:09",
+    onScreenText: (
+      <>
+        Let <span className="font-serif italic">u = 2x + 1</span> so the integral becomes a
+        simpler standard form.
+      </>
+    ),
+    userQuestion: (
+      <>
+        Why do we let <span className="font-serif italic">u = 2x + 1</span>?
+      </>
+    ),
+    assistantReply: (
+      <>
+        Because <span className="font-serif italic">2x + 1</span> is the inner expression, so
+        substituting <span className="font-serif italic">u</span> makes the integral much cleaner.
+      </>
+    ),
+  },
+  {
+    sidebarLabel: "Vectors",
+    videoTitle: "Vectors · Position vectors",
+    videoLength: "04:56",
+    onScreenText: (
+      <>
+        Use position vectors from <span className="font-serif italic">O</span>, then find{" "}
+        <span className="font-serif italic">AB = OB - OA</span>.
+      </>
+    ),
+    userQuestion: (
+      <>
+        How do I get the vector <span className="font-serif italic">AB</span>?
+      </>
+    ),
+    assistantReply: (
+      <>
+        Take the position vector of <span className="font-serif italic">B</span> and subtract the
+        position vector of <span className="font-serif italic">A</span>, so{" "}
+        <span className="font-serif italic">AB = OB - OA</span>.
+      </>
+    ),
+  },
+];
+
 export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
   const copyrightYear = new Date().getFullYear();
   const [isIntroVisible, setIsIntroVisible] = useState(false);
+  const [workspaceShowcaseIndex, setWorkspaceShowcaseIndex] = useState(0);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -20,6 +147,16 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
 
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setWorkspaceShowcaseIndex((current) => (current + 1) % WORKSPACE_SHOWCASE_ITEMS.length);
+    }, 2800);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const activeWorkspaceShowcase = WORKSPACE_SHOWCASE_ITEMS[workspaceShowcaseIndex];
 
   return (
     <div className="relative min-h-dvh w-full overflow-hidden bg-[var(--surface-app)]">
@@ -95,9 +232,9 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-[210px_minmax(0,1fr)_300px]">
-              <WorkspaceSidebarMock activeIndex={2} />
-              <HeroVideoPane />
-              <HeroArthurPane />
+              <WorkspaceSidebarMock activeIndex={workspaceShowcaseIndex} />
+              <HeroVideoPane showcaseItem={activeWorkspaceShowcase} />
+              <HeroArthurPane showcaseItem={activeWorkspaceShowcase} />
             </div>
           </div>
         </div>
@@ -118,34 +255,42 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
 
         <RevealOnScroll delay={120}>
           <div className="mt-12 grid grid-cols-1 items-stretch gap-5 md:grid-cols-2">
-            <FeatureCard
-              className="h-full"
-              tint="bg-[#e8efe9]"
-              eyebrow="Notes"
-              title="The real notes, shown properly."
-              preview={<NotesPreview />}
-            />
-            <FeatureCard
-              className="h-full"
-              tint="bg-[#eef2f7]"
-              eyebrow="Video"
-              title="Walkthroughs, one click away."
-              preview={<VideoPreview />}
-            />
-            <FeatureCard
-              className="h-full"
-              tint="bg-[#f3eee6]"
-              eyebrow="Arthur"
-              title="Arthur stays grounded in the same lesson."
-              preview={<ArthurPreview />}
-            />
-            <FeatureCard
-              className="h-full"
-              tint="bg-[#eef0ea]"
-              eyebrow="Progress"
-              title="Chapter by chapter."
-              preview={<ProgressPreview />}
-            />
+            <RevealOnScroll delay={40}>
+              <FeatureCard
+                className="h-full"
+                tint="bg-[#e8efe9]"
+                eyebrow="Notes"
+                title="The real notes, shown properly."
+                preview={<NotesPreview />}
+              />
+            </RevealOnScroll>
+            <RevealOnScroll delay={130}>
+              <FeatureCard
+                className="h-full"
+                tint="bg-[#eef2f7]"
+                eyebrow="Video"
+                title="Walkthroughs, one click away."
+                preview={<VideoPreview />}
+              />
+            </RevealOnScroll>
+            <RevealOnScroll delay={220}>
+              <FeatureCard
+                className="h-full"
+                tint="bg-[#f3eee6]"
+                eyebrow="Arthur"
+                title="Arthur stays grounded in the same lesson."
+                preview={<ArthurPreview />}
+              />
+            </RevealOnScroll>
+            <RevealOnScroll delay={310}>
+              <FeatureCard
+                className="h-full"
+                tint="bg-[#eef0ea]"
+                eyebrow="Progress"
+                title="Chapter by chapter."
+                preview={<ProgressPreview />}
+              />
+            </RevealOnScroll>
           </div>
         </RevealOnScroll>
       </section>
@@ -417,7 +562,7 @@ function StepCard({
 
 /* ---------- Workspace surface mocks ---------- */
 
-function HeroVideoPane() {
+function HeroVideoPane({ showcaseItem }: { showcaseItem: WorkspaceShowcaseItem }) {
   return (
     <div className="border-b border-zinc-200 p-6 md:border-b-0 md:border-r md:p-7">
       <div className="flex items-center justify-between">
@@ -426,11 +571,11 @@ function HeroVideoPane() {
             Lesson Video
           </p>
           <h3 className="mt-1 text-[17px] font-semibold tracking-tight text-zinc-900">
-            Differentiation · First principles
+            {showcaseItem.videoTitle}
           </h3>
         </div>
         <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-600">
-          06:12
+          {showcaseItem.videoLength}
         </span>
       </div>
       <div className="relative mt-5 overflow-hidden rounded-[16px] border border-zinc-200 bg-zinc-950 shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
@@ -440,9 +585,7 @@ function HeroVideoPane() {
               On screen
             </p>
             <p className="mt-1.5 text-[13px] leading-5 text-white/90">
-              Expand <span className="font-serif italic">(x+h)²</span>, cancel the{" "}
-              <span className="font-serif italic">x²</span> terms, divide through by{" "}
-              <span className="font-serif italic">h</span>.
+              {showcaseItem.onScreenText}
             </p>
           </div>
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-lg text-zinc-900 shadow-[0_10px_25px_rgba(255,255,255,0.18)]">
@@ -454,7 +597,9 @@ function HeroVideoPane() {
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
                 <div className="h-full w-[42%] rounded-full bg-white" />
               </div>
-              <span className="text-[10px] text-white/70">2:34 / 6:12</span>
+              <span className="text-[10px] text-white/70">
+                2:34 / {showcaseItem.videoLength}
+              </span>
             </div>
           </div>
         </div>
@@ -472,7 +617,7 @@ function HeroVideoPane() {
   );
 }
 
-function HeroArthurPane() {
+function HeroArthurPane({ showcaseItem }: { showcaseItem: WorkspaceShowcaseItem }) {
   return (
     <div className="flex flex-col bg-[var(--surface-sidebar)]">
       <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
@@ -494,12 +639,10 @@ function HeroArthurPane() {
           Pause anywhere and ask Arthur about the step on screen.
         </div>
         <div className="ml-auto max-w-[88%] rounded-[12px] bg-zinc-900 px-3 py-2 text-[12px] leading-5 text-white">
-          Why does the <span className="font-serif italic">x²</span> cancel here?
+          {showcaseItem.userQuestion}
         </div>
         <div className="rounded-[12px] border border-zinc-200 bg-white px-3 py-2 text-[12px] leading-[1.55] text-zinc-700 shadow-sm">
-          Expanding <span className="font-serif italic">(x+h)²</span> gives{" "}
-          <span className="font-serif italic">x² + 2xh + h²</span>. Subtracting the original{" "}
-          <span className="font-serif italic">x²</span> cancels it out.
+          {showcaseItem.assistantReply}
         </div>
       </div>
       <div className="border-t border-zinc-200 px-4 py-3">
