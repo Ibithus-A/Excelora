@@ -539,9 +539,9 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
                         aria-label={label}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-black/92 transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-black/[0.035] hover:text-black"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-black/92 transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-black/[0.035] hover:text-black"
                       >
-                        <Icon className="h-[21px] w-[21px]" />
+                        <Icon className="h-[24px] w-[24px]" />
                       </a>
                     ))}
                   </nav>
