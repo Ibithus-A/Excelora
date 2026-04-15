@@ -261,14 +261,47 @@ textarea {
 
 .assistant-message .katex-display {
   margin: 0.85rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.1rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 .assistant-message .katex {
   font-size: 1.02em;
 }
 
+.assistant-message .katex-display > .katex,
+.assistant-message .katex-display > .katex-html,
+.assistant-message .katex-display > .katex .katex-html,
+.assistant-message .katex-display > .katex .base,
+.assistant-message .katex-display > .katex .mord,
+.assistant-message .katex-display > .katex .mfrac,
+.assistant-message .katex-display > .katex .msupsub,
+.assistant-message .katex-display > .katex .vlist-t {
+  max-width: none;
+}
+
+.assistant-message .katex-display > .katex {
+  display: inline-block;
+  min-width: max-content;
+}
+
+.assistant-message .katex-display::-webkit-scrollbar,
+.assistant-message .katex::-webkit-scrollbar {
+  height: 6px;
+}
+
+.assistant-message .katex-display::-webkit-scrollbar-thumb,
+.assistant-message .katex::-webkit-scrollbar-thumb {
+  background: rgba(24, 24, 27, 0.14);
+  border-radius: 999px;
+}
+
 .assistant-message {
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
 }
 
 .assistant-message p {

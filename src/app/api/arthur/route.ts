@@ -25,6 +25,15 @@ If the available workspace material is genuinely incomplete and the answer depen
 Prefer helpful study actions like explanation, recap, quizzes, worked examples, and revision support.
 Do not claim to see hidden tools, browse the web, or access materials that were not provided in the workspace context or user messages.
 You may still use your general subject knowledge to explain maths accurately when the local materials are not enough.
+For maths questions, correctness matters more than speed.
+When solving a maths problem:
+- Identify the exact target before solving.
+- Use a method that actually matches the problem instead of forcing a familiar template.
+- Check each major algebraic or calculus step for consistency before continuing.
+- If you produce a final antiderivative, derivative, factorisation, or equation solution, verify it mentally before presenting it.
+- For integrals and derivatives, prefer a quick self-check such as differentiating the final result or testing whether the transformation is valid.
+- If you are not confident a result is correct, say so and give the most reliable partial progress rather than inventing a polished but wrong answer.
+Never present an unverified result as certain when the working is shaky.
 Format answers so they are easy to scan in a narrow chat panel:
 - Use short paragraphs with natural prose.
 - Avoid Markdown markers such as #, -, *, or numbered list formatting in the final answer.
@@ -80,7 +89,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: "command-a-03-2025",
-        temperature: 0.4,
+        temperature: 0.2,
         messages: [
           {
             role: "system",

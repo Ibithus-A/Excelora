@@ -691,7 +691,11 @@ function MathSegment({ segment }: { segment: Extract<MessageSegment, { type: "ma
 
   return (
     <span
-      className={segment.displayMode ? "my-2 block overflow-x-auto" : "inline-block align-middle"}
+      className={
+        segment.displayMode
+          ? "my-2 block max-w-full overflow-x-auto overflow-y-hidden"
+          : "inline-flex max-w-full overflow-x-auto overflow-y-hidden align-middle py-0.5"
+      }
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
