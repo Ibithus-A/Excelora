@@ -14,6 +14,16 @@ type ArthurRequestBody = {
 };
 
 const COHERE_API_URL = "https://api.cohere.com/v2/chat";
+const MATH_MODE_PROMPT = `
+Math mode is active for this request.
+Give a shorter, verification-first answer.
+First, state the target clearly in one sentence.
+Then solve using only valid transformations, with no skipped algebra where errors are likely.
+Before the final answer, perform a visible check when practical. For an integral, differentiate the proposed antiderivative. For an equation, substitute or test the solution. For simplification, compare equivalent forms.
+If the check fails, correct the work before answering.
+If the problem is too long for a reliable full solution in one response, give the safest next step and say exactly what still needs checking.
+Do not include a long exploratory path. Prefer the simplest reliable method.
+`.trim();
 const ARTHUR_SYSTEM_PROMPT = `
 You are Arthur, a friendly AI study assistant inside the Excelora workspace.
 Be concise, accurate, and encouraging.
@@ -80,6 +90,10 @@ export async function POST(request: Request) {
       role: message.role,
       content: [{ type: "text", text: message.content }],
     }));
+    const isMathMode = shouldUseMathMode(latestUserMessage.content);
+    const systemPrompt = isMathMode
+      ? `${ARTHUR_SYSTEM_PROMPT}\n\n${MATH_MODE_PROMPT}`
+      : ARTHUR_SYSTEM_PROMPT;
 
     const cohereResponse = await fetch(COHERE_API_URL, {
       method: "POST",
@@ -89,14 +103,14 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: "command-a-03-2025",
-        temperature: 0.2,
+        temperature: isMathMode ? 0.1 : 0.2,
         messages: [
           {
             role: "system",
             content: [
               {
                 type: "text",
-                text: `${ARTHUR_SYSTEM_PROMPT}\n\nCurrent page title: ${pageTitle}\n\nCurrent page content:\n${pageContent || "(blank page)"}\n\nLesson notes (extracted from the subtopic PDF):\n${lessonNotes || "(no PDF notes available for this subtopic yet)"}\n\nWorkspace context:\n${workspaceContext || "(no additional workspace context provided)"}`,
+                text: `${systemPrompt}\n\nCurrent page title: ${pageTitle}\n\nCurrent page content:\n${pageContent || "(blank page)"}\n\nLesson notes (extracted from the subtopic PDF):\n${lessonNotes || "(no PDF notes available for this subtopic yet)"}\n\nWorkspace context:\n${workspaceContext || "(no additional workspace context provided)"}`,
               },
             ],
           },
@@ -152,6 +166,41 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+function shouldUseMathMode(message: string) {
+  const normalized = message.toLowerCase();
+  const mathKeywords = [
+    "differentiate",
+    "derivative",
+    "integrate",
+    "integral",
+    "solve",
+    "simplify",
+    "expand",
+    "factorise",
+    "factorize",
+    "prove",
+    "equation",
+    "antiderivative",
+    "gradient",
+    "limit",
+    "matrix",
+    "vector",
+    "tan",
+    "sin",
+    "cos",
+    "ln",
+    "log",
+  ];
+
+  if (mathKeywords.some((keyword) => normalized.includes(keyword))) return true;
+  if (/[=^√∫πθ]/.test(message)) return true;
+  if (/\b\d+\s*[+\-*/]\s*\d+\b/.test(message)) return true;
+  if (/\b[a-z]\s*\^\s*\d+\b/i.test(message)) return true;
+  if (/\b(dy\/dx|d\/dx|dx|dt)\b/i.test(message)) return true;
+
+  return false;
 }
 
 function normalizeArthurResponse(input: string) {
