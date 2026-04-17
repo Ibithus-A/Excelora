@@ -270,6 +270,19 @@ textarea {
 
 .assistant-message .katex {
   font-size: 1.02em;
+  line-height: 1.45;
+}
+
+.assistant-message p:has(.katex) {
+  line-height: 2.05;
+}
+
+.assistant-message p:has(.katex-display) {
+  line-height: 1.75;
+}
+
+.assistant-message p .katex {
+  margin-inline: 0.08rem;
 }
 
 .assistant-message .katex-display > .katex,
@@ -352,4 +365,13 @@ textarea {
 .math-shortcut-label .katex svg {
   color: inherit;
   stroke: currentColor;
+}
+
+.math-builder-preview .katex-display {
+  margin: 0;
+}
+
+.math-builder-preview .katex {
+  font-size: 1.08em;
+  color: #3f3f46;
 }

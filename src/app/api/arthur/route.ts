@@ -8,6 +8,7 @@ type AssistantMessage = {
 
 type ArthurRequestBody = {
   pageTitle?: string;
+  pdfTitle?: string;
   pageContent?: string;
   workspaceContext?: string;
   messages?: AssistantMessage[];
@@ -66,16 +67,17 @@ export async function POST(request: Request) {
     const body = (await request.json()) as ArthurRequestBody;
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const pageTitle = body.pageTitle?.trim() ?? "Untitled page";
+    const pdfTitle = body.pdfTitle?.trim() || pageTitle;
     const pageContent = body.pageContent?.trim() ?? "";
     const workspaceContext = body.workspaceContext?.trim() ?? "";
     const latestUserMessage = messages[messages.length - 1];
 
     let lessonNotes = "";
-    if (pageTitle) {
+    if (pdfTitle) {
       try {
-        lessonNotes = (await readPdfTextForSubtopic(pageTitle)) ?? "";
+        lessonNotes = (await readPdfTextForSubtopic(pdfTitle)) ?? "";
       } catch (error) {
-        console.error("[arthur] pdf extraction failed", pageTitle, error);
+        console.error("[arthur] pdf extraction failed", pdfTitle, error);
       }
     }
 
@@ -110,7 +112,7 @@ export async function POST(request: Request) {
             content: [
               {
                 type: "text",
-                text: `${systemPrompt}\n\nCurrent page title: ${pageTitle}\n\nCurrent page content:\n${pageContent || "(blank page)"}\n\nLesson notes (extracted from the subtopic PDF):\n${lessonNotes || "(no PDF notes available for this subtopic yet)"}\n\nWorkspace context:\n${workspaceContext || "(no additional workspace context provided)"}`,
+                text: `${systemPrompt}\n\nCurrent page title: ${pageTitle}\n\nCurrent PDF/resource title: ${pdfTitle}\n\nCurrent page content:\n${pageContent || "(blank page)"}\n\nLesson notes (extracted from the current PDF/resource):\n${lessonNotes || "(no PDF notes available for this page yet)"}\n\nWorkspace context:\n${workspaceContext || "(no additional workspace context provided)"}`,
               },
             ],
           },

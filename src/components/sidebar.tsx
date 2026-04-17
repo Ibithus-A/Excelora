@@ -1,11 +1,12 @@
 "use client";
 
 import { canAccessNode } from "@/lib/access";
-import { CloseIcon, FlowLogoIcon, FolderIcon, PlusIcon } from "@/components/icons";
+import { CloseIcon, FolderIcon, PlusIcon } from "@/components/icons";
 import { SidebarNode } from "@/components/sidebar-node";
 import { useFlowState } from "@/context/flowstate-context";
 import { A_LEVEL_MATHS_TITLE } from "@/lib/seed";
 import type { UserAccessProfile } from "@/types/auth";
+import Image from "next/image";
 import type { DragEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -186,14 +187,15 @@ export function Sidebar({
     <aside className="flex h-full min-h-0 flex-col border-r border-zinc-200 bg-[var(--surface-sidebar)]">
       <div className="border-b border-zinc-200 px-3 py-3">
         <div className="flex h-9 items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white">
-              <FlowLogoIcon className="h-4 w-4" />
-            </div>
-            <p className="truncate text-[16px] font-semibold leading-none tracking-tight text-zinc-900">
-              Excelora
-            </p>
-          </div>
+          <Image
+            src="/assets/excelora-logo.svg"
+            alt="Excelora"
+            width={105}
+            height={24}
+            className="h-6 w-auto min-w-0 select-none"
+            draggable={false}
+            priority
+          />
 
           <div className="flex items-center gap-1.5">
             {onRequestClose ? (

@@ -58,9 +58,12 @@ function resolveAssessmentPdfUrl(chapterTitle: string): string {
   // Chapter titles look like "Chapter 1: Algebra and Functions". We qualify
   // the assessment PDF filename with the chapter number so different chapters
   // don't collide on /assets/Assessment.pdf.
+  return `/assets/${encodeURIComponent(resolveAssessmentPdfTitle(chapterTitle))}.pdf`;
+}
+
+function resolveAssessmentPdfTitle(chapterTitle: string): string {
   const match = chapterTitle.match(/chapter\s+(\d+)/i);
-  const label = match ? `Chapter ${match[1]} Assessment` : `${chapterTitle} Assessment`;
-  return `/assets/${encodeURIComponent(label)}.pdf`;
+  return match ? `Chapter ${match[1]} Assessment` : `${chapterTitle} Assessment`;
 }
 
 const DEFAULT_LOCK_INFO = {
@@ -158,6 +161,10 @@ export function EditorPane({
   const lessonContext = selectedNode ? getLessonChapterContext(state, selectedNode.id) : null;
   const isLessonPage = selectedNode?.kind === "page" && Boolean(lessonContext);
   const isAssessmentPage = Boolean(lessonContext?.isAssessmentPage);
+  const assistantPdfTitle =
+    isAssessmentPage && lessonContext
+      ? resolveAssessmentPdfTitle(lessonContext.chapterTitle)
+      : selectedNodeTitle;
   const parentFolder =
     selectedNode?.parentId && state.nodes[selectedNode.parentId]?.kind === "folder"
       ? state.nodes[selectedNode.parentId]
@@ -677,6 +684,7 @@ export function EditorPane({
       {selectedNode.kind === "page" && canUseAssistant ? (
         <EditorActionsDrawer
           pageTitle={selectedNode.title}
+          pdfTitle={assistantPdfTitle}
           pageContent={visiblePageContent}
           pageNodeId={selectedNode.id}
           workspaceContext={workspaceContext}
