@@ -5,9 +5,11 @@ import katex from "katex";
 import {
   FormEvent,
   KeyboardEvent,
+  MouseEvent,
   ReactNode,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -49,6 +51,32 @@ type MathInsert = {
   build: MathInsertBuild;
 };
 
+type MathDraftField = {
+  id: string;
+  label: string;
+  placeholder: string;
+};
+
+type MathDraft = {
+  id: string;
+  fields: MathDraftField[];
+  values: Record<string, string>;
+  targetRange: Range | null;
+  toLatex: (values: Record<string, string>) => string;
+};
+
+type MathDraftConfig = {
+  fields: MathDraftField[];
+  initialValues?: Record<string, string>;
+  toLatex: (values: Record<string, string>) => string;
+};
+
+type MathDraftSelection = {
+  fieldId: string;
+  start: number;
+  end: number;
+};
+
 type MathGroup = {
   id: string;
   label: string;
@@ -72,6 +100,368 @@ function insertStructure(
   empty: { text: string; caret: number },
 ): MathInsertBuild {
   return (selection) => (selection ? withSelection(selection) : empty);
+}
+
+function stripOuterParens(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("(") || !trimmed.endsWith(")")) return trimmed;
+
+  let depth = 0;
+  for (let index = 0; index < trimmed.length; index += 1) {
+    const char = trimmed[index];
+    if (char === "(") depth += 1;
+    if (char === ")") depth -= 1;
+    if (depth === 0 && index < trimmed.length - 1) return trimmed;
+  }
+
+  return stripOuterParens(trimmed.slice(1, -1));
+}
+
+function findTopLevelOperator(value: string, operators: string[]) {
+  let depth = 0;
+  for (let index = value.length - 1; index >= 0; index -= 1) {
+    const char = value[index];
+    if (char === ")") depth += 1;
+    if (char === "(") depth -= 1;
+    if (depth === 0 && operators.includes(char)) return index;
+  }
+
+  return -1;
+}
+
+function findTopLevelAddSubtract(value: string) {
+  let depth = 0;
+  for (let index = value.length - 1; index > 0; index -= 1) {
+    const char = value[index];
+    if (char === ")") depth += 1;
+    if (char === "(") depth -= 1;
+    if (depth === 0 && (char === "+" || char === "-")) return index;
+  }
+
+  return -1;
+}
+
+function formatPowerBase(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+    return `\\left(${formatPlainMath(trimmed.slice(1, -1))}\\right)`;
+  }
+
+  const formatted = formatPlainMath(trimmed);
+  return /[+\-/]/.test(trimmed) ? `\\left(${formatted}\\right)` : formatted;
+}
+
+function formatPlainMath(value: string, fallback = "\\square"): string {
+  const trimmed = stripOuterParens(value);
+  if (!trimmed) return fallback;
+  if (trimmed.includes("\\")) return trimmed;
+
+  const sqrtSymbolMatch = trimmed.match(/^√\((.*)\)$/);
+  if (sqrtSymbolMatch) {
+    return `\\sqrt{${formatPlainMath(sqrtSymbolMatch[1])}}`;
+  }
+
+  const absSymbolMatch = trimmed.match(/^\|(.*)\|$/);
+  if (absSymbolMatch) {
+    return `\\left|${formatPlainMath(absSymbolMatch[1])}\\right|`;
+  }
+
+  const addSubtractIndex = findTopLevelAddSubtract(trimmed);
+  if (addSubtractIndex > 0 && addSubtractIndex < trimmed.length - 1) {
+    return `${formatPlainMath(trimmed.slice(0, addSubtractIndex))}${trimmed[addSubtractIndex]}${formatPlainMath(
+      trimmed.slice(addSubtractIndex + 1),
+    )}`;
+  }
+
+  const divisionIndex = findTopLevelOperator(trimmed, ["/"]);
+  if (divisionIndex > 0 && divisionIndex < trimmed.length - 1) {
+    return `\\frac{${formatPlainMath(trimmed.slice(0, divisionIndex))}}{${formatPlainMath(
+      trimmed.slice(divisionIndex + 1),
+    )}}`;
+  }
+
+  const powerIndex = findTopLevelOperator(trimmed, ["^"]);
+  if (powerIndex > 0 && powerIndex < trimmed.length - 1) {
+    return `${formatPowerBase(trimmed.slice(0, powerIndex))}^{${formatPlainMath(
+      trimmed.slice(powerIndex + 1),
+    )}}`;
+  }
+
+  const functionMatch = trimmed.match(/^([a-zA-Z]+)\((.*)\)$/);
+  if (functionMatch) {
+    const [, rawName, argument] = functionMatch;
+    const name = rawName.toLowerCase();
+    const argumentLatex = formatPlainMath(argument);
+
+    if (["sin", "cos", "tan", "ln", "log"].includes(name)) {
+      return `\\${name}\\left(${argumentLatex}\\right)`;
+    }
+
+    if (name === "sqrt") return `\\sqrt{${argumentLatex}}`;
+    if (name === "abs") return `\\left|${argumentLatex}\\right|`;
+    if (name === "arcsin" || name === "asin") return `\\sin^{-1}\\left(${argumentLatex}\\right)`;
+    if (name === "arccos" || name === "acos") return `\\cos^{-1}\\left(${argumentLatex}\\right)`;
+    if (name === "arctan" || name === "atan") return `\\tan^{-1}\\left(${argumentLatex}\\right)`;
+  }
+
+  return trimmed
+    .replace(/\*/g, "\\cdot ")
+    .replace(/π/g, "\\pi")
+    .replace(/θ/g, "\\theta")
+    .replace(/α/g, "\\alpha")
+    .replace(/β/g, "\\beta")
+    .replace(/∞/g, "\\infty")
+    .replace(/≤/g, "\\leq")
+    .replace(/≥/g, "\\geq")
+    .replace(/≠/g, "\\neq")
+    .replace(/≈/g, "\\approx")
+    .replace(/→/g, "\\to")
+    .replace(/\bpi\b/gi, "\\pi")
+    .replace(/\btheta\b/gi, "\\theta")
+    .replace(/\balpha\b/gi, "\\alpha")
+    .replace(/\bbeta\b/gi, "\\beta");
+}
+
+function mathExpression(value: string, fallback = "\\square") {
+  return formatPlainMath(value, fallback);
+}
+
+function plainMathInsertion(item: MathInsert, selectedText: string) {
+  const selected = selectedText.trim();
+
+  switch (item.id) {
+    case "fraction": {
+      const text = selected ? `${selected}/` : "/";
+      return { text, caret: text.length };
+    }
+    case "sqrt": {
+      const text = `√(${selected})`;
+      return { text, caret: selected ? text.length : 2 };
+    }
+    case "power": {
+      const text = selected ? `${selected}^` : "^";
+      return { text, caret: text.length };
+    }
+    case "squared":
+      return { text: selected ? `${selected}^2` : "^2", caret: selected ? selected.length + 2 : 0 };
+    case "subscript": {
+      const text = selected ? `${selected}_` : "_";
+      return { text, caret: text.length };
+    }
+    case "brackets": {
+      const text = `(${selected})`;
+      return { text, caret: selected ? text.length : 1 };
+    }
+    case "abs": {
+      const text = `|${selected}|`;
+      return { text, caret: selected ? text.length : 1 };
+    }
+    case "sin":
+    case "cos":
+    case "tan":
+    case "ln":
+    case "log": {
+      const text = `${item.id}(${selected})`;
+      return { text, caret: selected ? text.length : item.id.length + 1 };
+    }
+    case "asin": {
+      const text = `asin(${selected})`;
+      return { text, caret: selected ? text.length : 5 };
+    }
+    case "exp": {
+      const text = selected ? `e^(${selected})` : "e^()";
+      return { text, caret: selected ? text.length : 3 };
+    }
+    case "pi":
+      return { text: "π", caret: 1 };
+    case "theta":
+      return { text: "θ", caret: 1 };
+    case "alpha":
+      return { text: "α", caret: 1 };
+    case "beta":
+      return { text: "β", caret: 1 };
+    case "infty":
+      return { text: "∞", caret: 1 };
+    case "pm":
+      return { text: " ± ", caret: 3 };
+    case "times":
+    case "cdot":
+      return { text: "*", caret: 1 };
+    case "leq":
+      return { text: " ≤ ", caret: 3 };
+    case "geq":
+      return { text: " ≥ ", caret: 3 };
+    case "neq":
+      return { text: " ≠ ", caret: 3 };
+    case "approx":
+      return { text: " ≈ ", caret: 3 };
+    case "to":
+      return { text: " → ", caret: 3 };
+    default:
+      return { text: selected, caret: selected.length };
+  }
+}
+
+function getMathDraftConfig(item: MathInsert, selection: string): MathDraftConfig {
+  const expressionField = { id: "expression", label: "Expression", placeholder: "sin(x + 1)" };
+  const selectedExpression = selection.trim();
+
+  switch (item.id) {
+    case "fraction":
+      return {
+        fields: [
+          { id: "numerator", label: "Numerator", placeholder: "x + 1" },
+          { id: "denominator", label: "Denominator", placeholder: "cos(2x)" },
+        ],
+        initialValues: { numerator: selectedExpression },
+        toLatex: (values) =>
+          `\\frac{${mathExpression(values.numerator)}}{${mathExpression(values.denominator)}}`,
+      };
+    case "sqrt":
+      return {
+        fields: [{ ...expressionField, placeholder: "sin(x)^2 + 1" }],
+        initialValues: { expression: selectedExpression },
+        toLatex: (values) => `\\sqrt{${mathExpression(values.expression)}}`,
+      };
+    case "power":
+      return {
+        fields: [
+          { id: "base", label: "Base", placeholder: "x" },
+          { id: "exponent", label: "Exponent", placeholder: "n + 1" },
+        ],
+        initialValues: { base: selectedExpression },
+        toLatex: (values) =>
+          `${mathExpression(values.base)}^{${mathExpression(values.exponent)}}`,
+      };
+    case "squared":
+      return {
+        fields: [{ id: "base", label: "Base", placeholder: "sin(x + 1)" }],
+        initialValues: { base: selectedExpression },
+        toLatex: (values) => `${mathExpression(values.base)}^{2}`,
+      };
+    case "subscript":
+      return {
+        fields: [
+          { id: "base", label: "Base", placeholder: "x" },
+          { id: "subscript", label: "Subscript", placeholder: "n" },
+        ],
+        initialValues: { base: selectedExpression },
+        toLatex: (values) =>
+          `${mathExpression(values.base)}_{${mathExpression(values.subscript)}}`,
+      };
+    case "brackets":
+      return {
+        fields: [expressionField],
+        initialValues: { expression: selectedExpression },
+        toLatex: (values) => `\\left(${mathExpression(values.expression)}\\right)`,
+      };
+    case "abs":
+      return {
+        fields: [expressionField],
+        initialValues: { expression: selectedExpression },
+        toLatex: (values) => `|${mathExpression(values.expression)}|`,
+      };
+    case "integral":
+      return {
+        fields: [
+          { id: "integrand", label: "Integrand", placeholder: "sin(x)^2 + 1" },
+          { id: "variable", label: "Variable", placeholder: "x" },
+        ],
+        initialValues: { integrand: selectedExpression, variable: "x" },
+        toLatex: (values) =>
+          `\\int ${mathExpression(values.integrand)}\\,d${mathExpression(values.variable, "x")}`,
+      };
+    case "definite-integral":
+      return {
+        fields: [
+          { id: "lower", label: "From", placeholder: "0" },
+          { id: "upper", label: "To", placeholder: "1" },
+          { id: "integrand", label: "Integrand", placeholder: "sin(x)^2 + 1" },
+          { id: "variable", label: "Variable", placeholder: "x" },
+        ],
+        initialValues: { integrand: selectedExpression, variable: "x" },
+        toLatex: (values) =>
+          `\\int_{${mathExpression(values.lower)}}^{${mathExpression(values.upper)}} ${mathExpression(
+            values.integrand,
+          )}\\,d${mathExpression(values.variable, "x")}`,
+      };
+    case "derivative":
+      return {
+        fields: [{ id: "variable", label: "Variable", placeholder: "x" }],
+        initialValues: { variable: "x" },
+        toLatex: (values) => `\\frac{d}{d${mathExpression(values.variable, "x")}}`,
+      };
+    case "dy-dx":
+      return {
+        fields: [
+          { id: "dependent", label: "Top", placeholder: "y" },
+          { id: "variable", label: "Bottom", placeholder: "x" },
+        ],
+        initialValues: { dependent: "y", variable: "x" },
+        toLatex: (values) =>
+          `\\frac{d${mathExpression(values.dependent, "y")}}{d${mathExpression(
+            values.variable,
+            "x",
+          )}}`,
+      };
+    case "limit":
+      return {
+        fields: [
+          { id: "variable", label: "Variable", placeholder: "x" },
+          { id: "approaches", label: "Approaches", placeholder: "0" },
+        ],
+        initialValues: { variable: "x" },
+        toLatex: (values) =>
+          `\\lim_{${mathExpression(values.variable, "x")}\\to ${mathExpression(values.approaches)}}`,
+      };
+    case "sum":
+      return {
+        fields: [
+          { id: "index", label: "Index", placeholder: "n" },
+          { id: "start", label: "From", placeholder: "1" },
+          { id: "end", label: "To", placeholder: "N" },
+          { id: "expression", label: "Expression", placeholder: "n^2" },
+        ],
+        initialValues: { index: "n", start: "1", expression: selectedExpression },
+        toLatex: (values) =>
+          `\\sum_{${mathExpression(values.index, "n")}=${mathExpression(
+            values.start,
+            "1",
+          )}}^{${mathExpression(values.end)}} ${mathExpression(values.expression)}`,
+      };
+    case "sin":
+    case "cos":
+    case "tan":
+    case "ln":
+    case "log": {
+      const command = item.id;
+      return {
+        fields: [expressionField],
+        initialValues: { expression: selectedExpression },
+        toLatex: (values) => `\\${command}(${mathExpression(values.expression)})`,
+      };
+    }
+    case "asin":
+      return {
+        fields: [expressionField],
+        initialValues: { expression: selectedExpression },
+        toLatex: (values) => `\\sin^{-1}(${mathExpression(values.expression)})`,
+      };
+    case "exp":
+      return {
+        fields: [{ id: "exponent", label: "Exponent", placeholder: "x" }],
+        initialValues: { exponent: selectedExpression },
+        toLatex: (values) => `e^{${mathExpression(values.exponent)}}`,
+      };
+    default: {
+      const rawLatex = item.build("").text.replace(/^\$|\$$/g, "");
+      return {
+        fields: [],
+        initialValues: { expression: rawLatex },
+        toLatex: () => rawLatex,
+      };
+    }
+  }
 }
 
 const MATH_GROUPS: MathGroup[] = [
@@ -500,6 +890,9 @@ function DrawerContent({
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isMathsOpen, setIsMathsOpen] = useState(false);
+  const [mathDraft, setMathDraft] = useState<MathDraft | null>(null);
+  const [mathDraftSelection, setMathDraftSelection] = useState<MathDraftSelection | null>(null);
+  const [mathDraftFocus, setMathDraftFocus] = useState<MathDraftSelection | null>(null);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
 
@@ -520,6 +913,9 @@ function DrawerContent({
     setMessages([]);
     setErrorMessage("");
     setIsMathsOpen(false);
+    setMathDraft(null);
+    setMathDraftSelection(null);
+    setMathDraftFocus(null);
     clearComposer();
   }, [pageNodeId, clearComposer]);
 
@@ -626,13 +1022,112 @@ function DrawerContent({
     await sendMessage();
   };
 
-  const insertMath = (item: MathInsert) => {
+  const getComposerRange = () => {
+    const root = composerRef.current;
+    if (!root) return null;
+
+    const selection = window.getSelection();
+    const savedRange = savedRangeRef.current;
+
+    if (selection && selection.rangeCount && root.contains(selection.anchorNode)) {
+      return selection.getRangeAt(0).cloneRange();
+    }
+
+    if (savedRange && root.contains(savedRange.commonAncestorContainer)) {
+      return savedRange.cloneRange();
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(root);
+    range.collapse(false);
+    return range;
+  };
+
+  const insertIntoMathDraft = (item: MathInsert) => {
+    if (!mathDraft) return false;
+
+    const fallbackFieldId = mathDraftSelection?.fieldId ?? mathDraft.fields[0]?.id;
+    if (!fallbackFieldId) return false;
+
+    const currentValue = mathDraft.values[fallbackFieldId] ?? "";
+    const start = mathDraftSelection?.fieldId === fallbackFieldId ? mathDraftSelection.start : currentValue.length;
+    const end = mathDraftSelection?.fieldId === fallbackFieldId ? mathDraftSelection.end : currentValue.length;
+    const insertion = plainMathInsertion(item, currentValue.slice(start, end));
+    const nextValue = `${currentValue.slice(0, start)}${insertion.text}${currentValue.slice(end)}`;
+    const nextCaret = start + insertion.caret;
+
+    setMathDraft((current) =>
+      current
+        ? {
+            ...current,
+            values: {
+              ...current.values,
+              [fallbackFieldId]: nextValue,
+            },
+          }
+        : current,
+    );
+    setMathDraftSelection({ fieldId: fallbackFieldId, start: nextCaret, end: nextCaret });
+    setMathDraftFocus({ fieldId: fallbackFieldId, start: nextCaret, end: nextCaret });
+    return true;
+  };
+
+  const openMathDraft = (item: MathInsert) => {
+    if (insertIntoMathDraft(item)) return;
+
+    const range = getComposerRange();
+    const selectedText = range?.toString() ?? "";
+    const config = getMathDraftConfig(item, selectedText);
+    const initialValues = Object.fromEntries(config.fields.map((field) => [field.id, ""]));
+    const values = { ...initialValues, ...config.initialValues };
+
+    if (config.fields.length === 0) {
+      insertMathLatex(config.toLatex(values), range);
+      return;
+    }
+
+    setMathDraft({
+      id: item.id,
+      fields: config.fields,
+      values,
+      targetRange: range,
+      toLatex: config.toLatex,
+    });
+    setMathDraftSelection({
+      fieldId: config.fields[0].id,
+      start: values[config.fields[0].id]?.length ?? 0,
+      end: values[config.fields[0].id]?.length ?? 0,
+    });
+  };
+
+  const openExistingMathDraft = (chip: HTMLElement) => {
+    const range = document.createRange();
+    range.selectNode(chip);
+    savedRangeRef.current = range.cloneRange();
+
+    setIsMathsOpen(true);
+    setMathDraft({
+      id: `existing-${chip.dataset.latex ?? "math"}`,
+      fields: [{ id: "expression", label: "Expression", placeholder: "x + 1" }],
+      values: { expression: chip.dataset.latex ?? "" },
+      targetRange: range,
+      toLatex: (values) => mathExpression(values.expression),
+    });
+    setMathDraftSelection({
+      fieldId: "expression",
+      start: chip.dataset.latex?.length ?? 0,
+      end: chip.dataset.latex?.length ?? 0,
+    });
+  };
+
+  const insertMathLatex = (rawLatex: string, targetRange: Range | null) => {
     const root = composerRef.current;
     if (!root) return;
 
-    const buildResult = item.build("");
-    const rawLatex = buildResult.text.replace(/^\$|\$$/g, "");
-    const displayLatex = rawLatex.replace(/\{\}/g, "{\\square}");
+    const normalizedLatex = rawLatex.trim();
+    if (!normalizedLatex) return;
+
+    const displayLatex = normalizedLatex.replace(/\{\}/g, "{\\square}");
 
     let rendered: string;
     try {
@@ -641,13 +1136,13 @@ function DrawerContent({
         strict: "ignore",
       });
     } catch {
-      rendered = rawLatex;
+      rendered = normalizedLatex;
     }
 
     const chip = document.createElement("span");
     chip.setAttribute("contenteditable", "false");
     chip.dataset.mathChip = "true";
-    chip.dataset.latex = rawLatex;
+    chip.dataset.latex = normalizedLatex;
     chip.className = "math-chip";
     chip.innerHTML = rendered;
 
@@ -655,7 +1150,10 @@ function DrawerContent({
     const savedRange = savedRangeRef.current;
     let range: Range;
 
-    if (selection && selection.rangeCount && root.contains(selection.anchorNode)) {
+    if (targetRange && root.contains(targetRange.commonAncestorContainer)) {
+      range = targetRange.cloneRange();
+      range.deleteContents();
+    } else if (selection && selection.rangeCount && root.contains(selection.anchorNode)) {
       range = selection.getRangeAt(0);
       range.deleteContents();
     } else if (savedRange && root.contains(savedRange.commonAncestorContainer)) {
@@ -683,6 +1181,25 @@ function DrawerContent({
 
     root.focus();
     updateIsEmpty();
+    setMathDraft(null);
+    setMathDraftSelection(null);
+    setMathDraftFocus(null);
+  };
+
+  const commitMathDraft = () => {
+    if (!mathDraft) return;
+    insertMathLatex(mathDraft.toLatex(mathDraft.values), mathDraft.targetRange);
+  };
+
+  const handleComposerClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const chip = target.closest<HTMLElement>("[data-math-chip]");
+    if (!chip || !composerRef.current?.contains(chip)) return;
+
+    event.preventDefault();
+    openExistingMathDraft(chip);
   };
 
   return (
@@ -739,7 +1256,30 @@ function DrawerContent({
 
           <form onSubmit={handleSubmit} className="border-t border-zinc-200/80 bg-white px-3 py-3">
             <div className="flex flex-col gap-2 rounded-[14px] bg-zinc-50 px-2.5 py-2.5 ring-1 ring-inset ring-zinc-200/80 transition focus-within:bg-white focus-within:ring-zinc-400">
-              {isMathsOpen ? <MathKeypad onInsert={insertMath} /> : null}
+              {isMathsOpen ? (
+                <MathKeypad
+                  draft={mathDraft}
+                  focusRequest={mathDraftFocus}
+                  onDraftCancel={() => {
+                    setMathDraft(null);
+                    setMathDraftSelection(null);
+                    setMathDraftFocus(null);
+                  }}
+                  onDraftChange={(fieldId, value) =>
+                    setMathDraft((current) =>
+                      current
+                        ? { ...current, values: { ...current.values, [fieldId]: value } }
+                        : current,
+                    )
+                  }
+                  onDraftCommit={commitMathDraft}
+                  onDraftSelectionChange={(selection) => {
+                    setMathDraftSelection(selection);
+                    setMathDraftFocus(null);
+                  }}
+                  onInsert={openMathDraft}
+                />
+              ) : null}
 
               <div className="flex items-end gap-1.5">
                 <div className="relative min-h-[28px] w-full flex-1">
@@ -752,6 +1292,7 @@ function DrawerContent({
                     aria-label="Ask Arthur anything"
                     onInput={updateIsEmpty}
                     onBlur={rememberSelection}
+                    onClick={handleComposerClick}
                     onKeyDown={handleKeyDown}
                     className="math-composer scroll-slim max-h-[160px] min-h-[28px] w-full overflow-y-auto bg-transparent px-1.5 py-1 text-sm leading-6 text-zinc-800 outline-none"
                   />
@@ -799,16 +1340,45 @@ function DrawerContent({
   );
 }
 
-function MathKeypad({ onInsert }: { onInsert: (item: MathInsert) => void }) {
+function MathKeypad({
+  draft,
+  focusRequest,
+  onDraftCancel,
+  onDraftChange,
+  onDraftCommit,
+  onDraftSelectionChange,
+  onInsert,
+}: {
+  draft: MathDraft | null;
+  focusRequest: MathDraftSelection | null;
+  onDraftCancel: () => void;
+  onDraftChange: (fieldId: string, value: string) => void;
+  onDraftCommit: () => void;
+  onDraftSelectionChange: (selection: MathDraftSelection) => void;
+  onInsert: (item: MathInsert) => void;
+}) {
   const [activeGroupId, setActiveGroupId] = useState(MATH_GROUPS[0].id);
   const activeGroup = MATH_GROUPS.find((group) => group.id === activeGroupId) ?? MATH_GROUPS[0];
 
   return (
     <div className="overflow-hidden rounded-[12px] border border-zinc-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+      {draft ? (
+        <MathDraftEditor
+          draft={draft}
+          focusRequest={focusRequest}
+          onCancel={onDraftCancel}
+          onChange={onDraftChange}
+          onCommit={onDraftCommit}
+          onSelectionChange={onDraftSelectionChange}
+        />
+      ) : null}
       <div
         role="tablist"
         aria-label="Maths categories"
-        className="flex items-center gap-1 border-b border-zinc-200/80 bg-zinc-50/70 px-1.5 py-1.5"
+        className={[
+          "flex items-center gap-1 border-b border-zinc-200/80 bg-zinc-50/70 px-1.5 py-1.5",
+          draft ? "border-t" : "",
+        ].join(" ")}
       >
         {MATH_GROUPS.map((group) => {
           const isActive = group.id === activeGroupId;
@@ -845,6 +1415,125 @@ function MathKeypad({ onInsert }: { onInsert: (item: MathInsert) => void }) {
   );
 }
 
+function MathDraftEditor({
+  draft,
+  focusRequest,
+  onCancel,
+  onChange,
+  onCommit,
+  onSelectionChange,
+}: {
+  draft: MathDraft;
+  focusRequest: MathDraftSelection | null;
+  onCancel: () => void;
+  onChange: (fieldId: string, value: string) => void;
+  onCommit: () => void;
+  onSelectionChange: (selection: MathDraftSelection) => void;
+}) {
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const previewLatex = useMemo(() => draft.toLatex(draft.values), [draft]);
+  const previewHtml = useMemo(() => {
+    try {
+      return katex.renderToString(previewLatex.replace(/\{\}/g, "{\\square}") || "\\square", {
+        displayMode: true,
+        throwOnError: false,
+        strict: "ignore",
+      });
+    } catch {
+      return null;
+    }
+  }, [previewLatex]);
+
+  useLayoutEffect(() => {
+    if (!focusRequest) return;
+    const input = inputRefs.current[focusRequest.fieldId];
+    if (!input) return;
+
+    input.focus();
+    input.setSelectionRange(focusRequest.start, focusRequest.end);
+  }, [focusRequest, draft.values]);
+
+  const rememberFieldSelection = (fieldId: string, input: HTMLInputElement) => {
+    onSelectionChange({
+      fieldId,
+      start: input.selectionStart ?? input.value.length,
+      end: input.selectionEnd ?? input.value.length,
+    });
+  };
+
+  return (
+    <div className="space-y-2 border-b border-zinc-200/80 bg-white p-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+        Customise
+      </p>
+      <div className="grid grid-cols-2 gap-1.5">
+        {draft.fields.map((field, index) => (
+          <label
+            key={field.id}
+            className={[
+              "min-w-0 space-y-1",
+              field.id === "expression" || field.id === "integrand" ? "col-span-2" : "",
+            ].join(" ")}
+          >
+            <span className="block text-[11px] font-medium text-zinc-500">{field.label}</span>
+            <input
+              ref={(node) => {
+                inputRefs.current[field.id] = node;
+              }}
+              value={draft.values[field.id] ?? ""}
+              onChange={(event) => {
+                onChange(field.id, event.target.value);
+                rememberFieldSelection(field.id, event.target);
+              }}
+              onClick={(event) => rememberFieldSelection(field.id, event.currentTarget)}
+              onFocus={(event) => rememberFieldSelection(field.id, event.currentTarget)}
+              onSelect={(event) => rememberFieldSelection(field.id, event.currentTarget)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  onCommit();
+                }
+              }}
+              className="h-9 w-full min-w-0 rounded-[9px] border border-zinc-200 bg-white px-2.5 text-sm text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400"
+              aria-label={field.label}
+              placeholder={field.placeholder}
+              autoFocus={index === 0}
+            />
+          </label>
+        ))}
+      </div>
+      <div className="math-builder-preview min-h-14 overflow-x-auto rounded-[10px] border border-zinc-200 bg-zinc-50 px-3 py-2">
+        <p className="mb-1 text-[11px] font-medium text-zinc-400">Preview</p>
+        <div
+          className="flex min-h-7 items-center justify-center text-zinc-800"
+          dangerouslySetInnerHTML={previewHtml ? { __html: previewHtml } : undefined}
+        >
+          {previewHtml ? null : <span className="text-xs text-zinc-500">{previewLatex}</span>}
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-1.5">
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onCancel}
+          className="inline-flex h-9 items-center justify-center rounded-[9px] border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onCommit}
+          disabled={draft.fields.every((field) => !draft.values[field.id]?.trim())}
+          className="inline-flex h-9 items-center justify-center rounded-[9px] bg-zinc-900 px-3 text-xs font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+        >
+          Insert
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MathKeypadButton({
   item,
   onClick,
@@ -864,6 +1553,8 @@ function MathKeypadButton({
     }
   }, [item.labelLatex]);
 
+  const isWide = item.id === "integral" || item.id === "definite-integral";
+
   return (
     <button
       type="button"
@@ -871,11 +1562,14 @@ function MathKeypadButton({
       onMouseDown={(event) => event.preventDefault()}
       title={item.ariaLabel}
       aria-label={item.ariaLabel}
-      className="group inline-flex h-11 items-center justify-center rounded-[10px] border border-zinc-200/80 bg-white text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900 active:bg-zinc-100"
+      className={[
+        "group inline-flex h-11 min-w-0 items-center justify-center overflow-hidden rounded-[10px] border border-zinc-200/80 bg-white px-1 text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900 active:bg-zinc-100",
+        isWide ? "col-span-2" : "",
+      ].join(" ")}
     >
       {html ? (
         <span
-          className="math-keypad-label inline-flex items-center justify-center leading-none"
+          className="math-keypad-label inline-flex max-w-full items-center justify-center overflow-hidden leading-none"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
@@ -915,7 +1609,7 @@ function RenderedUserMessage({ content }: { content: string }) {
     <div className="space-y-2.5 text-[14px] leading-[1.7]">
       {paragraphs.map((paragraph, index) => (
         <p key={`user-paragraph-${index}`} className="whitespace-pre-wrap break-words text-white">
-          {renderInlineSegments(paragraph.replace(/\n/g, " "), `user-paragraph-${index}`)}
+          {renderInlineSegments(paragraph.replace(/\n/g, " "), `user-paragraph-${index}`, false)}
         </p>
       ))}
     </div>
@@ -967,10 +1661,16 @@ function parseAssistantBlocks(content: string) {
   });
 }
 
-function renderInlineSegments(content: string, keyPrefix: string) {
+function renderInlineSegments(content: string, keyPrefix: string, autoDisplayComplexMath = true) {
   return splitMessageSegments(content).map((segment, index) => {
     if (segment.type === "math") {
-      return <MathSegment key={`${keyPrefix}-math-${index}`} segment={segment} />;
+      return (
+        <MathSegment
+          key={`${keyPrefix}-math-${index}`}
+          segment={segment}
+          autoDisplayComplexMath={autoDisplayComplexMath}
+        />
+      );
     }
 
     return renderFormattedText(segment.content, `${keyPrefix}-text-${index}`);
@@ -1086,18 +1786,30 @@ function normalizeAssistantContent(content: string) {
     .trim();
 }
 
-function MathSegment({ segment }: { segment: Extract<MessageSegment, { type: "math" }> }) {
+function MathSegment({
+  segment,
+  autoDisplayComplexMath = true,
+}: {
+  segment: Extract<MessageSegment, { type: "math" }>;
+  autoDisplayComplexMath?: boolean;
+}) {
+  const shouldDisplay =
+    segment.displayMode ||
+    (autoDisplayComplexMath &&
+      segment.content.length > 34 &&
+      /\\(?:d?frac|sqrt)|\^|_|\\int|\\sum|\\lim/.test(segment.content));
+
   const html = useMemo(() => {
     try {
       return katex.renderToString(segment.content, {
-        displayMode: segment.displayMode,
+        displayMode: shouldDisplay,
         throwOnError: false,
         strict: "ignore",
       });
     } catch {
       return null;
     }
-  }, [segment.content, segment.displayMode]);
+  }, [segment.content, shouldDisplay]);
 
   if (!html) {
     return (
@@ -1110,8 +1822,8 @@ function MathSegment({ segment }: { segment: Extract<MessageSegment, { type: "ma
   return (
     <span
       className={
-        segment.displayMode
-          ? "my-3 block max-w-full overflow-x-auto overflow-y-hidden py-1"
+        shouldDisplay
+          ? "my-3 block max-w-full overflow-x-auto overflow-y-hidden py-2"
           : "mx-0.5 inline align-middle py-1"
       }
       dangerouslySetInnerHTML={{ __html: html }}
