@@ -1,7 +1,7 @@
 import {
   A_LEVEL_MATHS_CHAPTERS,
   INTERACTIVE_ASSESSMENT_TITLE,
-} from "@/lib/seed";
+} from "./seed.ts";
 
 export const CHAPTER_ONE_ASSESSMENT_KEY =
   "pure-mathematics:chapter-1-algebra-and-functions";

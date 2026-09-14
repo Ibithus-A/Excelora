@@ -9,12 +9,13 @@ import { formatPlainMath } from "@/lib/math-format";
 import { SHARED_MATH_INPUT_GROUPS } from "@/lib/math-input-catalog";
 import { buildMathInputInsertion } from "@/lib/math-input-builder";
 import { hasAssessmentAnswerContent } from "@/lib/assessment-answer";
+import { CHAPTER_ONE_ASSESSMENT_FORM_A } from "@/lib/question-bank/chapter-one";
+import type { QuestionBankItem } from "@/lib/question-bank/types";
 import {
   RichMathAnswerInput,
   type RichMathAnswerHandle,
 } from "@/components/rich-math-answer-input";
 import { StructuredGraphSketch } from "@/components/structured-graph-sketch";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -48,13 +49,7 @@ type TutorPreviewMarking = {
   questionScores: Record<string, PreviewQuestionScore>;
 };
 
-type AssessmentQuestion = {
-  number: number;
-  marks: number;
-  body: ReactNode;
-  hasSketch?: boolean;
-  answerParts?: Array<{ key: string; label: string }>;
-};
+type AssessmentQuestion = QuestionBankItem;
 
 function answerPartsFor(question: AssessmentQuestion) {
   return question.answerParts ?? [{ key: `q${question.number}`, label: "Answer" }];
@@ -86,189 +81,29 @@ function MathText({ children }: { children: string }) {
   );
 }
 
-const QUESTIONS: AssessmentQuestion[] = [
-  {
-    number: 1,
-    marks: 2,
-    body: (
-      <p>
-        <MathText>{String.raw`f(x)=3x^3+2ax^2-4x+5a`}</MathText>. Given that
-        <MathText>{String.raw`(x+3)`}</MathText> is a factor of <MathText>{String.raw`f(x)`}</MathText>,
-        find the value of the constant <MathText>a</MathText>.
-      </p>
-    ),
-  },
-  {
-    number: 2,
-    marks: 5,
-    answerParts: [
-      { key: "q2_a_i", label: "(a)(i)" },
-      { key: "q2_a_ii", label: "(a)(ii)" },
-      { key: "q2_b", label: "(b)" },
-    ],
-    body: (
-      <div className="space-y-3">
-        <p>(a) Simplify fully each expression, writing the final answer in terms of <MathText>{String.raw`\sqrt2`}</MathText>.</p>
-        <p className="pl-4">(i) <MathText>{String.raw`\sqrt{98}+\sqrt2`}</MathText></p>
-        <p className="pl-4">(ii) <MathText>{String.raw`(\sqrt2+3)(2-3\sqrt2)`}</MathText></p>
-        <p>(b) Solve <MathText>{String.raw`\frac{27^t}{3^{t-1}}=3\sqrt3`}</MathText>. Detailed workings must be shown.</p>
-      </div>
-    ),
-  },
-  { number: 3, marks: 2, body: <p>Factorize <MathText>{String.raw`2x^2-xy-y^2`}</MathText>.</p> },
-  { number: 4, marks: 3, body: <p>Solve <MathText>{String.raw`(2x+3)^2-(4-x)^2=45`}</MathText>.</p> },
-  {
-    number: 5,
-    marks: 4,
-    body: (
-      <p>
-        A cylinder has radius <MathText>{String.raw`\left(\frac1{\sqrt2-1}\right)`}</MathText> cm
-        and height <MathText>{String.raw`(\sqrt2+1)`}</MathText> cm. Show, by detailed working,
-        that its volume is exactly <MathText>{String.raw`\pi(7+5\sqrt2)`}</MathText> cm³.
-      </p>
-    ),
-  },
-  {
-    number: 6,
-    marks: 5,
-    body: (
-      <p>
-        A right-angled trapezium <MathText>ABCD</MathText> has parallel sides
-        <MathText>AB</MathText> and <MathText>CD</MathText> of lengths
-        <MathText>{String.raw`(2x+1)`}</MathText> cm and <MathText>{String.raw`(x+1)`}</MathText> cm.
-        Its height <MathText>AD</MathText> is <MathText>{String.raw`2x`}</MathText> cm. Given that its
-        area is 16 cm², determine the exact length of <MathText>BC</MathText>.
-      </p>
-    ),
-  },
-  {
-    number: 7,
-    marks: 3,
-    body: (
-      <p>
-        The line <MathText>{String.raw`y=5x+k`}</MathText> intersects
-        <MathText>{String.raw`y=4x^2-7x+11`}</MathText> at two distinct points. Show that
-        <MathText>{String.raw`k>2`}</MathText>.
-      </p>
-    ),
-  },
-  { number: 8, marks: 3, body: <p>Solve <MathText>{String.raw`12-2|2x-3|\ge7`}</MathText>.</p> },
-  {
-    number: 9,
-    marks: 5,
-    hasSketch: true,
-    answerParts: [{ key: "q9_b", label: "(b)" }],
-    body: (
-      <div className="space-y-3">
-        <p><MathText>{String.raw`C_1`}</MathText> has equation <MathText>{String.raw`y=|x-1|`}</MathText>. <MathText>{String.raw`C_2`}</MathText> has equation <MathText>{String.raw`y=|2x+1|`}</MathText>.</p>
-        <p>(a) Sketch <MathText>{String.raw`C_1`}</MathText> and <MathText>{String.raw`C_2`}</MathText> on the same axes, indicating coordinates of intercepts.</p>
-        <p>(b) Hence solve <MathText>{String.raw`|2x+1|\ge|x-1|`}</MathText>.</p>
-      </div>
-    ),
-  },
-  {
-    number: 10,
-    marks: 7,
-    answerParts: [
-      { key: "q10_a", label: "(a)" },
-      { key: "q10_b", label: "(b)" },
-    ],
-    body: (
-      <div className="space-y-3">
-        <p>A polynomial <MathText>{String.raw`f(x)`}</MathText> gives remainder 5 when divided by <MathText>{String.raw`(x-2)`}</MathText> and remainder −11 when divided by <MathText>{String.raw`(x+2)`}</MathText>.</p>
-        <p>(a) When divided by <MathText>{String.raw`(x+2)(x-2)`}</MathText>, the remainder is <MathText>{String.raw`ax+b`}</MathText>. Find <MathText>a</MathText> and <MathText>b</MathText>.</p>
-        <p>(b) Given <MathText>{String.raw`f(x)=3x^4+px+q`}</MathText>, express <MathText>{String.raw`f(x)`}</MathText> as <MathText>{String.raw`(x^2-4)g(x)+ax+b`}</MathText> and find <MathText>{String.raw`g(x),p,q`}</MathText>.</p>
-      </div>
-    ),
-  },
-  {
-    number: 11,
-    marks: 8,
-    answerParts: [
-      { key: "q11_a", label: "(a)" },
-      { key: "q11_b", label: "(b)" },
-      { key: "q11_c", label: "(c)" },
-      { key: "q11_d", label: "(d)" },
-    ],
-    body: (
-      <div className="space-y-3">
-        <p><MathText>{String.raw`f(x)=x^3+3x^2-24x+20`}</MathText>.</p>
-        <p>(a) Show <MathText>{String.raw`(x-1)`}</MathText> is a factor.</p>
-        <p>(b) Factorise <MathText>{String.raw`f(x)`}</MathText> completely.</p>
-        <p>(c) Solve <MathText>{String.raw`f(x)=0`}</MathText>.</p>
-        <p>The line <MathText>{String.raw`y=-8`}</MathText> touches the curve at <MathText>{String.raw`Q(2,-8)`}</MathText> and crosses it at <MathText>P</MathText>.</p>
-        <p>(d) Find the coordinates of <MathText>P</MathText>.</p>
-      </div>
-    ),
-  },
-  {
-    number: 12,
-    marks: 10,
-    answerParts: [
-      { key: "q12_a", label: "(a)" },
-      { key: "q12_b", label: "(b)" },
-      { key: "q12_c_i", label: "(c)(i)" },
-      { key: "q12_c_ii", label: "(c)(ii)" },
-      { key: "q12_d", label: "(d)" },
-    ],
-    body: (
-      <div className="space-y-3">
-        <p><MathText>{String.raw`f(x)=4-3x^2,\ x\in\mathbb R`}</MathText>, and <MathText>{String.raw`g(x)=\frac5{2x-9},\ x\ne\frac92`}</MathText>.</p>
-        <p>(a) Find <MathText>{String.raw`fg(2)`}</MathText>.</p>
-        <p>(b) Find <MathText>{String.raw`g^{-1}(x)`}</MathText>, stating its domain.</p>
-        <p>(c)(i) Find <MathText>{String.raw`gf(x)`}</MathText> as a simplified fraction.</p>
-        <p>(c)(ii) Deduce the range of <MathText>{String.raw`gf(x)`}</MathText>.</p>
-        <p>The function <MathText>{String.raw`h(x)=2x^2-6x+k,\ x\in\mathbb R`}</MathText>.</p>
-        <p>(d) Find the range of <MathText>k</MathText> for which <MathText>{String.raw`f(x)=h(x)`}</MathText> has no real solutions.</p>
-      </div>
-    ),
-  },
-  {
-    number: 13,
-    marks: 4,
-    body: (
-      <p>
-        <MathText>{String.raw`x^2+(k-1)x+k+2=0`}</MathText> has two equal roots. Find the possible
-        values of <MathText>k</MathText> and the corresponding repeated roots.
-      </p>
-    ),
-  },
-  {
-    number: 14,
-    marks: 6,
-    answerParts: [
-      { key: "q14_a", label: "(a)" },
-      { key: "q14_b", label: "(b)" },
-    ],
-    body: (
-      <div className="space-y-3">
-        <p><MathText>{String.raw`f(x)=4x(x-1)`}</MathText>. The graph of <MathText>{String.raw`g(x)`}</MathText> is obtained from <MathText>f</MathText> by translating 1 unit in the positive <MathText>x</MathText>-direction, then stretching horizontally by scale factor <MathText>{String.raw`\frac23`}</MathText>.</p>
-        <p>(a) Find <MathText>{String.raw`g(x)`}</MathText> in simplified form.</p>
-        <p>The graph of <MathText>{String.raw`f(x)`}</MathText> is obtained from <MathText>{String.raw`h(x)`}</MathText> by translating 1 unit in the positive <MathText>x</MathText>-direction, then stretching vertically by scale factor 2.</p>
-        <p>(b) Find <MathText>{String.raw`h(x)`}</MathText> in simplified form.</p>
-      </div>
-    ),
-  },
-  {
-    number: 15,
-    marks: 8,
-    answerParts: [
-      { key: "q15_a", label: "(a)" },
-      { key: "q15_b", label: "(b)" },
-      { key: "q15_c", label: "(c)" },
-      { key: "q15_d", label: "(d)" },
-    ],
-    body: (
-      <div className="space-y-3">
-        <p>A factory makes soap. The cost £<MathText>y</MathText> of making <MathText>x</MathText> bars equals a fixed cost plus a cost proportional to the number made. Each bar sells for £2. At 800 bars profit is £500; at 300 bars there is a loss of £80.</p>
-        <p>(a) Write a general equation linking <MathText>y</MathText> with <MathText>x</MathText>.</p>
-        <p>(b) Show <MathText>{String.raw`y=0.84x+428`}</MathText>.</p>
-        <p>(c) Interpret 0.84 in context.</p>
-        <p>(d) Find the least number of bars that must be made and sold for a profit.</p>
-      </div>
-    ),
-  },
-];
+const QUESTIONS: AssessmentQuestion[] = CHAPTER_ONE_ASSESSMENT_FORM_A;
+
+function QuestionBody({ question }: { question: AssessmentQuestion }) {
+  return (
+    <div className="space-y-3">
+      {question.paragraphs.map((paragraph, paragraphIndex) => (
+        <p key={`${question.id}-paragraph-${paragraphIndex}`}>
+          {paragraph.map((segment, segmentIndex) =>
+            segment.type === "math" ? (
+              <MathText key={`${question.id}-segment-${paragraphIndex}-${segmentIndex}`}>
+                {segment.value}
+              </MathText>
+            ) : (
+              <span key={`${question.id}-segment-${paragraphIndex}-${segmentIndex}`}>
+                {segment.value}
+              </span>
+            ),
+          )}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 type MathInputKey = {
   id: string;
@@ -873,7 +708,7 @@ export function ChapterOneInteractiveAssessment({
           <div><p className="text-xs font-semibold text-zinc-900">Question {question.number} of 15</p><p className="mt-0.5 text-[11px] text-zinc-500">{answeredCount} answered · {lockedCount} {role === "tutor" ? "checked" : "locked"} · {role === "tutor" ? "Unlimited preview" : saveState === "saving" ? "Saving…" : saveState === "error" ? "Save failed" : "Saved"}</p></div>
           <div className="flex items-center gap-2"><span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold tabular-nums text-zinc-800">{role === "tutor" ? "Preview" : formatTime(remainingSeconds)}</span>{role === "tutor" ? <button type="button" onClick={() => void startAssessment()} className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50">Reset preview</button> : null}<button data-maths-input-trigger type="button" onClick={() => { if (isCalculatorOpen) closeCalculator(); else openCalculator(); }} aria-expanded={isCalculatorOpen} className={["rounded-full border px-3 py-1 text-xs font-medium transition", isCalculatorOpen ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 text-zinc-700 hover:bg-zinc-50"].join(" ")}>Calculator</button></div>
         </div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-100"><div className="h-full rounded-full bg-zinc-800 transition-[width]" style={{ width: `${((currentIndex + 1) / QUESTIONS.length) * 100}%` }} /></div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-100"><div className="h-full rounded-full bg-emerald-500 transition-[width] duration-300 ease-out" style={{ width: `${((currentIndex + 1) / QUESTIONS.length) * 100}%` }} /></div>
       </div>
 
       <CalculatorDrawer
@@ -896,7 +731,7 @@ export function ChapterOneInteractiveAssessment({
 
       <section className="py-8">
         <div className="flex items-start justify-between gap-5"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Question {question.number}</p><span className="shrink-0 rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600">{question.marks} marks</span></div>
-        <div className="mt-5 text-[15px] leading-8 text-zinc-800 sm:text-base">{question.body}</div>
+        <div className="mt-5 text-[15px] leading-8 text-zinc-800 sm:text-base"><QuestionBody question={question} /></div>
         {isCurrentAnswerLocked ? <div className="mt-8 flex justify-end"><span className={["rounded-full border px-2.5 py-1 text-[11px] font-semibold", role !== "tutor" || currentTutorScoreState === "correct" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : currentTutorScoreState === "partial" ? "border-amber-200 bg-amber-50 text-amber-700" : "border-rose-200 bg-rose-50 text-rose-700"].join(" ")}>{role === "tutor" && currentTutorScore ? currentTutorScoreState === "correct" ? `Correct · ${currentTutorScore.marks}/${currentTutorScore.automatedMaxMarks}` : currentTutorScoreState === "partial" ? `Partially correct · ${currentTutorScore.marks}/${currentTutorScore.automatedMaxMarks}` : `Incorrect · ${currentTutorScore.marks}/${currentTutorScore.automatedMaxMarks}` : "Locked and marked"}</span></div> : null}
         {question.hasSketch ? <div className={isCurrentAnswerLocked ? "pointer-events-none opacity-70" : ""}><p className="mt-8 text-[15px] font-normal leading-8 text-zinc-800 sm:text-base">Answer (a) — Sketch:</p><StructuredGraphSketch value={answers.q9_sketch ?? ""} onChange={(value) => setAnswers((current) => ({ ...current, q9_sketch: value }))} /></div> : null}
         <div className="mt-8 space-y-5">

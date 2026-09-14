@@ -1,4 +1,4 @@
-import type { FlowNode, FlowState } from "@/types/flowstate";
+import type { FlowNode, FlowState } from "../types/flowstate.ts";
 
 export const A_LEVEL_MATHS_TITLE = "A Level Maths";
 export const END_OF_TOPIC_ASSESSMENT_TITLE = "Assessment";

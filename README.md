@@ -2,8 +2,18 @@ Flowstate is the Excelora learning workspace built with Next.js, React, and Supa
 
 ## Development
 
+The project uses Node.js 24 LTS and npm 11. Install the pinned runtime before installing dependencies:
+
 ```bash
-npm install
+nvm install
+nvm use
+node --version
+```
+
+The expected version is recorded in both `.nvmrc` and `.node-version`. Deployment platforms should honour the `engines` declaration in `package.json` and use Node 24.x.
+
+```bash
+npm ci
 npm run dev
 ```
 

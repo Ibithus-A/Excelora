@@ -21,6 +21,9 @@ This document is the implementation checklist for every interactive assessment. 
 
 ## Questions and answers
 
+- Build released papers from the reusable question-bank format in `src/lib/question-bank`; do not hard-code question JSX inside an assessment component.
+- Assessment items must be Excelora-original and must not repeat a worked example, practice question, or solution visible in a lesson. The question-bank collision test is a release gate.
+- Past papers and third-party resources may be used to map specification coverage, command words, difficulty and question archetypes, but their question text and distinctive data must not be copied into the product unless Excelora has explicit redistribution rights.
 - Show one question at a time while keeping the question count and total marks visible.
 - Every labelled question part or subpart must have its own answer box and storage key. Never combine `(a)(i)`, `(a)(ii)`, `(b)`, and similar parts into one response field.
 - Keep question parts and answer boxes in the same order as the source assessment.
