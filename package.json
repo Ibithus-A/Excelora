@@ -14,7 +14,10 @@
     "lint": "eslint",
     "test:math": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/math-input.test.ts",
     "test:diagrams": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/chapter-one-diagrams.test.ts",
-    "test:question-bank": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/question-bank.test.ts"
+    "test:question-bank": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/question-bank.test.ts",
+    "test:assessment-engine": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/generated-assessment-selector.test.ts",
+    "test:assessment-security": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/generated-assessment-security.test.ts",
+    "bank:import": "node scripts/import-assessment-bank.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

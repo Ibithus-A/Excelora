@@ -3,14 +3,13 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { canAccessNode, getLockedChapterMessage } from "@/lib/access";
-import { ChapterOneInteractiveAssessment } from "@/components/chapter-one-interactive-assessment";
+import { GeneratedChapterAssessment } from "@/components/generated-chapter-assessment";
 import { FolderIcon } from "@/components/icons";
 import type { TutorialSurface } from "@/components/tutorial-showcase";
 import { getNotionLesson } from "@/content/notion-lessons/registry";
 import { useFlowState } from "@/context/flowstate-context";
 import {
   END_OF_TOPIC_ASSESSMENT_TITLE,
-  INTERACTIVE_ASSESSMENT_TITLE,
 } from "@/lib/seed";
 import {
   getDefaultTitle,
@@ -146,7 +145,7 @@ export function EditorPane({
   const titleMeasureRef = useRef<HTMLSpanElement | null>(null);
   const [titleFontSizePx, setTitleFontSizePx] = useState(MAX_TITLE_FONT_SIZE_PX);
   const [isAssistantHovered, setIsAssistantHovered] = useState(false);
-  const [isAssessmentMathsOpen, setIsAssessmentMathsOpen] = useState(false);
+  const [isAssessmentMathsOpen] = useState(false);
   const [mobileAssistantNodeId, setMobileAssistantNodeId] = useState<string | null>(null);
   const [surfaceTransitionMode, setSurfaceTransitionMode] =
     useState<SurfaceTransitionMode>("fade");
@@ -195,8 +194,7 @@ export function EditorPane({
   const lessonContext = selectedNode ? getLessonChapterContext(state, selectedNode.id) : null;
   const isLessonPage = selectedNode?.kind === "page" && Boolean(lessonContext);
   const isAssessmentPage = Boolean(lessonContext?.isAssessmentPage);
-  const isInteractiveAssessment =
-    selectedNode?.title === INTERACTIVE_ASSESSMENT_TITLE;
+  const isInteractiveAssessment = isAssessmentPage;
   const notionLesson = getNotionLesson(selectedNode?.title);
   const NativeLessonComponent = notionLesson?.Component ?? null;
   const isNativeLessonPreview = Boolean(notionLesson);
@@ -763,10 +761,11 @@ export function EditorPane({
                     <div className={isAssessmentPage ? "px-4 py-5 md:px-5" : ""}>
                       {isAssessmentPage ? (
                         <div className="overflow-hidden rounded-none bg-white">
-                          {isInteractiveAssessment ? (
-                            <ChapterOneInteractiveAssessment
+                          {isInteractiveAssessment && lessonContext ? (
+                            <GeneratedChapterAssessment
+                              subjectTitle={lessonContext.subjectTitle ?? ""}
+                              chapterTitle={lessonContext.chapterTitle}
                               role={role}
-                              onMathsSidebarOpenChange={setIsAssessmentMathsOpen}
                               onCompleted={() => {
                                 if (!selectedNode || isLessonWatched) return;
                                 const metadata = selectedTopicMetadata();

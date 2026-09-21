@@ -56,7 +56,7 @@ export function useAssessmentAccess(
         studentId,
         progressVersion,
       });
-      const response = await fetch(`/api/assessments?${params}`, { cache: "no-store" });
+      const response = await fetch(`/api/generated-assessments?${params}`, { cache: "no-store" });
       const payload = (await response.json()) as { isUnlocked?: boolean; requiresPremium?: boolean; prerequisite?: AssessmentPrerequisiteSummary; attempt?: AssessmentAttemptSummary | null; error?: string };
       if (!response.ok) throw new Error(payload.error || "Unable to load assessment access.");
       setIsUnlocked(Boolean(payload.isUnlocked));
