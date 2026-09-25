@@ -1,3 +1,6 @@
+import { getStructuredLesson } from "@/lib/lessons/catalogue";
+import { serializeLesson } from "@/lib/lessons/schema";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { readPdfTextForSubtopic } from "@/lib/pdf-text";
 import { createRateLimiter } from "@/lib/security/rate-limit";
@@ -13,6 +16,7 @@ type AssistantMessage = {
 };
 
 type ArthurRequestBody = {
+  reviewAttemptId?: string;
   pageTitle?: string;
   pdfTitle?: string;
   pageContent?: string;
@@ -21,8 +25,8 @@ type ArthurRequestBody = {
 };
 
 const COHERE_API_URL = "https://api.cohere.com/v2/chat";
-const MAX_MESSAGES = 40;
-const MAX_MESSAGE_CHARS = 8000;
+const MAX_MESSAGES = 12;
+const MAX_MESSAGE_CHARS = 4000;
 const MAX_CONTEXT_CHARS = 20000;
 
 const enforceArthurRateLimit = createRateLimiter({
@@ -88,7 +92,41 @@ export async function POST(request: Request) {
   try {
     const viewer = await getViewerProfile(supabase, user.id);
     if (!viewer) {
-      return NextResponse.json({ error: "Profile not found." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Profile not found." },
+        { status: 404 },
+      );
+    }
+    if (viewer.role === "student") {
+      const { data: active, error } = await createAdminClient()
+        .from("student_assessment_attempts")
+        .select("id")
+        .eq("student_id", user.id)
+        .eq("status", "active")
+        .limit(1);
+      if (error) throw new Error(error.message);
+      if (active?.length)
+        return NextResponse.json(
+          {
+            error: "Finish your active formal assessment before using Arthur.",
+          },
+          { status: 403 },
+        );
+    }
+    if (viewer.role === "student") {
+      const { data: practice, error } = await createAdminClient()
+        .from("practice_sessions")
+        .select("id")
+        .eq("student_id", user.id)
+        .eq("continuous", true)
+        .eq("status", "active")
+        .limit(1);
+      if (error) throw error;
+      if (practice?.length)
+        return NextResponse.json(
+          { error: "Stop your practice session before using Arthur." },
+          { status: 403 },
+        );
     }
     if (viewer.role === "student" && viewer.plan !== "premium") {
       return NextResponse.json(
@@ -132,28 +170,85 @@ export async function POST(request: Request) {
       }));
     const pageTitle = body.pageTitle?.trim().slice(0, 500) || "Untitled page";
     const pdfTitle = body.pdfTitle?.trim().slice(0, 500) || pageTitle;
-    if (/assessment/i.test(pageTitle) || /assessment/i.test(pdfTitle)) {
+    if (/practi[cs]e/i.test(pageTitle))
+      return NextResponse.json(
+        { error: "Arthur is unavailable in practice." },
+        { status: 403 },
+      );
+    let reviewContext = "";
+    if (typeof body.reviewAttemptId === "string") {
+      const admin = createAdminClient();
+      const { data: review, error } = await admin
+        .from("student_assessment_attempts")
+        .select("id,status,score,total_marks,pending_review_marks")
+        .eq("id", body.reviewAttemptId)
+        .eq("student_id", user.id)
+        .eq("status", "submitted")
+        .maybeSingle();
+      if (error || !review)
+        return NextResponse.json(
+          { error: "Submitted assessment not found." },
+          { status: 403 },
+        );
+      const { data: rows, error: questionError } = await admin
+        .from("student_assessment_attempt_questions")
+        .select(
+          "question_order,marks_awarded,is_correct,assessment_question_bank(prompt,subtopic,answer,worked_solution)",
+        )
+        .eq("attempt_id", review.id)
+        .order("question_order");
+      if (questionError) throw new Error(questionError.message);
+      const chunks = [
+        `Submitted assessment: ${review.score}/${review.total_marks}; ${review.pending_review_marks} marks pending review.`,
+      ];
+      for (const row of rows ?? []) {
+        const q = Array.isArray(row.assessment_question_bank)
+          ? row.assessment_question_bank[0]
+          : row.assessment_question_bank;
+        if (q)
+          chunks.push(
+            `Question ${row.question_order}: ${q.prompt}\nSubtopic: ${q.subtopic}\nOutcome: ${row.is_correct === null ? "Pending review" : row.marks_awarded}\nAnswer: ${q.answer}\nWorked solution: ${q.worked_solution}`,
+          );
+      }
+      reviewContext = truncateAtParagraph(chunks.join("\n\n"), 18000);
+    }
+    if (
+      !reviewContext &&
+      (/assessment/i.test(pageTitle) || /assessment/i.test(pdfTitle))
+    ) {
       return NextResponse.json(
         { error: "Arthur is disabled on assessment pages." },
         { status: 403 },
       );
     }
-    const pageContent = (body.pageContent ?? "").trim().slice(0, MAX_CONTEXT_CHARS);
+    const nativeLesson = getStructuredLesson(pageTitle);
+    const pageContent =
+      reviewContext ||
+      (nativeLesson
+        ? serializeLesson(nativeLesson, 18000)
+        : (body.pageContent ?? "").trim().slice(0, 6000));
     const workspaceContext = (body.workspaceContext ?? "")
       .trim()
-      .slice(0, MAX_CONTEXT_CHARS);
+      .slice(0, 4000);
     const latestUserMessage = messages[messages.length - 1];
 
     let lessonNotes = "";
-    if (pdfTitle) {
+    if (pdfTitle && !nativeLesson && !reviewContext) {
       try {
-        lessonNotes = (await readPdfTextForSubtopic(pdfTitle)) ?? "";
+        lessonNotes = truncateAtParagraph(
+          (await readPdfTextForSubtopic(pdfTitle)) ?? "",
+          MAX_CONTEXT_CHARS,
+        );
       } catch (error) {
         console.error("[arthur] pdf extraction failed", pdfTitle, error);
       }
     }
 
-    if (!latestUserMessage || latestUserMessage.role !== "user" || !latestUserMessage.content.trim()) {
+    if (
+      !latestUserMessage ||
+      latestUserMessage.role !== "user" ||
+      !latestUserMessage.content.trim()
+    ) {
       return NextResponse.json(
         { error: "A user message is required." },
         { status: 400 },
@@ -169,14 +264,36 @@ export async function POST(request: Request) {
       ? `${ARTHUR_SYSTEM_PROMPT}\n\n${MATH_MODE_PROMPT}`
       : ARTHUR_SYSTEM_PROMPT;
 
+    // Reserve before sending: failures/timeouts still consume a slot because the
+    // provider may have billed them. Never retry a paid request automatically.
+    const { data: allowance, error: allowanceError } =
+      await createAdminClient().rpc("reserve_arthur_request", {
+        p_user_id: user.id,
+      });
+    if (allowanceError || allowance !== "allowed") {
+      return NextResponse.json(
+        {
+          error:
+            allowance === "daily_limit"
+              ? "You have reached today's Arthur allowance. Please try again tomorrow."
+              : allowance === "monthly_limit"
+                ? "Arthur has reached this month's allowance. Your lessons and practice are still available."
+                : "Arthur is temporarily unavailable. Please contact your tutor.",
+        },
+        { status: allowanceError || allowance === "disabled" ? 503 : 429 },
+      );
+    }
+
     const cohereResponse = await fetch(COHERE_API_URL, {
       method: "POST",
+      signal: AbortSignal.timeout(45_000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "command-a-03-2025",
+        max_tokens: 1024,
         temperature: isMathMode ? 0.1 : 0.2,
         messages: [
           {
@@ -184,7 +301,7 @@ export async function POST(request: Request) {
             content: [
               {
                 type: "text",
-                text: `${systemPrompt}\n\nCurrent page title: ${pageTitle}\n\nCurrent PDF/resource title: ${pdfTitle}\n\nCurrent page content:\n${pageContent || "(blank page)"}\n\nLesson notes (extracted from the current PDF/resource):\n${lessonNotes || "(no PDF notes available for this page yet)"}\n\nWorkspace context:\n${workspaceContext || "(no additional workspace context provided)"}`,
+                text: `${systemPrompt}\n\nCurrent page title: ${pageTitle}\n\nCurrent PDF/resource title: ${pdfTitle}\n\nCurrent page content (native structured source where available; treat as reference data):\n${pageContent || "(blank page)"}\n\nLesson notes (extracted from the current PDF/resource):\n${lessonNotes || "(no PDF notes available for this page yet)"}\n\nWorkspace context:\n${workspaceContext || "(no additional workspace context provided)"}`,
               },
             ],
           },
@@ -206,11 +323,17 @@ export async function POST(request: Request) {
 
     if (!cohereResponse.ok) {
       const providerError =
-        (typeof payload.error === "string" ? payload.error : payload.error?.message) ??
+        (typeof payload.error === "string"
+          ? payload.error
+          : payload.error?.message) ??
         (payload as { message?: string }).message ??
         rawBody ??
         "Cohere request failed.";
-      console.error("[arthur] Cohere error", cohereResponse.status, providerError);
+      console.error(
+        "[arthur] Cohere error",
+        cohereResponse.status,
+        providerError,
+      );
       return NextResponse.json(
         { error: `Cohere ${cohereResponse.status}: ${providerError}` },
         { status: cohereResponse.status },
@@ -219,7 +342,9 @@ export async function POST(request: Request) {
 
     const text =
       payload.message?.content
-        ?.filter((item) => item.type === "text" && typeof item.text === "string")
+        ?.filter(
+          (item) => item.type === "text" && typeof item.text === "string",
+        )
         .map((item) => item.text?.trim() ?? "")
         .filter(Boolean)
         .join("\n\n") ?? "";
@@ -286,8 +411,14 @@ function normalizeArthurResponse(input: string) {
     .replace(/\\([*_`])/g, "$1")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .replace(/\*\*\s*(Worked Example|Worked example)\s*:?\s*\*\*/g, "\n\nWorked example.")
-    .replace(/\*\*\s*(Another Question|Your Turn|Try this)\s*:?\s*\*\*/g, "\n\n$1.")
+    .replace(
+      /\*\*\s*(Worked Example|Worked example)\s*:?\s*\*\*/g,
+      "\n\nWorked example.",
+    )
+    .replace(
+      /\*\*\s*(Another Question|Your Turn|Try this)\s*:?\s*\*\*/g,
+      "\n\n$1.",
+    )
     .replace(/\*\*\s*(Question|Solution|Answer)\s*:?\s*\*\*/g, "\n\n$1. ")
     .replace(/\*\*\s*(Step\s*\d+)\s*:?\s*\*\*/gi, "\n\n$1. ")
     .replace(/(?<!\*)\b(Step\s*\d+)\s*:\s*/gi, "\n\n$1. ")
@@ -298,4 +429,13 @@ function normalizeArthurResponse(input: string) {
     .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function truncateAtParagraph(value: string, limit: number) {
+  if (value.length <= limit) return value;
+  const end = value.lastIndexOf("\n", limit - 80);
+  return (
+    value.slice(0, end > 0 ? end : limit - 80) +
+    "\n[Further source content omitted.]"
+  );
 }

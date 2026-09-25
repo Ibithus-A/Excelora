@@ -44,7 +44,7 @@ export function NotionLessonRenderer({
 export function MathText({ children }: { children: string }) {
   return (
     <span
-      className="inline-block px-0.5"
+      className="lesson-math-inline px-0.5"
       dangerouslySetInnerHTML={{
         __html: katex.renderToString(children, {
           throwOnError: false,
@@ -58,7 +58,7 @@ export function MathText({ children }: { children: string }) {
 export function DisplayMath({ children }: { children: string }) {
   return (
     <div
-      className="my-4 max-w-full py-1 text-center text-[clamp(0.72rem,2.5vw,1.04rem)]"
+      className="lesson-math-display my-4 max-w-full py-2 text-center text-[clamp(0.72rem,2.5vw,1.04rem)]"
       dangerouslySetInnerHTML={{
         __html: katex.renderToString(children, {
           displayMode: true,
@@ -104,7 +104,7 @@ export function Step({
         {number}
       </span>
       <div>
-        <p className="font-medium tracking-[-0.01em] text-zinc-800">{title}</p>
+        {title && <p className="font-medium tracking-[-0.01em] text-zinc-800">{title}</p>}
         {children ? <div className="mt-1">{children}</div> : null}
       </div>
     </div>

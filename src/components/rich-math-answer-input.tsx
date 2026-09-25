@@ -80,8 +80,8 @@ function serializeAnswer(root: HTMLElement) {
 
 export const RichMathAnswerInput = forwardRef<
   RichMathAnswerHandle,
-  { value: string; onChange: (value: string) => void; onFocus?: () => void; id: string; readOnly?: boolean }
->(function RichMathAnswerInput({ value, onChange, onFocus, id, readOnly = false }, ref) {
+  { value: string; onChange: (value: string) => void; onFocus?: () => void; id: string; readOnly?: boolean; ariaLabel?: string }
+>(function RichMathAnswerInput({ value, onChange, onFocus, id, readOnly = false, ariaLabel }, ref) {
   const rootRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const lastEmittedRef = useRef<string | null>(null);
@@ -145,7 +145,7 @@ export const RichMathAnswerInput = forwardRef<
         suppressContentEditableWarning
         role="textbox"
         aria-multiline="true"
-        aria-label={readOnly ? "Confirmed answer" : "Answer"}
+        aria-label={ariaLabel ?? (readOnly ? "Confirmed answer" : "Answer")}
         aria-readonly={readOnly}
         onInput={emitChange}
         onFocus={onFocus}

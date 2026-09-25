@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-25T18:34:34.603Z",
+  "checks": [
+    "student cannot read another student",
+    "authenticated notes completion persists without claiming video watched",
+    "database RLS isolates lesson progress",
+    "real tutor practice preview and checking",
+    "student cannot use tutor preview",
+    "real student continuous start/resume/check/extend/save/stop/refresh",
+    "practice isolation",
+    "tutor activity and saved response review",
+    "real all-module completion and tutor assessment unlock",
+    "student cannot unlock assessments",
+    "real exact-15 formal paper without answer leakage",
+    "formal attempt blocks practice",
+    "real formal submission"
+  ],
+  "temporaryAuthUsersCreated": 3,
+  "cleanupSucceeded": true,
+  "paidAIRequests": 0,
+  "existingStudentMutations": 0
+}

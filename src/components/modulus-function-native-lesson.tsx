@@ -48,7 +48,7 @@ function ModulusIntervalDiagram() {
         <NativeDiagramMathLabel x={58} y={78} width={42} align="end">{String.raw`\frac52`}</NativeDiagramMathLabel>
         <NativeDiagramMathLabel x={208} y={202}>{String.raw`\frac32`}</NativeDiagramMathLabel>
         <text x="374" y="198" fontSize="13" fill="#52525b">x</text>
-        <text x="61" y="21" fontSize="13" fill="#52525b">y</text>
+        <text x="42" y="16" fontSize="13" fill="#52525b">y</text>
       </NativePlotSvg>
     </NativeLessonDiagram>
   );

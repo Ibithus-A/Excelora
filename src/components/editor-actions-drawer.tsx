@@ -633,6 +633,7 @@ const MATH_GROUPS: MathGroup[] = SHARED_MATH_INPUT_GROUPS.map((group) => ({
 type EditorActionsDrawerProps = {
   pageTitle: string;
   pdfTitle?: string;
+  reviewAttemptId?: string;
   pageContent: string;
   pageNodeId: string;
   workspaceContext: string;
@@ -646,6 +647,7 @@ type EditorActionsDrawerProps = {
 export function EditorActionsDrawer({
   pageTitle,
   pdfTitle,
+  reviewAttemptId,
   pageContent,
   pageNodeId,
   workspaceContext,
@@ -738,6 +740,7 @@ export function EditorActionsDrawer({
           >
             <DrawerContent
               pageTitle={pageTitle}
+              reviewAttemptId={reviewAttemptId}
               pdfTitle={pdfTitle}
               pageContent={pageContent}
               pageNodeId={pageNodeId}
@@ -809,7 +812,8 @@ export function EditorActionsDrawer({
               </div>
               <DrawerContent
                 pageTitle={pageTitle}
-                pdfTitle={pdfTitle}
+                reviewAttemptId={reviewAttemptId}
+              pdfTitle={pdfTitle}
                 pageContent={pageContent}
                 pageNodeId={pageNodeId}
                 workspaceContext={workspaceContext}
@@ -826,6 +830,7 @@ export function EditorActionsDrawer({
 function DrawerContent({
   pageTitle,
   pdfTitle,
+  reviewAttemptId,
   pageContent,
   pageNodeId,
   workspaceContext,
@@ -833,6 +838,7 @@ function DrawerContent({
 }: {
   pageTitle: string;
   pdfTitle?: string;
+  reviewAttemptId?: string;
   pageContent: string;
   pageNodeId: string;
   workspaceContext: string;
@@ -947,6 +953,7 @@ function DrawerContent({
         body: JSON.stringify({
           pageTitle,
           pdfTitle,
+  reviewAttemptId,
           pageContent,
           pageNodeId,
           workspaceContext,

@@ -4,8 +4,9 @@ import {
   A_LEVEL_MATHS_SUBJECT_TITLES,
   A_LEVEL_MATHS_TITLE,
   END_OF_TOPIC_ASSESSMENT_TITLE,
+  INTERACTIVE_ASSESSMENT_TITLE,
+  PRACTICE_QUESTIONS_TITLE,
 } from "@/lib/seed";
-import type { StudentDailyStats } from "@/types/dashboard";
 import type { FlowState } from "@/types/flowstate";
 import type { UserAccessProfile, UserPlan } from "@/types/auth";
 
@@ -124,29 +125,6 @@ export function getHighestAccessibleChapter(access: StudentAccessShape | null | 
   return highest ?? CHAPTER_ONE_TITLE;
 }
 
-export function buildStudentStats(
-  unlockedChapterCount: number,
-  seedFactor: number,
-): StudentDailyStats {
-  const reviewedToday = Math.max(
-    6,
-    Math.round(unlockedChapterCount * 2.5 + 8 + (seedFactor % 4)),
-  );
-  const dueToday = Math.max(
-    4,
-    Math.round(unlockedChapterCount * 1.6 + 5 + (seedFactor % 3)),
-  );
-
-  const habitSeries = Array.from({ length: 7 }, (_, index) => {
-    const base = 26 + unlockedChapterCount * 2.7;
-    const drift = (index - 3) * 3.2;
-    const variation = ((seedFactor + index * 5) % 9) - 4;
-    return Math.max(18, Math.min(150, Math.round(base + drift + variation)));
-  });
-
-  return { reviewedToday, dueToday, habitSeries };
-}
-
 function getMathRootId(state: FlowState): string | null {
   return (
     state.rootIds.find((id) => {
@@ -199,7 +177,7 @@ const STUDENT_PAGE_TITLES_BY_CHAPTER = new Map(
   A_LEVEL_MATHS_CHAPTERS.map((chapter) => [
     normalizeTitle(chapter.title),
     new Set(
-      [...chapter.subtopics, END_OF_TOPIC_ASSESSMENT_TITLE].map((title) =>
+      [...chapter.subtopics, END_OF_TOPIC_ASSESSMENT_TITLE, INTERACTIVE_ASSESSMENT_TITLE, PRACTICE_QUESTIONS_TITLE].map((title) =>
         normalizeTitle(title),
       ),
     ),
@@ -238,7 +216,7 @@ export function canAccessNode(
   );
   if (!allowedPageTitles) return false;
 
-  return allowedPageTitles.has(normalizeTitle(node.title));
+  return allowedPageTitles.has(normalizeTitle(node.title.replace(/ — (?:Native review|Original PDF)$/, "")));
 }
 
 export function getLockedChapterMessage(

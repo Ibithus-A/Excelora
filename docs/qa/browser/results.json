@@ -1,0 +1,90 @@
+{
+  "environment": "Local real components with mocked API responses; not authenticated Supabase end-to-end",
+  "report": [
+    {
+      "subject": "Pure Mathematics",
+      "formalQuestions": 15,
+      "practiceQuestions": 10,
+      "continuousNextBatch": true,
+      "draftRefresh": true,
+      "practiceDraftRefresh": true,
+      "widths": [
+        320,
+        430,
+        1280
+      ],
+      "pageOverflow": false
+    },
+    {
+      "subject": "Mechanics",
+      "formalQuestions": 15,
+      "practiceQuestions": 10,
+      "continuousNextBatch": true,
+      "draftRefresh": true,
+      "practiceDraftRefresh": true,
+      "widths": [
+        320,
+        430,
+        1280
+      ],
+      "pageOverflow": false
+    },
+    {
+      "subject": "Statistics",
+      "formalQuestions": 15,
+      "practiceQuestions": 10,
+      "continuousNextBatch": true,
+      "draftRefresh": true,
+      "practiceDraftRefresh": true,
+      "widths": [
+        320,
+        430,
+        1280
+      ],
+      "pageOverflow": false
+    }
+  ],
+  "unauthenticated": [
+    {
+      "endpoint": "generated-assessments",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "endpoint": "generated-assessments",
+      "method": "POST",
+      "status": 401
+    },
+    {
+      "endpoint": "practice",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "endpoint": "practice",
+      "method": "POST",
+      "status": 401
+    },
+    {
+      "endpoint": "assessments",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "endpoint": "assessments",
+      "method": "POST",
+      "status": 401
+    },
+    {
+      "endpoint": "arthur",
+      "method": "POST",
+      "status": 401
+    }
+  ],
+  "nativeWidths": [
+    320,
+    430,
+    1280
+  ],
+  "errors": []
+}

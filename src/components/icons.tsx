@@ -6,9 +6,22 @@ export function FlowLogoIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
       <rect x="2.5" y="2.5" width="19" height="19" rx="6.5" fill="white" />
-      <rect x="2.5" y="2.5" width="19" height="19" rx="6.5" stroke="#111111" strokeWidth="1" />
+      <rect
+        x="2.5"
+        y="2.5"
+        width="19"
+        height="19"
+        rx="6.5"
+        stroke="#111111"
+        strokeWidth="1"
+      />
       <circle cx="12" cy="12" r="4.8" stroke="#111111" strokeWidth="1.7" />
-      <path d="M14.8 14.8 17 17" stroke="#111111" strokeWidth="1.7" strokeLinecap="round" />
+      <path
+        d="M14.8 14.8 17 17"
+        stroke="#111111"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -153,7 +166,15 @@ export function EditIcon(props: IconProps) {
 export function LockIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" {...props}>
-      <rect x="4.5" y="9" width="11" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.3" />
+      <rect
+        x="4.5"
+        y="9"
+        width="11"
+        height="7"
+        rx="1.8"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
       <path
         d="M6.8 9V7.2A3.2 3.2 0 0 1 10 4a3.2 3.2 0 0 1 3.2 3.2V9"
         stroke="currentColor"
@@ -167,7 +188,15 @@ export function LockIcon(props: IconProps) {
 export function UnlockIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" {...props}>
-      <rect x="4.5" y="9" width="11" height="7" rx="1.8" stroke="currentColor" strokeWidth="1.3" />
+      <rect
+        x="4.5"
+        y="9"
+        width="11"
+        height="7"
+        rx="1.8"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
       <path
         d="M13.2 9V7.2A3.2 3.2 0 0 0 10 4a3.2 3.2 0 0 0-3.2 3.2"
         stroke="currentColor"
@@ -249,7 +278,15 @@ export function AssistantIcon(props: IconProps) {
 export function MathsIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" {...props}>
-      <rect x="3.5" y="3.5" width="13" height="13" rx="3" stroke="currentColor" strokeWidth="1.3" />
+      <rect
+        x="3.5"
+        y="3.5"
+        width="13"
+        height="13"
+        rx="3"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
       <path
         d="M6.5 7.2h3M8 5.7v3M11.8 6.1h2.7M11.8 8.2h2.7M6.6 12.2h3M6.6 14.2h3M12.1 11.7l2.3 2.3M14.4 11.7l-2.3 2.3"
         stroke="currentColor"
@@ -274,7 +311,15 @@ export function FacebookIcon(props: IconProps) {
 export function InstagramIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
-      <rect x="5.25" y="5.25" width="13.5" height="13.5" rx="4" stroke="currentColor" strokeWidth="1.5" />
+      <rect
+        x="5.25"
+        y="5.25"
+        width="13.5"
+        height="13.5"
+        rx="4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
       <circle cx="12" cy="12" r="3.3" stroke="currentColor" strokeWidth="1.5" />
       <circle cx="16.6" cy="7.6" r="0.9" fill="currentColor" />
     </svg>
@@ -284,7 +329,12 @@ export function InstagramIcon(props: IconProps) {
 export function LinkedInIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
-      <path d="M7.5 10v8" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      <path
+        d="M7.5 10v8"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
       <path
         d="M11.8 18v-4.5c0-1.4 1-2.4 2.3-2.4 1.4 0 2.2.9 2.2 2.7V18"
         stroke="currentColor"
@@ -304,6 +354,24 @@ export function TikTokIcon(props: IconProps) {
         d="M13.6 5.2c.4 1.3 1.5 2.4 2.9 2.9v2a5.9 5.9 0 0 1-2.9-1v4.4a4.1 4.1 0 1 1-4.1-4.1c.3 0 .5 0 .8.1v2.1a2 2 0 1 0 1.2 1.9v-9h2.1v.7Z"
         fill="currentColor"
       />
+    </svg>
+  );
+}
+
+export function PracticeIcon(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M9 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4" />
+      <path d="m14 4 6 6M11 17l-4 1 1-4L18 4a2.12 2.12 0 0 1 3 3Z" />
     </svg>
   );
 }

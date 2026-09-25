@@ -38,7 +38,6 @@ export default function HomePage() {
     selectedStudentPlan,
     activeStudentUnlocks,
     activeStudentMilestone,
-    currentStudentStats,
     selectedStudentMilestone,
     chapterTagsByTitle,
     selectStudent,
@@ -138,7 +137,6 @@ export default function HomePage() {
           <DashboardHome
             name={effectiveCurrentUser.name}
             role={effectiveCurrentUser.role}
-            stats={currentStudentStats}
             onOpenWorkspace={handleOpenWorkspaceFromDashboard}
             onStartTutorial={handleStartTutorial}
             onSignOut={handleSignOut}

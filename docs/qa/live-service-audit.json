@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-25T18:33:57.275Z",
+  "readOnly": true,
+  "checks": [
+    {
+      "table": "practice_sessions",
+      "columns": "continuous",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "practice_session_questions",
+      "columns": "question_id",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "arthur_usage_settings",
+      "columns": "id",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "student_topic_progress",
+      "columns": "id",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "student_activity",
+      "columns": "student_id",
+      "status": 200,
+      "error": null
+    }
+  ]
+}

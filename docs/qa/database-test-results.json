@@ -1,0 +1,75 @@
+{
+  "bankQuestions": 4616,
+  "subjects": [
+    {
+      "domain": "Pure Mathematics",
+      "topic": "pure_1_algebra_and_functions",
+      "practiceQuestions": 5,
+      "formalQuestions": 15,
+      "distribution": [
+        4,
+        7,
+        4
+      ],
+      "result": {
+        "status": "submitted",
+        "score": 0,
+        "pending_review_marks": 62
+      },
+      "retakeAvoidedRepeats": true
+    },
+    {
+      "domain": "Mechanics",
+      "topic": "mechanics_as_1_modelling_in_mechanics",
+      "practiceQuestions": 5,
+      "formalQuestions": 15,
+      "distribution": [
+        4,
+        7,
+        4
+      ],
+      "result": {
+        "status": "submitted",
+        "score": 0,
+        "pending_review_marks": 54
+      },
+      "retakeAvoidedRepeats": true
+    },
+    {
+      "domain": "Statistics",
+      "topic": "statistics_as_1_data_collection",
+      "practiceQuestions": 5,
+      "formalQuestions": 15,
+      "distribution": [
+        4,
+        7,
+        4
+      ],
+      "result": {
+        "status": "submitted",
+        "score": 0,
+        "pending_review_marks": 40
+      },
+      "retakeAvoidedRepeats": true
+    }
+  ],
+  "checks": [
+    "new migration applies to assessment schema",
+    "separate practice records",
+    "whole-chapter 20-question mixed-subtopic sessions for all subjects; scoped sessions reject mixed IDs",
+    "unchecked drafts persist without grading, enforce ownership and cannot replace checked responses",
+    "complete practice and formal sessions across all three subjects",
+    "4/7/4 and exact persisted question order",
+    "idempotent start and submission",
+    "stale marking rolls back",
+    "duplicate marking rejected",
+    "practice start and check blocked during active formal attempts",
+    "expired papers can submit saved responses",
+    "student isolation",
+    "practice avoidance",
+    "retake avoidance",
+    "deadline enforcement",
+    "locked answers cannot change",
+    "anonymous/authenticated roles cannot access question secrets or persistence RPCs"
+  ]
+}

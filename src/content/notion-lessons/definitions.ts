@@ -12,7 +12,7 @@ import {
   QUADRATIC_FUNCTIONS_NATIVE_PREVIEW_TITLE,
   SIMULTANEOUS_EQUATIONS_NATIVE_PREVIEW_TITLE,
   SURDS_NATIVE_PREVIEW_TITLE,
-} from "@/lib/seed";
+} from "../../lib/seed.ts";
 
 const PURE_MATHEMATICS = "Pure Mathematics";
 const ALGEBRA_AND_FUNCTIONS = "Algebra and Functions";

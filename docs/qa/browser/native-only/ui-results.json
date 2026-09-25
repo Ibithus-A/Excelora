@@ -1,0 +1,11 @@
+{
+  "widths": [
+    320,
+    1280
+  ],
+  "startStopUI": true,
+  "calculatorInsertion": true,
+  "noAssistantInPractice": true,
+  "tutorChapterSwitch": true,
+  "pageErrors": []
+}

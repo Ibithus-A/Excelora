@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { safeAuthReturnPath } from "@/lib/auth-return-path";
 import { NextResponse } from "next/server";
 
 function isIgnorableConfirmationError(message: string, next: string) {
@@ -22,7 +23,7 @@ function buildRedirectUrl(requestUrl: string, targetPath: string, error?: string
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/";
+  const next = safeAuthReturnPath(requestUrl.searchParams.get("next"));
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type");
   const errorDescription = requestUrl.searchParams.get("error_description");

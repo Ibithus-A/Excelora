@@ -119,8 +119,8 @@ function TranslatedParabolaDiagram() {
         <circle cx="270" cy="104" r="3.5" fill="#71717a" />
         <circle cx="138" cy="162" r="3.5" fill="#18181b" />
         <line x1="138" y1="99" x2="138" y2="109" stroke="#71717a" />
-        <text x="138" y="93" textAnchor="middle" fontSize="12" fill="#52525b">−4</text>
-        <text x="280" y="126" textAnchor="start" fontSize="12" fill="#52525b">0</text>
+        <text x="138" y="84" textAnchor="middle" fontSize="12" fill="#52525b">−4</text>
+        <text x="249" y="132" textAnchor="start" fontSize="12" fill="#52525b">0</text>
         <text x="374" y="108" fontSize="13" fill="#52525b">x</text>
         <text x="277" y="21" fontSize="13" fill="#52525b">y</text>
       </NativePlotSvg>

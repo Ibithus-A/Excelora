@@ -1,4 +1,5 @@
 "use client";
+import {mapLessonProgress} from "@/lib/lesson-progress";
 
 import { canAccessNode } from "@/lib/access";
 import { CloseIcon, FolderIcon, PlusIcon } from "@/components/icons";
@@ -59,8 +60,7 @@ export function Sidebar({
   const isStudent = role === "student";
   const canManage = !isStudent;
   const workspaceTopicProgress = isStudent ? topicProgress : undefined;
-  const lessonProgress = workspaceTopicProgress?.lessonProgress ?? {};
-  const currentSubtopicId = workspaceTopicProgress?.currentSubtopicId ?? null;
+  const {lessonProgress,currentSubtopicId}=useMemo(()=>mapLessonProgress(state,workspaceTopicProgress?.rows??[]),[state,workspaceTopicProgress?.rows]);
   const assessmentProgressVersion = (workspaceTopicProgress?.rows ?? [])
     .map((row) => `${row.topic_id}:${row.status}:${row.watched_video}:${row.updated_at}`)
     .join("|");

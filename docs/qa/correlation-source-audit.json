@@ -1,0 +1,106 @@
+{
+  "method": "Centered-product Pearson correlation; Simpson quadrature (10000 intervals) of the null Pearson-r density and bisection for critical values. Source values preserved in draft content.",
+  "results": [
+    {
+      "source": "8.2 Example 1.2.1",
+      "reported": 0.9533,
+      "recomputed": 0.9532973672298688
+    },
+    {
+      "source": "8.2 Practice 1",
+      "reported": -0.874,
+      "recomputed": -0.8541518536828547
+    },
+    {
+      "source": "8.2 Practice 2",
+      "reported": -0.986,
+      "recomputed": -0.979511280007801
+    },
+    {
+      "source": "8.2 Practice 3",
+      "reported": 0.962,
+      "recomputed": 0.948860713735565
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 8,
+      "oneTailSignificance": 0.1,
+      "reported": 0.5067,
+      "recomputed": 0.5067270934230663
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 30,
+      "oneTailSignificance": 0.05,
+      "reported": 0.3061,
+      "recomputed": 0.30605660061929996
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 24,
+      "oneTailSignificance": 0.05,
+      "reported": 0.3438,
+      "recomputed": 0.34378256979728405
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 40,
+      "oneTailSignificance": 0.025,
+      "reported": 0.312,
+      "recomputed": 0.3120063686684631
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 40,
+      "oneTailSignificance": 0.01,
+      "reported": 0.3665,
+      "recomputed": 0.36654569932007064
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 6,
+      "oneTailSignificance": 0.05,
+      "reported": 0.7293,
+      "recomputed": 0.7292992756568282
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 5,
+      "oneTailSignificance": 0.05,
+      "reported": 0.8054,
+      "recomputed": 0.8053836198904349
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 10,
+      "oneTailSignificance": 0.1,
+      "reported": 0.4716,
+      "recomputed": 0.4427959028365791
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 10,
+      "oneTailSignificance": 0.05,
+      "reported": 0.5822,
+      "recomputed": 0.5493568319350999
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 10,
+      "oneTailSignificance": 0.025,
+      "reported": 0.6664,
+      "recomputed": 0.6318968647198204
+    },
+    {
+      "source": "8.3 critical value",
+      "n": 10,
+      "oneTailSignificance": 0.01,
+      "reported": 0.7498,
+      "recomputed": 0.7154592459862812
+    },
+    {
+      "source": "8.3 Practice 4",
+      "oneTailP": 0.018913113295399943
+    }
+  ]
+}

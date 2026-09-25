@@ -1,6 +1,7 @@
 import {
   END_OF_TOPIC_ASSESSMENT_TITLE,
   INTERACTIVE_ASSESSMENT_TITLE,
+  PRACTICE_QUESTIONS_TITLE,
 } from "@/lib/seed";
 import type { FlowNode, FlowState, NodeKind } from "@/types/flowstate";
 
@@ -444,7 +445,9 @@ function collectDescendantPageIds(state: FlowState, id: string, pageIds: string[
   if (
     node.kind === "page" &&
     node.title !== END_OF_TOPIC_ASSESSMENT_TITLE &&
-    node.title !== INTERACTIVE_ASSESSMENT_TITLE
+    node.title !== INTERACTIVE_ASSESSMENT_TITLE &&
+    node.title !== PRACTICE_QUESTIONS_TITLE &&
+    !/ — (?:Native review|Original PDF)$/.test(node.title)
   ) {
     pageIds.push(node.id);
   }
@@ -522,10 +525,12 @@ export function getLessonChapterContext(
 
   if (lessonIds.length === 0 && assessmentId !== id) return null;
 
-  const currentLessonIndex = lessonIds.indexOf(id);
+  const sourceTitle = node.title.replace(/ — (?:Native review|Original PDF)$/, "");
+  const canonicalId = chapterNode.childrenIds.find(childId => state.nodes[childId]?.title === sourceTitle);
+  const currentLessonIndex = lessonIds.indexOf(canonicalId ?? id);
   const isAssessmentPage =
     assessmentId === id || node.title === END_OF_TOPIC_ASSESSMENT_TITLE;
-  if (currentLessonIndex === -1 && !isAssessmentPage) return null;
+  if (currentLessonIndex === -1 && !isAssessmentPage && node.title !== PRACTICE_QUESTIONS_TITLE && !/ — (?:Native review|Original PDF)$/.test(node.title)) return null;
 
   return {
     chapterId: chapterNode.id,

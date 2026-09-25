@@ -1,5 +1,7 @@
+import { hasChapterAccess } from "@/lib/access";
+import { loadExposure } from "@/lib/question-bank/repository.server";
 import { getAssessmentConfig } from "@/lib/assessment-config";
-import type { BankQuestion, QuestionExposure } from "@/lib/question-bank/bank-types";
+import type { BankQuestion } from "@/lib/question-bank/bank-types";
 import { markBankResponse } from "@/lib/question-bank/marking.server";
 import { calculateSubtopicResults, selectAssessmentQuestions } from "@/lib/question-bank/selector";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -55,9 +57,10 @@ async function presentAttempt(attemptId: string, reveal: boolean) {
     const raw = Array.isArray(row.assessment_question_bank) ? row.assessment_question_bank[0] : row.assessment_question_bank;
     const safe = { ...(raw as Record<string, unknown>) };
     if (!reveal) { delete safe.answer; delete safe.worked_solution; }
-    return { order: row.question_order, response: row.student_answer, state: row.submission_state, marksAwarded: row.marks_awarded, isCorrect: row.is_correct, ...safe };
+    return { order: row.question_order, response: row.student_answer, state: row.submission_state, ...(reveal ? { marksAwarded: row.marks_awarded, isCorrect: row.is_correct } : {}), ...safe };
   });
-  return { ...attempt, questions };
+  const publicAttempt = { id: attempt.id, status: attempt.status, attempt_number: attempt.attempt_number, total_marks: attempt.total_marks, deadline_at: attempt.deadline_at, questions };
+  return reveal ? { ...publicAttempt, score: attempt.score, percentage: attempt.percentage, pending_review_marks: attempt.pending_review_marks } : publicAttempt;
 }
 
 export async function GET(request: Request) {
@@ -68,6 +71,7 @@ export async function GET(request: Request) {
     if (context.profile.role === "student" && config.minimumStudentPlan === "premium" && context.profile.plan !== "premium") {
       return Response.json({ assessment: config, requiresPremium: true, isUnlocked: false, attempt: null });
     }
+    if (context.profile.role === "student" && !hasChapterAccess(context.profile, config.chapterTitle)) return fail("Chapter locked.", 403);
     const studentId = context.profile.role === "tutor" ? new URL(request.url).searchParams.get("studentId") : context.user.id;
     if (!studentId) {
       const admin = createAdminClient();
@@ -95,10 +99,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const context = await viewer(); if (!context) return fail("Unauthorized.", 401);
   try {
-    const body = await request.json() as { action?: string; assessmentKey?: string; attemptId?: string; answers?: Record<string, string> };
+    const body = await request.json() as { action?: string; assessmentKey?: string; attemptId?: string; questionId?: string; answers?: Record<string, string> };
     const config = getAssessmentConfig(body.assessmentKey ?? ""); if (!config) return fail("Unknown assessment.", 400);
+    if (context.profile.role === "tutor" && body.action === "preview-check") {
+      const ids = Object.keys(body.answers ?? {}).slice(0, 15);
+      const { data, error } = await createAdminClient().from("assessment_question_bank").select("id,response_type,answer,worked_solution,marks").eq("course_topic_key", config.bankCourseTopicKey).in("id", ids);
+      if (error) throw new Error(error.message);
+      return Response.json({ grades: (data ?? []).map(q => ({ id: q.id, ...markBankResponse(q.response_type, body.answers?.[q.id] ?? "", { questionId: q.id, answer: q.answer, workedSolution: q.worked_solution }, q.marks) })) });
+    }
     if (context.profile.role !== "student") return fail("Tutor previews do not create student records.", 400);
     if (config.minimumStudentPlan === "premium" && context.profile.plan !== "premium") return fail("This assessment requires Premium.", 403);
+    if (!hasChapterAccess(context.profile, config.chapterTitle)) return fail("Chapter locked.", 403);
     const admin = createAdminClient();
     if (body.action === "start" || body.action === "retake") {
       const requirement = await prerequisite(context.user.id, config); if (!requirement.isComplete) return fail("Complete every chapter module first.", 403);
@@ -106,60 +117,49 @@ export async function POST(request: Request) {
       if (!access?.is_unlocked) return fail("This assessment is locked.", 403);
       const { data: active } = await admin.from("student_assessment_attempts").select("id").eq("student_id", context.user.id).eq("assessment_key", config.key).eq("status", "active").maybeSingle();
       if (active) return Response.json({ attempt: await presentAttempt(active.id, false) });
-      const [{ data: rawQuestions, error: bankError }, { data: rawExposure, error: exposureError }, { data: previous }] = await Promise.all([
+      const [{ data: rawQuestions, error: bankError }, exposure] = await Promise.all([
         admin.from("assessment_question_bank").select(PUBLIC_FIELDS).eq("course_topic_key", config.bankCourseTopicKey).eq("exposed_in_notes", false),
-        admin.from("student_question_exposure").select("question_id,family,times_seen,last_seen_at").eq("student_id", context.user.id).eq("course_topic_key", config.bankCourseTopicKey),
-        admin.from("student_assessment_attempts").select("attempt_number").eq("student_id", context.user.id).eq("assessment_key", config.key).order("attempt_number", { ascending: false }).limit(1).maybeSingle(),
+        loadExposure(context.user.id, config.bankCourseTopicKey),
       ]);
-      if (bankError || exposureError) throw new Error(bankError?.message ?? exposureError?.message);
-      const questions = (rawQuestions ?? []).map((row) => toQuestion(row));
-      const exposure: QuestionExposure[] = (rawExposure ?? []).map((r) => ({ questionId: r.question_id, family: r.family, timesSeen: r.times_seen, lastSeenAt: r.last_seen_at }));
-      const selected = selectAssessmentQuestions({ questions, courseTopicKey: config.bankCourseTopicKey, exposure });
-      const now = new Date(); const totalMarks = selected.reduce((sum, q) => sum + q.marks, 0);
-      const { data: attempt, error: insertError } = await admin.from("student_assessment_attempts").insert({
-        student_id: context.user.id, assessment_key: config.key, bank_course_topic_key: config.bankCourseTopicKey,
-        attempt_number: Number(previous?.attempt_number ?? 0) + 1, question_count: 15, total_marks: totalMarks,
-        duration_seconds: config.durationSeconds, answers: {}, locked_questions: [], status: "active", is_legacy: false,
-        started_at: now.toISOString(), deadline_at: new Date(now.getTime() + config.durationSeconds * 1000).toISOString(), updated_at: now.toISOString(),
-      }).select("id").single();
-      if (insertError) throw new Error(insertError.message);
-      const { error: paperError } = await admin.from("student_assessment_attempt_questions").insert(selected.map((q, index) => ({ attempt_id: attempt.id, question_id: q.id, question_order: index + 1 })));
-      if (paperError) throw new Error(paperError.message);
-      for (const q of selected) {
-        const old = exposure.find((e) => e.questionId === q.id);
-        const { error } = await admin.from("student_question_exposure").upsert({ student_id: context.user.id, question_id: q.id, family: q.family, course_topic_key: q.courseTopicKey, subtopic: q.subtopic, first_seen_at: old ? undefined : now.toISOString(), last_seen_at: now.toISOString(), times_seen: (old?.timesSeen ?? 0) + 1, last_attempt_id: attempt.id }, { onConflict: "student_id,question_id" });
-        if (error) throw new Error(error.message);
-      }
+      if (bankError) throw new Error(bankError.message);
+      const selected = selectAssessmentQuestions({ questions: (rawQuestions ?? []).map(toQuestion), courseTopicKey: config.bankCourseTopicKey, exposure });
+      const { data: attemptId, error: startError } = await admin.rpc("start_generated_assessment", { p_student: context.user.id, p_key: config.key, p_topic: config.bankCourseTopicKey, p_duration: config.durationSeconds, p_ids: selected.map(q => q.id) });
+      if (startError) throw new Error(startError.message);
+      const attempt = { id: String(attemptId) };
       return Response.json({ attempt: await presentAttempt(attempt.id, false) });
     }
-    if (!body.attemptId || !body.answers || !["save", "submit"].includes(body.action ?? "")) return fail("Invalid assessment action.", 400);
-    const { data: attempt } = await admin.from("student_assessment_attempts").select("id,status,student_id,total_marks,deadline_at").eq("id", body.attemptId).eq("student_id", context.user.id).maybeSingle();
+    if (!body.attemptId || !body.answers || !["save", "submit", "lock"].includes(body.action ?? "")) return fail("Invalid assessment action.", 400);
+    const { data: attempt } = await admin.from("student_assessment_attempts").select("id,status,student_id,total_marks,deadline_at").eq("id", body.attemptId).eq("assessment_key", config.key).eq("student_id", context.user.id).maybeSingle();
     if (!attempt || attempt.status !== "active") return fail("This assessment is no longer active.", 409);
     const expired = new Date(attempt.deadline_at).getTime() <= Date.now();
-    if (expired && body.action === "save") return fail("The assessment time has expired.", 409);
+    if (expired && body.action !== "submit") return fail("The assessment time has expired.", 409);
     const entries = Object.entries(expired ? {} : body.answers).filter(([id, answer]) => id.length < 200 && typeof answer === "string" && answer.length <= 150000);
-    for (const [questionId, answer] of entries) {
-      const { error } = await admin.from("student_assessment_attempt_questions").update({ student_answer: { value: answer }, submission_state: answer.trim() ? "draft" : "unanswered", updated_at: new Date().toISOString() }).eq("attempt_id", attempt.id).eq("question_id", questionId);
+    if (!expired) {
+      const { error } = await admin.rpc("save_generated_answers", { p_student: context.user.id, p_attempt: attempt.id, p_answers: Object.fromEntries(entries) });
       if (error) throw new Error(error.message);
     }
     if (body.action === "save") return Response.json({ attempt: await presentAttempt(attempt.id, false) });
     const { data: paper, error: paperError } = await admin.from("student_assessment_attempt_questions").select("question_id,student_answer,assessment_question_bank(id,subtopic,family,marks,response_type,answer,worked_solution,course_topic_key)").eq("attempt_id", attempt.id);
     if (paperError) throw new Error(paperError.message);
-    let score = 0; let reviewMarks = 0; const awarded: Record<string, number> = {}; const now = new Date().toISOString();
-    for (const row of paper ?? []) {
+    const awarded: Record<string, number> = {};
+    const grades = (paper ?? []).map(row => {
       const q = (Array.isArray(row.assessment_question_bank) ? row.assessment_question_bank[0] : row.assessment_question_bank) as Record<string, unknown>;
-      const answer = String((row.student_answer as { value?: string })?.value ?? "");
-      const marked = markBankResponse(String(q.response_type), answer, { questionId: String(q.id), answer: String(q.answer), workedSolution: String(q.worked_solution) }, Number(q.marks));
-      score += marked.marks; if (marked.requiresReview) reviewMarks += Number(q.marks); awarded[String(q.id)] = marked.marks;
-      await admin.from("student_assessment_attempt_questions").update({ submission_state: "marked", marks_awarded: marked.marks, is_correct: marked.isCorrect, marked_at: now, updated_at: now }).eq("attempt_id", attempt.id).eq("question_id", row.question_id);
-      await admin.from("student_question_attempt_history").upsert({ student_id: context.user.id, attempt_id: attempt.id, question_id: row.question_id, family: q.family, course_topic_key: q.course_topic_key, subtopic: q.subtopic, marks_awarded: marked.marks, available_marks: q.marks, is_correct: marked.isCorrect, attempted_at: now }, { onConflict: "attempt_id,question_id" });
-      const { data: exposureRow } = await admin.from("student_question_exposure").select("times_attempted,total_marks_awarded").eq("student_id", context.user.id).eq("question_id", row.question_id).single();
-      await admin.from("student_question_exposure").update({ times_attempted: Number(exposureRow?.times_attempted ?? 0) + 1, total_marks_awarded: Number(exposureRow?.total_marks_awarded ?? 0) + marked.marks, last_correct: marked.isCorrect, last_attempt_id: attempt.id, last_seen_at: now }).eq("student_id", context.user.id).eq("question_id", row.question_id);
+      const response = String((row.student_answer as { value?: string })?.value ?? "");
+      const marked = markBankResponse(String(q.response_type), response, { questionId: String(q.id), answer: String(q.answer), workedSolution: String(q.worked_solution) }, Number(q.marks));
+      awarded[row.question_id] = marked.marks;
+      return { id: row.question_id, response, marks: marked.marks, correct: marked.isCorrect, review: marked.requiresReview };
+    });
+    if (body.action === "lock") {
+      const grade = grades.find(q => q.id === body.questionId);
+      if (!grade) return fail("Question not in this paper.", 400);
+      const { error } = await admin.rpc("lock_generated_answer", { p_student: context.user.id, p_attempt: attempt.id, p_question: grade.id, p_response: grade.response, p_marks: grade.marks, p_correct: grade.correct });
+      if (error) throw new Error(error.message);
+      return Response.json({ attempt: await presentAttempt(attempt.id, false) });
     }
-    const publicQuestions = (paper ?? []).map((row) => { const q = (Array.isArray(row.assessment_question_bank) ? row.assessment_question_bank[0] : row.assessment_question_bank) as Record<string, unknown>; return { id: String(q.id), subtopic: String(q.subtopic), marks: Number(q.marks) }; });
-    const percentage = attempt.total_marks ? Math.round((score / attempt.total_marks) * 10000) / 100 : 0;
-    const { error: submitError } = await admin.from("student_assessment_attempts").update({ status: "submitted", submitted_at: now, updated_at: now, score, automated_total_marks: attempt.total_marks - reviewMarks, pending_review_marks: reviewMarks, percentage, question_scores: awarded, marking_version: "bank-v1-safe-marker", last_marked_at: now }).eq("id", attempt.id).eq("status", "active");
+    const { error: submitError } = await admin.rpc("submit_generated_assessment", { p_student: context.user.id, p_attempt: attempt.id, p_grades: grades });
     if (submitError) throw new Error(submitError.message);
+    const pendingIds = new Set(grades.filter(grade => grade.review).map(grade => grade.id));
+    const publicQuestions = (paper ?? []).filter(row => !pendingIds.has(row.question_id)).map(row => { const q = (Array.isArray(row.assessment_question_bank) ? row.assessment_question_bank[0] : row.assessment_question_bank) as Record<string, unknown>; return { id: String(q.id), subtopic: String(q.subtopic), marks: Number(q.marks) }; });
     return Response.json({ attempt: await presentAttempt(attempt.id, true), subtopics: calculateSubtopicResults(publicQuestions, awarded) });
   } catch (error) { console.error("[generated assessment POST]", error); return fail("Unable to update assessment.", 500); }
 }

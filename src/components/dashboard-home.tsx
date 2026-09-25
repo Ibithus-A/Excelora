@@ -1,4 +1,5 @@
 "use client";
+import {mapLessonProgress} from "@/lib/lesson-progress";
 
 import {
   BookmarkIcon,
@@ -12,7 +13,8 @@ import { canAccessNode, CHAPTER_ONE_TITLE } from "@/lib/access";
 import { A_LEVEL_MATHS_SUBJECTS } from "@/lib/seed";
 import { getLessonChapterContext } from "@/lib/tree-utils";
 import type { UserAccessProfile, UserPlan, UserRole } from "@/types/auth";
-import type { StudentDailyStats } from "@/types/dashboard";
+import {StudentActivityPanel} from "./student-activity-panel";
+import {useStudyActivity} from "@/lib/hooks/use-study-activity";
 import type { FlowNode } from "@/types/flowstate";
 import type { TopicProgressController } from "@/types/topic-progress";
 import type {
@@ -28,7 +30,6 @@ type DashboardHomeProps = {
   onStartTutorial: () => void;
   onSignOut: () => void;
   onSwitchAccount: () => void;
-  stats: StudentDailyStats;
   currentPlan?: UserPlan;
   chapterTitles?: string[];
   students?: UserAccessProfile[];
@@ -70,7 +71,6 @@ type DashboardLessonTopicItem = {
   isCurrent: boolean;
 };
 
-const EMPTY_LESSON_PROGRESS: Record<string, boolean> = {};
 
 export function DashboardHome({
   name,
@@ -104,8 +104,7 @@ export function DashboardHome({
   topicProgress,
 }: DashboardHomeProps) {
   const { state, revealNode } = useFlowState();
-  const lessonProgress = topicProgress?.lessonProgress ?? EMPTY_LESSON_PROGRESS;
-  const currentSubtopicId = topicProgress?.currentSubtopicId ?? null;
+  const {lessonProgress,currentSubtopicId}=useMemo(()=>mapLessonProgress(state,topicProgress?.rows??[]),[state,topicProgress?.rows]);
   const [studentSearch, setStudentSearch] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
@@ -245,7 +244,7 @@ export function DashboardHome({
     const items = orderedPages
       .map((node) => {
         const context = getLessonChapterContext(state, node.id);
-        if (!context || context.isAssessmentPage) return null;
+        if (!context || context.isAssessmentPage || node.title === "Practice Questions") return null;
 
         return {
           id: node.id,
@@ -260,7 +259,7 @@ export function DashboardHome({
     const completed = items.filter((item) => item.isComplete);
     const incomplete = items.filter((item) => !item.isComplete);
     const selectedCurrent = incomplete.find((item) => item.isCurrent) ?? null;
-    const ongoing = selectedCurrent ? [selectedCurrent] : incomplete.slice(0, 1);
+    const ongoing = selectedCurrent ? [selectedCurrent] : [];
     const ongoingIds = new Set(ongoing.map((item) => item.id));
     const toDo = incomplete.filter((item) => !ongoingIds.has(item.id));
 
@@ -275,6 +274,7 @@ export function DashboardHome({
   ]);
   const visibleProgressItems =
     role === "student" || selectedStudent ? studentLessonItems : chapterProgressItems;
+  useStudyActivity(role === "student", "Dashboard", "dashboard");
   const progressOwnerLabel =
     role === "tutor" && selectedStudent
       ? `Viewing ${selectedStudent.name}'s progress`
@@ -424,6 +424,7 @@ export function DashboardHome({
           </div>
         </header>
 
+        {role === "tutor" && <StudentActivityPanel students={students} studentId={selectedStudentId??""} onSelectStudent={onSelectStudent}/>}
         <article
           data-tour="dashboard-progress"
           className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6"

@@ -79,7 +79,7 @@ function CompletedSquareMinimumDiagram() {
         <text x="46" y="94" textAnchor="end" fontSize="12" fill="#52525b">7</text>
         <text x="160" y="220" textAnchor="middle" fontSize="12" fill="#52525b">−1</text>
         <text x="374" y="204" fontSize="13" fill="#52525b">x</text>
-        <text x="65" y="20" fontSize="13" fill="#52525b">y</text>
+        <text x="45" y="16" fontSize="13" fill="#52525b">y</text>
       </NativePlotSvg>
     </NativeLessonDiagram>
   );

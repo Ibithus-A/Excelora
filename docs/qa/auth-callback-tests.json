@@ -1,0 +1,23 @@
+{
+  "date": "2026-09-25T18:38:16.815Z",
+  "checks": [
+    {
+      "next": "https://other.invalid",
+      "staysOnSite": true
+    },
+    {
+      "next": "//other.invalid",
+      "staysOnSite": true
+    },
+    {
+      "next": "/\\other.invalid",
+      "staysOnSite": true
+    },
+    {
+      "next": "/reset-password",
+      "staysOnSite": true
+    }
+  ],
+  "qaRouteAbsent": true,
+  "realTokensUsed": false
+}

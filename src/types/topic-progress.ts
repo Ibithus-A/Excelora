@@ -31,6 +31,7 @@ export type TopicProgressController = {
   canMutate: boolean;
   refresh: () => Promise<void>;
   setCurrentTopic: (metadata: TopicProgressMetadata) => Promise<void>;
+  markNotesCompleted: (metadata: TopicProgressMetadata) => Promise<void>;
   markTopicCompleted: (metadata: TopicProgressMetadata) => Promise<void>;
   markTopicTodo: (metadata: TopicProgressMetadata) => Promise<void>;
 };

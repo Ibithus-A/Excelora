@@ -145,6 +145,7 @@ async function getAttempt(studentId: string, assessmentKey: string) {
     .select(ATTEMPT_SELECT)
     .eq("student_id", studentId)
     .eq("assessment_key", assessmentKey)
+    .eq("is_legacy", true)
     .maybeSingle<AttemptRow>();
   if (error) throw new Error(error.message);
   return data ?? null;
@@ -432,7 +433,7 @@ export async function POST(request: Request) {
     if (!access?.is_unlocked) return jsonError("This assessment is locked.", 403);
 
     const admin = createAdminClient();
-    let attempt = await closeExpiredAttempt(
+    const attempt = await closeExpiredAttempt(
       await getAttempt(viewerContext.user.id, config.key),
     );
 
@@ -441,30 +442,10 @@ export async function POST(request: Request) {
         return jsonError("This assessment has already been attempted and cannot be retaken.", 409);
       }
       if (!attempt) {
-        const startedAt = new Date();
-        const deadlineAt = new Date(startedAt.getTime() + config.durationSeconds * 1000);
-        const { data, error } = await admin
-          .from("student_assessment_attempts")
-          .insert({
-            student_id: viewerContext.user.id,
-            assessment_key: config.key,
-            question_count: config.questionCount,
-            total_marks: config.totalMarks,
-            duration_seconds: config.durationSeconds,
-            answers: {},
-            locked_questions: [],
-            status: "active",
-            started_at: startedAt.toISOString(),
-            deadline_at: deadlineAt.toISOString(),
-            updated_at: startedAt.toISOString(),
-          })
-          .select(ATTEMPT_SELECT)
-          .single<AttemptRow>();
-        if (error) throw new Error(error.message);
-        attempt = data;
+        return jsonError("Start a new paper from the generated chapter assessment.", 409);
       }
       return Response.json({
-        attempt: presentAttempt(attempt, attempt?.status === "submitted"),
+        attempt: presentAttempt(attempt, false),
         serverNow: new Date().toISOString(),
       });
     }

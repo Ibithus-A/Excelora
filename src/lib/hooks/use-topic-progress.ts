@@ -1,4 +1,5 @@
 "use client";
+import { lessonIdentity } from "@/lib/lesson-progress";
 
 import { createClient } from "@/lib/supabase/client";
 import type { AuthenticatedAccount } from "@/types/auth";
@@ -7,7 +8,7 @@ import type {
   TopicProgressMetadata,
   TopicProgressRow,
 } from "@/types/topic-progress";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type UseTopicProgressOptions = {
   currentUser: AuthenticatedAccount | null;
@@ -24,6 +25,7 @@ const EMPTY_CONTROLLER: TopicProgressController = {
   canMutate: false,
   refresh: async () => {},
   setCurrentTopic: async () => {},
+  markNotesCompleted: async () => {},
   markTopicCompleted: async () => {},
   markTopicTodo: async () => {},
 };
@@ -35,7 +37,11 @@ function normalizeRow(value: unknown): TopicProgressRow | null {
   if (typeof row.student_id !== "string") return null;
   if (typeof row.topic_id !== "string") return null;
   if (typeof row.topic_title !== "string") return null;
-  if (row.status !== "todo" && row.status !== "current" && row.status !== "completed") {
+  if (
+    row.status !== "todo" &&
+    row.status !== "current" &&
+    row.status !== "completed"
+  ) {
     return null;
   }
 
@@ -44,12 +50,15 @@ function normalizeRow(value: unknown): TopicProgressRow | null {
     student_id: row.student_id,
     topic_id: row.topic_id,
     topic_title: row.topic_title,
-    chapter_title: typeof row.chapter_title === "string" ? row.chapter_title : null,
-    subject_title: typeof row.subject_title === "string" ? row.subject_title : null,
+    chapter_title:
+      typeof row.chapter_title === "string" ? row.chapter_title : null,
+    subject_title:
+      typeof row.subject_title === "string" ? row.subject_title : null,
     status: row.status,
     watched_video: Boolean(row.watched_video),
     started_at: typeof row.started_at === "string" ? row.started_at : null,
-    completed_at: typeof row.completed_at === "string" ? row.completed_at : null,
+    completed_at:
+      typeof row.completed_at === "string" ? row.completed_at : null,
     updated_at: typeof row.updated_at === "string" ? row.updated_at : "",
   };
 }
@@ -107,10 +116,15 @@ export function useTopicProgress({
   const currentUserId = currentUser?.id ?? null;
   const currentUserRole = currentUser?.role ?? null;
   const canMutate = Boolean(
-    currentUserId && currentUserRole === "student" && targetStudentId === currentUserId,
+    currentUserId &&
+    currentUserRole === "student" &&
+    targetStudentId === currentUserId,
   );
 
+  const requestVersion = useRef(0);
+
   const refresh = useCallback(async () => {
+    const version = ++requestVersion.current;
     if (!currentUserId || !targetStudentId) {
       setRows([]);
       setError("");
@@ -131,22 +145,36 @@ export function useTopicProgress({
         .eq("student_id", targetStudentId)
         .order("updated_at", { ascending: false });
 
+      if (version !== requestVersion.current) return;
       if (progressError) throw progressError;
       setRows(
         mergeRowsByTopicId(
-          (data ?? []).map(normalizeRow).filter((row): row is TopicProgressRow => Boolean(row)),
+          (data ?? [])
+            .map(normalizeRow)
+            .filter((row): row is TopicProgressRow => Boolean(row)),
         ),
       );
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Unable to load topic progress.";
+      if (version !== requestVersion.current) return;
+      const message =
+        caught instanceof Error
+          ? caught.message
+          : "Unable to load topic progress.";
       setError(message);
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current) setIsLoading(false);
     }
   }, [currentUserId, targetStudentId]);
 
   useEffect(() => {
     void refresh();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 45000);
+    return () => {
+      requestVersion.current += 1;
+      window.clearInterval(timer);
+    };
   }, [refresh]);
 
   const applyOptimisticRow = useCallback(
@@ -155,17 +183,26 @@ export function useTopicProgress({
       const nextRow = toPlaceholderRow(currentUser, metadata, status);
 
       setRows((current) => {
-        const withoutTopic = current.filter((row) => row.topic_id !== metadata.topicId);
+        const withoutTopic = current.filter(
+          (row) => row.topic_id !== metadata.topicId,
+        );
         const withoutCurrent =
           status === "current"
             ? withoutTopic.map((row) =>
                 row.status === "current"
-                  ? { ...row, status: "todo" as const, watched_video: false, completed_at: null }
+                  ? {
+                      ...row,
+                      status: "todo" as const,
+                      watched_video: false,
+                      completed_at: null,
+                    }
                   : row,
               )
             : withoutTopic;
 
-        return status === "todo" ? withoutCurrent : [nextRow, ...withoutCurrent];
+        return status === "todo"
+          ? withoutCurrent
+          : [nextRow, ...withoutCurrent];
       });
     },
     [currentUser],
@@ -178,10 +215,16 @@ export function useTopicProgress({
 
       try {
         const supabase = createClient();
-        const { error: rpcError } = await supabase.rpc(rpcName, metadataToRpcArgs(metadata));
+        const { error: rpcError } = await supabase.rpc(
+          rpcName,
+          metadataToRpcArgs(metadata),
+        );
         if (rpcError) throw rpcError;
       } catch (caught) {
-        const message = caught instanceof Error ? caught.message : "Unable to save topic progress.";
+        const message =
+          caught instanceof Error
+            ? caught.message
+            : "Unable to save topic progress.";
         setError(message);
         await refresh();
       }
@@ -207,21 +250,68 @@ export function useTopicProgress({
     [applyOptimisticRow, callProgressRpc, canMutate],
   );
 
+  const markNotesCompleted = useCallback(
+    async (metadata: TopicProgressMetadata) => {
+      if (!canMutate) return;
+      setError("");
+      try {
+        const response = await fetch("/api/student-progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "complete-notes", ...metadata }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw Error(data.error);
+        await refresh();
+      } catch (caught) {
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "Unable to save lesson progress.",
+        );
+      }
+    },
+    [canMutate, refresh],
+  );
+
   const markTopicTodo = useCallback(
     async (metadata: TopicProgressMetadata) => {
       if (!canMutate) return;
-      applyOptimisticRow(metadata, "todo");
-      await callProgressRpc("mark_topic_todo", metadata);
+      const matches = rows.filter(
+        (row) =>
+          lessonIdentity(
+            row.subject_title,
+            row.chapter_title,
+            row.topic_title,
+          ) ===
+          lessonIdentity(
+            metadata.subjectTitle,
+            metadata.chapterTitle,
+            metadata.topicTitle,
+          ),
+      );
+      for (const row of matches.length
+        ? matches
+        : [{ topic_id: metadata.topicId }]) {
+        const existing = { ...metadata, topicId: row.topic_id };
+        applyOptimisticRow(existing, "todo");
+        await callProgressRpc("mark_topic_todo", existing);
+      }
     },
-    [applyOptimisticRow, callProgressRpc, canMutate],
+    [applyOptimisticRow, callProgressRpc, canMutate, rows],
   );
 
   return useMemo(() => {
     if (!currentUserId || !targetStudentId) return EMPTY_CONTROLLER;
 
-    const rowsByTopicId = Object.fromEntries(rows.map((row) => [row.topic_id, row]));
+    const rowsByTopicId = Object.fromEntries(
+      rows.map((row) => [row.topic_id, row]),
+    );
     const lessonProgress = Object.fromEntries(
-      rows.map((row) => [row.topic_id, row.status === "completed" || row.watched_video]),
+      rows.map((row) => [
+        row.topic_id,
+        row.status === "completed" || row.watched_video,
+      ]),
     );
     const currentSubtopicId =
       rows.find((row) => row.status === "current")?.topic_id ?? null;
@@ -236,6 +326,7 @@ export function useTopicProgress({
       canMutate,
       refresh,
       setCurrentTopic,
+      markNotesCompleted,
       markTopicCompleted,
       markTopicTodo,
     };
@@ -245,6 +336,7 @@ export function useTopicProgress({
     error,
     isLoading,
     markTopicCompleted,
+    markNotesCompleted,
     markTopicTodo,
     refresh,
     rows,

@@ -1,14 +1,22 @@
 import type { BankQuestionSecret } from "./bank-types.ts";
+import { answerText, decodeParts } from "./responses.ts";
 
-function normalized(value: string) {
-  return value.toLowerCase().trim().replace(/\s+/g, " ").replace(/[£,]/g, "").replace(/\.$/, "");
-}
-
-function singleNumber(value: string) {
-  const cleaned = normalized(value).replace(/^[a-z]\s*=\s*/, "");
-  if (!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(cleaned)) return null;
-  const number = Number(cleaned);
-  return Number.isFinite(number) ? number : null;
+/** No eval, coercion of units, comma removal, or case-folding of symbolic variables. */
+export function parseNumericAnswer(value: string): number | null {
+  let text = answerText(value).replace(/\$/g, "").replace(/−/g, "-").trim();
+  text = text.replace(
+    /^\\(?:d?frac)\{([+-]?[\d.]+)\}\{([+-]?[\d.]+)\}$/,
+    "$1/$2",
+  );
+  const literal = "[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?";
+  if (new RegExp(`^${literal}$`).test(text)) {
+    const n = Number(text);
+    return Number.isFinite(n) ? n : null;
+  }
+  const fraction = new RegExp(`^(${literal})\\s*/\\s*(${literal})$`).exec(text);
+  if (!fraction || Number(fraction[2]) === 0) return null;
+  const n = Number(fraction[1]) / Number(fraction[2]);
+  return Number.isFinite(n) ? n : null;
 }
 
 export function markBankResponse(
@@ -17,20 +25,24 @@ export function markBankResponse(
   secret: BankQuestionSecret,
   availableMarks: number,
 ) {
-  if (!studentAnswer.trim()) return { marks: 0, isCorrect: false, requiresReview: false };
-  if (responseType === "numeric") {
-    const submitted = singleNumber(studentAnswer);
-    const expected = singleNumber(secret.answer);
+  const parts = Object.values(decodeParts(studentAnswer));
+  if (!parts.some((p) => answerText(p)))
+    return { marks: 0, isCorrect: false, requiresReview: false };
+  if (responseType === "numeric" && parts.length === 1) {
+    const submitted = parseNumericAnswer(parts[0]);
+    const expected = parseNumericAnswer(secret.answer);
     if (submitted !== null && expected !== null) {
-      const isCorrect = Math.abs(submitted - expected) <= Math.max(1e-9, Math.abs(expected) * 1e-9);
-      return { marks: isCorrect ? availableMarks : 0, isCorrect, requiresReview: false };
+      const isCorrect =
+        Math.abs(submitted - expected) <=
+        Math.max(1e-9, Math.abs(expected) * 1e-9);
+      return {
+        marks: isCorrect ? availableMarks : 0,
+        isCorrect,
+        requiresReview: false,
+      };
     }
   }
-  // Exact text is safe to accept. All other symbolic, multi-part or written
-  // responses are retained for a future equivalence/manual marker rather than
-  // being incorrectly rejected by brittle algebraic string comparison.
-  if (normalized(studentAnswer) === normalized(secret.answer)) {
-    return { marks: availableMarks, isCorrect: true, requiresReview: false };
-  }
+  // Even identical final expressions cannot prove that required working was supplied.
+  // Leave symbolic equivalence, explanation and unallocated multipart marks to review.
   return { marks: 0, isCorrect: null, requiresReview: true };
 }

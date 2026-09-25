@@ -113,7 +113,7 @@ function RestrictedParabolaDiagram() {
         <circle cx="318" cy="48" r="3.5" fill="#18181b" />
         <text x="32" y="52" textAnchor="end" fontSize="12" fill="#52525b">12</text>
         <text x="32" y="198" textAnchor="end" fontSize="12" fill="#52525b">−4</text>
-        <text x="78" y="150" textAnchor="end" fontSize="12" fill="#52525b">0</text>
+        <text x="78" y="142" textAnchor="end" fontSize="12" fill="#52525b">0</text>
         <text x="130" y="218" textAnchor="middle" fontSize="12" fill="#52525b">1</text>
         <text x="318" y="176" textAnchor="middle" fontSize="12" fill="#52525b">5</text>
         <text x="374" y="160" fontSize="13" fill="#52525b">x</text>

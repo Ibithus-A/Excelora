@@ -1,0 +1,110 @@
+ M next.config.ts
+ M src/app/api/arthur/route.ts
+ M src/app/api/assessments/route.ts
+ M src/app/api/generated-assessments/route.ts
+ M src/app/globals.css
+ M src/components/composite-inverse-functions-native-lesson.tsx
+ M src/components/editor-actions-drawer.tsx
+ M src/components/editor-pane.tsx
+ M src/components/generated-chapter-assessment.tsx
+ M src/components/graph-transformations-native-lesson.tsx
+ M src/components/graphs-of-functions-native-lesson.tsx
+ M src/components/icons.tsx
+ M src/components/inequalities-native-lesson.tsx
+ M src/components/modulus-function-native-lesson.tsx
+ M src/components/native-lesson-diagram.tsx
+ M src/components/notion-lesson-renderer.tsx
+ M src/components/quadratic-functions-native-lesson.tsx
+ M src/components/rich-math-answer-input.tsx
+ M src/content/notion-lessons/definitions.ts
+ M src/lib/access.ts
+ M src/lib/question-bank/marking.server.ts
+ M src/lib/seed.ts
+ M src/lib/tree-utils.ts
+?? docs/qa/
+?? "public/assets/Pure Mathematics/1.1 Laws of Indices.pdf"
+?? "public/assets/Pure Mathematics/1.10 Transformations of Graphs.pdf"
+?? "public/assets/Pure Mathematics/1.11 Partial Fractions.pdf"
+?? "public/assets/Pure Mathematics/1.12 Functions in Modelling.pdf"
+?? "public/assets/Pure Mathematics/1.2 Surds and Rationalising Denominators.pdf"
+?? "public/assets/Pure Mathematics/1.3 Quadratic Functions.pdf"
+?? "public/assets/Pure Mathematics/1.4 Simultaneous Equations.pdf"
+?? "public/assets/Pure Mathematics/1.5 Inequalities.pdf"
+?? "public/assets/Pure Mathematics/1.6 Polynomials and Algebraic Division.pdf"
+?? "public/assets/Pure Mathematics/1.7 Graphs of Functions.pdf"
+?? "public/assets/Pure Mathematics/1.8 The Modulus Function.pdf"
+?? "public/assets/Pure Mathematics/1.9 Composite and Inverse Functions.pdf"
+?? scripts/course-conversion-inventory.ts
+?? scripts/extract-native-lesson-content.mjs
+?? scripts/qa-fixture/
+?? scripts/supabase-usage-audit.sql
+?? scripts/verify-arthur-usage.mjs
+?? scripts/verify-assessment-database.mjs
+?? scripts/verify-bank-mathematics.mjs
+?? scripts/verify-native-browser.mjs
+?? scripts/verify-workflow-browser.mjs
+?? src/app/api/practice/
+?? src/components/bank-question.tsx
+?? src/components/box-plot-lesson-diagram.tsx
+?? src/components/function-curves-diagram.tsx
+?? src/components/lesson-data-diagram.tsx
+?? src/components/motion-lesson-diagram.tsx
+?? src/components/practice-questions.tsx
+?? src/components/probability-tree-diagram.tsx
+?? src/components/scatter-lesson-diagram.tsx
+?? src/components/scene-lesson-diagram.tsx
+?? src/components/structured-native-lesson.tsx
+?? src/components/venn-lesson-diagram.tsx
+?? src/content/notion-lessons/authoring.ts
+?? src/content/notion-lessons/coordinate-geometry.ts
+?? src/content/notion-lessons/legacy-structured.json
+?? src/content/notion-lessons/mechanics-applied-forces.ts
+?? src/content/notion-lessons/mechanics-calculus.ts
+?? src/content/notion-lessons/mechanics-constant-acceleration.ts
+?? src/content/notion-lessons/mechanics-forces.ts
+?? src/content/notion-lessons/mechanics-friction.ts
+?? src/content/notion-lessons/mechanics-modelling.ts
+?? src/content/notion-lessons/mechanics-moments.ts
+?? src/content/notion-lessons/mechanics-projectiles.ts
+?? src/content/notion-lessons/mechanics-scenes.ts
+?? src/content/notion-lessons/mechanics-vector-kinematics.ts
+?? src/content/notion-lessons/native-duplicates.ts
+?? src/content/notion-lessons/proof-structure.ts
+?? src/content/notion-lessons/proof.ts
+?? src/content/notion-lessons/pure-differentiation.ts
+?? src/content/notion-lessons/pure-exponentials.ts
+?? src/content/notion-lessons/pure-integration.ts
+?? src/content/notion-lessons/pure-numerical.ts
+?? src/content/notion-lessons/pure-trigonometry.ts
+?? src/content/notion-lessons/pure-vectors.ts
+?? src/content/notion-lessons/sequences-series.ts
+?? src/content/notion-lessons/statistics-collection.ts
+?? src/content/notion-lessons/statistics-conditional-assessment.ts
+?? src/content/notion-lessons/statistics-conditional.ts
+?? src/content/notion-lessons/statistics-correlation-test.ts
+?? src/content/notion-lessons/statistics-correlation.ts
+?? src/content/notion-lessons/statistics-data-presentation.ts
+?? src/content/notion-lessons/statistics-distributions.ts
+?? src/content/notion-lessons/statistics-hypothesis.ts
+?? src/content/notion-lessons/statistics-location.ts
+?? src/content/notion-lessons/statistics-normal-a.ts
+?? src/content/notion-lessons/statistics-normal-b.ts
+?? src/content/notion-lessons/statistics-normal-c.ts
+?? src/content/notion-lessons/statistics-probability-formulae.ts
+?? src/content/notion-lessons/statistics-probability.ts
+?? src/content/notion-lessons/statistics-regression.ts
+?? src/lib/lessons/
+?? src/lib/question-bank/compound-parts.ts
+?? src/lib/question-bank/math-segments.ts
+?? src/lib/question-bank/practice-selector.ts
+?? src/lib/question-bank/repository.server.ts
+?? src/lib/question-bank/responses.ts
+?? src/lib/question-bank/subtopics.ts
+?? supabase/migrations/20260921_practice_and_attempt_safety.sql
+?? supabase/migrations/20260924_arthur_usage_limits.sql
+?? supabase/migrations/20260924_chapter_wide_practice.sql
+?? tests/analytic-curves.test.ts
+?? tests/bank-math.test.ts
+?? tests/native-lessons.test.ts
+?? tests/practice-and-context.test.ts
+?? tests/practice-presentation.test.ts

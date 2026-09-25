@@ -1,0 +1,1142 @@
+[
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.1 Laws of Indices",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.1 Laws of Indices.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.1 Laws of Indices",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.2 Surds and Rationalising Denominators",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.2 Surds and Rationalising Denominators.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.2 Surds and Rationalising Denominators",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.3 Quadratic Functions",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.3 Quadratic Functions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.3 Quadratic Functions",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.4 Simultaneous Equations",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.4 Simultaneous Equations.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.4 Simultaneous Equations",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.5 Inequalities",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.5 Inequalities.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.5 Inequalities",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.6 Polynomials and Algebraic Division",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.6 Polynomials and Algebraic Division.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.6 Polynomials and Algebraic Division",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.7 Graphs of Functions",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.7 Graphs of Functions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.7 Graphs of Functions",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.8 The Modulus Function",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.8 The Modulus Function.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.8 The Modulus Function",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.9 Composite and Inverse Functions",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.9 Composite and Inverse Functions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.9 Composite and Inverse Functions",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.10 Transformations of Graphs",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.10 Transformations of Graphs.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.10 Transformations of Graphs",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.11 Partial Fractions",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.11 Partial Fractions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.11 Partial Fractions",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 1: Algebra and Functions",
+    "subtopic": "1.12 Functions in Modelling",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/1.12 Functions in Modelling.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.12 Functions in Modelling",
+    "conversionStatus": "existing-native",
+    "qaStatus": "existing-page-not-reapproved"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 2: Proof",
+    "subtopic": "2.1 The Structure of Mathematical Proof",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/2.1 The Structure of Mathematical Proof.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.1 The Structure of Mathematical Proof",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 2: Proof",
+    "subtopic": "2.2 Proof by Deduction",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/2.2 Proof by Deduction.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.2 Proof by Deduction",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 2: Proof",
+    "subtopic": "2.3 Proof by Exhaustion",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/2.3 Proof by Exhaustion.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.3 Proof by Exhaustion",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 2: Proof",
+    "subtopic": "2.4 Disproof by Counter Example",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/2.4 Disproof by Counter Example.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.4 Disproof by Counter Example",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 2: Proof",
+    "subtopic": "2.5 Proof by Contradiction",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/2.5 Proof by Contradiction.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.5 Proof by Contradiction",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 3: Coordinate Geometry",
+    "subtopic": "3.1 Straight Lines",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/3.1 Straight Lines.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.1 Straight Lines",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 3: Coordinate Geometry",
+    "subtopic": "3.2 Circles",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/3.2 Circles.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.2 Circles",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 3: Coordinate Geometry",
+    "subtopic": "3.3 Parametric Equations",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/3.3 Parametric Equations.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.3 Parametric Equations",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 3: Coordinate Geometry",
+    "subtopic": "3.4 Parametric Equations in Modelling",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/3.4 Parametric Equations in Modelling.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.4 Parametric Equations in Modelling",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 4: Sequences and Series",
+    "subtopic": "4.1 Arithmetic Sequences and Series",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/4.1 Arithmetic Sequences and Series.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.1 Arithmetic Sequences and Series",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 4: Sequences and Series",
+    "subtopic": "4.2 Geometric Sequences and Series",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/4.2 Geometric Sequences and Series.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.2 Geometric Sequences and Series",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 4: Sequences and Series",
+    "subtopic": "4.3 Sigma Notation and Recurrence Relations",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/4.3 Sigma Notation and Recurrence Relations.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.3 Sigma Notation and Recurrence Relations",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 4: Sequences and Series",
+    "subtopic": "4.4 Binomial Expansion - Positive Integer n",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/4.4 Binomial Expansion - Positive Integer n.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.4 Binomial Expansion - Positive Integer n",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 4: Sequences and Series",
+    "subtopic": "4.5 Binomial Expansion - Rational n",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/4.5 Binomial Expansion - Rational n.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.5 Binomial Expansion - Rational n",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 4: Sequences and Series",
+    "subtopic": "4.6 Sequences and Series in Modelling",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/4.6 Sequences and Series in Modelling.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.6 Sequences and Series in Modelling",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.1 Radians, Arc Length and Sector Area",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.1 Radians, Arc Length and Sector Area.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.1 Radians, Arc Length and Sector Area",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.2 Sine Rule, Cosine Rule and Area of a Triangle",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.2 Sine Rule, Cosine Rule and Area of a Triangle.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.2 Sine Rule, Cosine Rule and Area of a Triangle",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.3 Exact Trigonometric Values",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.3 Exact Trigonometric Values.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.3 Exact Trigonometric Values",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.4 Trigonometric Graphs and Symmetry",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.4 Trigonometric Graphs and Symmetry.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.4 Trigonometric Graphs and Symmetry",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.5 Small Angle Approximations",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.5 Small Angle Approximations.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.5 Small Angle Approximations",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.6 Reciprocal and Inverse Trigonometric Functions",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.6 Reciprocal and Inverse Trigonometric Functions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.6 Reciprocal and Inverse Trigonometric Functions",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.7 Trigonometric Identities",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.7 Trigonometric Identities.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.7 Trigonometric Identities",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.8 The R cos Form",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.8 The R cos Form.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.8 The R cos Form",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.9 Solving Trigonometric Equations",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.9 Solving Trigonometric Equations.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.9 Solving Trigonometric Equations",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 5: Trigonometry",
+    "subtopic": "5.10 Trigonometry in Modelling",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/5.10 Trigonometry in Modelling.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.10 Trigonometry in Modelling",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 6: Exponentials and Logarithms",
+    "subtopic": "6.1 Exponential Functions",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/6.1 Exponential Functions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "6.1 Exponential Functions",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 6: Exponentials and Logarithms",
+    "subtopic": "6.2 Logarithms and Their Laws",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/6.2 Logarithms and Their Laws.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "6.2 Logarithms and Their Laws",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 6: Exponentials and Logarithms",
+    "subtopic": "6.3 Logarithmic Graphs for Estimating Parameters",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/6.3 Logarithmic Graphs for Estimating Parameters.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "6.3 Logarithmic Graphs for Estimating Parameters",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 6: Exponentials and Logarithms",
+    "subtopic": "6.4 Exponential Growth and Decay",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/6.4 Exponential Growth and Decay.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "6.4 Exponential Growth and Decay",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 7: Differentiation",
+    "subtopic": "7.1 Differentiation from First Principles",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/7.1 Differentiation from First Principles.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "7.1 Differentiation from First Principles",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 7: Differentiation",
+    "subtopic": "7.2 Standard Derivatives and Basic Rules",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/7.2 Standard Derivatives and Basic Rules.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "7.2 Standard Derivatives and Basic Rules",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 7: Differentiation",
+    "subtopic": "7.3 Chain Rule, Product Rule and Quotient Rule",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/7.3 Chain Rule, Product Rule and Quotient Rule.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "7.3 Chain Rule, Product Rule and Quotient Rule",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 7: Differentiation",
+    "subtopic": "7.4 Applications of Differentiation",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/7.4 Applications of Differentiation.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "7.4 Applications of Differentiation",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 7: Differentiation",
+    "subtopic": "7.5 Implicit and Parametric Differentiation",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/7.5 Implicit and Parametric Differentiation.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "7.5 Implicit and Parametric Differentiation",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 7: Differentiation",
+    "subtopic": "7.6 Constructing Differential Equations",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/7.6 Constructing Differential Equations.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "7.6 Constructing Differential Equations",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 8: Integration",
+    "subtopic": "8.1 Standard Integrals",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/8.1 Standard Integrals.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.1 Standard Integrals",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 8: Integration",
+    "subtopic": "8.2 Definite Integrals and Areas",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/8.2 Definite Integrals and Areas.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.2 Definite Integrals and Areas",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 8: Integration",
+    "subtopic": "8.3 Integration by Substitution",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/8.3 Integration by Substitution.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.3 Integration by Substitution",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 8: Integration",
+    "subtopic": "8.4 Integration by Parts",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/8.4 Integration by Parts.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.4 Integration by Parts",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 8: Integration",
+    "subtopic": "8.5 Integration Using Partial Fractions",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/8.5 Integration Using Partial Fractions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.5 Integration Using Partial Fractions",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 8: Integration",
+    "subtopic": "8.6 Differential Equations",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/8.6 Differential Equations.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.6 Differential Equations",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 9: Numerical Methods",
+    "subtopic": "9.1 Locating Roots by Sign Change",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/9.1 Locating Roots by Sign Change.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.1 Locating Roots by Sign Change",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 9: Numerical Methods",
+    "subtopic": "9.2 Fixed Point Iteration",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/9.2 Fixed Point Iteration.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.2 Fixed Point Iteration",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 9: Numerical Methods",
+    "subtopic": "9.3 The Newton-Raphson Method",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/9.3 The Newton-Raphson Method.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.3 The Newton-Raphson Method",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 9: Numerical Methods",
+    "subtopic": "9.4 The Trapezium Rule",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/9.4 The Trapezium Rule.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.4 The Trapezium Rule",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 10: Vectors",
+    "subtopic": "10.1 Vectors in Two and Three Dimensions",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/10.1 Vectors in Two and Three Dimensions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.1 Vectors in Two and Three Dimensions",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 10: Vectors",
+    "subtopic": "10.2 Position Vectors and Distance",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/10.2 Position Vectors and Distance.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.2 Position Vectors and Distance",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Pure Mathematics",
+    "chapter": "Chapter 10: Vectors",
+    "subtopic": "10.3 Vector Problems in Pure Mathematics",
+    "originalPdf": "archives/course-pdfs/Pure Mathematics/10.3 Vector Problems in Pure Mathematics.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.3 Vector Problems in Pure Mathematics",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 1: Modelling in Mechanics",
+    "subtopic": "1.1 Modelling Assumptions",
+    "originalPdf": "archives/course-pdfs/Mechanics/1.1 Modelling Assumptions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.1 Modelling Assumptions",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 1: Modelling in Mechanics",
+    "subtopic": "1.2 Vectors in Mechanics",
+    "originalPdf": "archives/course-pdfs/Mechanics/1.2 Vectors in Mechanics.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.2 Vectors in Mechanics",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 2: Constant Acceleration",
+    "subtopic": "2.1 Velocity-Time Graphs",
+    "originalPdf": "archives/course-pdfs/Mechanics/2.1 Velocity-Time Graphs.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.1 Velocity-Time Graphs",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 2: Constant Acceleration",
+    "subtopic": "2.2 The SUVAT Equations",
+    "originalPdf": "archives/course-pdfs/Mechanics/2.2 The SUVAT Equations.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.2 The SUVAT Equations",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 2: Constant Acceleration",
+    "subtopic": "2.3 Vertical Motion Under Gravity",
+    "originalPdf": "archives/course-pdfs/Mechanics/2.3 Vertical Motion Under Gravity.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.3 Vertical Motion Under Gravity",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 3: Forces and Motion",
+    "subtopic": "3.1 Newton's Laws and Force Diagrams",
+    "originalPdf": "archives/course-pdfs/Mechanics/3.1 Newton's Laws and Force Diagrams.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.1 Newton's Laws and Force Diagrams",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 3: Forces and Motion",
+    "subtopic": "3.2 Connected Particles and Pulleys",
+    "originalPdf": "archives/course-pdfs/Mechanics/3.2 Connected Particles and Pulleys.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.2 Connected Particles and Pulleys",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 3: Forces and Motion",
+    "subtopic": "3.3 Inclined Planes",
+    "originalPdf": "archives/course-pdfs/Mechanics/3.3 Inclined Planes.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.3 Inclined Planes",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 4: Variable Acceleration",
+    "subtopic": "4.1 Calculus for Variable Acceleration",
+    "originalPdf": "archives/course-pdfs/Mechanics/4.1 Calculus for Variable Acceleration.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.1 Calculus for Variable Acceleration",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 4: Variable Acceleration",
+    "subtopic": "4.2 Differentiating Position",
+    "originalPdf": "archives/course-pdfs/Mechanics/4.2 Differentiating Position.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.2 Differentiating Position",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 5: Moments",
+    "subtopic": "5.1 Moments and the Principle of Moments",
+    "originalPdf": "archives/course-pdfs/Mechanics/5.1 Moments and the Principle of Moments.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.1 Moments and the Principle of Moments",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 6: Forces and Friction",
+    "subtopic": "6.1 Friction on Inclined Planes",
+    "originalPdf": "archives/course-pdfs/Mechanics/6.1 Friction on Inclined Planes.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "6.1 Friction on Inclined Planes",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 7: Projectiles",
+    "subtopic": "7.1 Projectile Motion",
+    "originalPdf": "archives/course-pdfs/Mechanics/7.1 Projectile Motion.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "7.1 Projectile Motion",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 8: Applications of Forces",
+    "subtopic": "8.1 Forces in Two Dimensions",
+    "originalPdf": "archives/course-pdfs/Mechanics/8.1 Forces in Two Dimensions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.1 Forces in Two Dimensions",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 8: Applications of Forces",
+    "subtopic": "8.2 Vector Kinematics with Forces",
+    "originalPdf": "archives/course-pdfs/Mechanics/8.2 Vector Kinematics with Forces.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.2 Vector Kinematics with Forces",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 9: Further Kinematics",
+    "subtopic": "9.1 Vector Kinematics",
+    "originalPdf": "archives/course-pdfs/Mechanics/9.1 Vector Kinematics.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.1 Vector Kinematics",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Mechanics",
+    "chapter": "Chapter 9: Further Kinematics",
+    "subtopic": "9.2 Constant Acceleration in Vector Form",
+    "originalPdf": "archives/course-pdfs/Mechanics/9.2 Constant Acceleration in Vector Form.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.2 Constant Acceleration in Vector Form",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 1: Data Collection",
+    "subtopic": "1.1 Populations and Samples",
+    "originalPdf": "archives/course-pdfs/Statistics/1.1 Populations and Samples.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.1 Populations and Samples",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 1: Data Collection",
+    "subtopic": "1.2 Sampling Methods",
+    "originalPdf": "archives/course-pdfs/Statistics/1.2 Sampling Methods.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.2 Sampling Methods",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 1: Data Collection",
+    "subtopic": "1.3 Types of Data",
+    "originalPdf": "archives/course-pdfs/Statistics/1.3 Types of Data.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.3 Types of Data",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 1: Data Collection",
+    "subtopic": "1.4 The Large Data Set",
+    "originalPdf": "archives/course-pdfs/Statistics/1.4 The Large Data Set.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "1.4 The Large Data Set",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 2: Measures of Location and Spread",
+    "subtopic": "2.1 Measures of Central Tendency",
+    "originalPdf": "archives/course-pdfs/Statistics/2.1 Measures of Central Tendency.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.1 Measures of Central Tendency",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 2: Measures of Location and Spread",
+    "subtopic": "2.2 Quartiles, Percentiles and Measures of Spread",
+    "originalPdf": "archives/course-pdfs/Statistics/2.2 Quartiles, Percentiles and Measures of Spread.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.2 Quartiles, Percentiles and Measures of Spread",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 2: Measures of Location and Spread",
+    "subtopic": "2.3 Variance and Standard Deviation",
+    "originalPdf": "archives/course-pdfs/Statistics/2.3 Variance and Standard Deviation.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.3 Variance and Standard Deviation",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 2: Measures of Location and Spread",
+    "subtopic": "2.4 Coding",
+    "originalPdf": "archives/course-pdfs/Statistics/2.4 Coding.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "2.4 Coding",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 3: Representations of Data",
+    "subtopic": "3.1 Outliers",
+    "originalPdf": "archives/course-pdfs/Statistics/3.1 Outliers.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.1 Outliers",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 3: Representations of Data",
+    "subtopic": "3.2 Box Plots",
+    "originalPdf": "archives/course-pdfs/Statistics/3.2 Box Plots.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.2 Box Plots",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 3: Representations of Data",
+    "subtopic": "3.3 Cumulative Frequency Diagrams",
+    "originalPdf": "archives/course-pdfs/Statistics/3.3 Cumulative Frequency Diagrams.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.3 Cumulative Frequency Diagrams",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 3: Representations of Data",
+    "subtopic": "3.4 Histograms",
+    "originalPdf": "archives/course-pdfs/Statistics/3.4 Histograms.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.4 Histograms",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 3: Representations of Data",
+    "subtopic": "3.5 Comparing Data Sets",
+    "originalPdf": "archives/course-pdfs/Statistics/3.5 Comparing Data Sets.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "3.5 Comparing Data Sets",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 4: Correlation",
+    "subtopic": "4.1 Scatter Diagrams and Correlation",
+    "originalPdf": "archives/course-pdfs/Statistics/4.1 Scatter Diagrams and Correlation.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.1 Scatter Diagrams and Correlation",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 4: Correlation",
+    "subtopic": "4.2 Regression Lines",
+    "originalPdf": "archives/course-pdfs/Statistics/4.2 Regression Lines.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "4.2 Regression Lines",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 5: Probability",
+    "subtopic": "5.1 Calculating Probabilities",
+    "originalPdf": "archives/course-pdfs/Statistics/5.1 Calculating Probabilities.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.1 Calculating Probabilities",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 5: Probability",
+    "subtopic": "5.2 Venn Diagrams",
+    "originalPdf": "archives/course-pdfs/Statistics/5.2 Venn Diagrams.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.2 Venn Diagrams",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 5: Probability",
+    "subtopic": "5.3 Mutually Exclusive and Independent Events",
+    "originalPdf": "archives/course-pdfs/Statistics/5.3 Mutually Exclusive and Independent Events.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.3 Mutually Exclusive and Independent Events",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 5: Probability",
+    "subtopic": "5.4 Tree Diagrams",
+    "originalPdf": "archives/course-pdfs/Statistics/5.4 Tree Diagrams.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "5.4 Tree Diagrams",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 6: Statistical Distributions",
+    "subtopic": "6.1 Discrete Random Variables",
+    "originalPdf": "archives/course-pdfs/Statistics/6.1 Discrete Random Variables.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "6.1 Discrete Random Variables",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 6: Statistical Distributions",
+    "subtopic": "6.2 The Binomial Distribution",
+    "originalPdf": "archives/course-pdfs/Statistics/6.2 The Binomial Distribution.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "6.2 The Binomial Distribution",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 7: Hypothesis Testing",
+    "subtopic": "7.1 The Language of Hypothesis Testing",
+    "originalPdf": "archives/course-pdfs/Statistics/7.1 The Language of Hypothesis Testing.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "7.1 The Language of Hypothesis Testing",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 7: Hypothesis Testing",
+    "subtopic": "7.2 Finding Critical Regions",
+    "originalPdf": "archives/course-pdfs/Statistics/7.2 Finding Critical Regions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "7.2 Finding Critical Regions",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 8: Regression, Correlation and Hypothesis Testing",
+    "subtopic": "8.1 Exponential Models",
+    "originalPdf": "archives/course-pdfs/Statistics/8.1 Exponential Models.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.1 Exponential Models",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 8: Regression, Correlation and Hypothesis Testing",
+    "subtopic": "8.2 Measuring Correlation",
+    "originalPdf": "archives/course-pdfs/Statistics/8.2 Measuring Correlation.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.2 Measuring Correlation",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 8: Regression, Correlation and Hypothesis Testing",
+    "subtopic": "8.3 Hypothesis Testing for Zero Correlation",
+    "originalPdf": "archives/course-pdfs/Statistics/8.3 Hypothesis Testing for Zero Correlation.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "8.3 Hypothesis Testing for Zero Correlation",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 9: Conditional Probability",
+    "subtopic": "9.1 Set Notation",
+    "originalPdf": "archives/course-pdfs/Statistics/9.1 Set Notation.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.1 Set Notation",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 9: Conditional Probability",
+    "subtopic": "9.2 Conditional Probability",
+    "originalPdf": "archives/course-pdfs/Statistics/9.2 Conditional Probability.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.2 Conditional Probability",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 9: Conditional Probability",
+    "subtopic": "9.3 Conditional Probabilities in Venn Diagrams",
+    "originalPdf": "archives/course-pdfs/Statistics/9.3 Conditional Probabilities in Venn Diagrams.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.3 Conditional Probabilities in Venn Diagrams",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 9: Conditional Probability",
+    "subtopic": "9.4 Probability Formulae",
+    "originalPdf": "archives/course-pdfs/Statistics/9.4 Probability Formulae.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "9.4 Probability Formulae",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 10: The Normal Distribution",
+    "subtopic": "10.1 The Normal Distribution",
+    "originalPdf": "archives/course-pdfs/Statistics/10.1 The Normal Distribution.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.1 The Normal Distribution",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 10: The Normal Distribution",
+    "subtopic": "10.2 Finding Probabilities for Normal Distributions",
+    "originalPdf": "archives/course-pdfs/Statistics/10.2 Finding Probabilities for Normal Distributions.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.2 Finding Probabilities for Normal Distributions",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 10: The Normal Distribution",
+    "subtopic": "10.3 The Inverse Normal Distribution Function",
+    "originalPdf": "archives/course-pdfs/Statistics/10.3 The Inverse Normal Distribution Function.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.3 The Inverse Normal Distribution Function",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 10: The Normal Distribution",
+    "subtopic": "10.4 The Standard Normal Distribution",
+    "originalPdf": "archives/course-pdfs/Statistics/10.4 The Standard Normal Distribution.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.4 The Standard Normal Distribution",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 10: The Normal Distribution",
+    "subtopic": "10.5 Finding Mu and Sigma",
+    "originalPdf": "archives/course-pdfs/Statistics/10.5 Finding Mu and Sigma.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.5 Finding Mu and Sigma",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 10: The Normal Distribution",
+    "subtopic": "10.6 Approximating the Binomial Distribution",
+    "originalPdf": "archives/course-pdfs/Statistics/10.6 Approximating the Binomial Distribution.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.6 Approximating the Binomial Distribution",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  },
+  {
+    "subject": "Statistics",
+    "chapter": "Chapter 10: The Normal Distribution",
+    "subtopic": "10.7 Hypothesis Testing with the Normal Distribution",
+    "originalPdf": "archives/course-pdfs/Statistics/10.7 Hypothesis Testing with the Normal Distribution.pdf",
+    "pdfPresent": true,
+    "nativeDuplicate": "10.7 Hypothesis Testing with the Normal Distribution",
+    "conversionStatus": "converted-draft",
+    "qaStatus": "render-checks-passed-source-approval-pending"
+  }
+]

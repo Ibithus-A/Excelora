@@ -1,0 +1,29 @@
+{
+  "date": "2026-09-25",
+  "location": "public (website host, not Supabase Storage)",
+  "extensions": {
+    "(none)": {
+      "files": 3,
+      "bytes": 20492
+    },
+    ".svg": {
+      "files": 6,
+      "bytes": 3892
+    },
+    ".png": {
+      "files": 1,
+      "bytes": 67560
+    },
+    ".mp4": {
+      "files": 9,
+      "bytes": 88191450
+    },
+    ".jpg": {
+      "files": 9,
+      "bytes": 461589
+    }
+  },
+  "totalBytes": 88744983,
+  "archivedPdfFiles": 170,
+  "archivedPdfBytes": 11734886
+}

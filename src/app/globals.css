@@ -524,3 +524,40 @@ textarea {
   font-size: 1.08em;
   color: #3f3f46;
 }
+
+/* Reserve vertical space for stacked fractions. Wide expressions remain swipeable
+   without showing scrollbar tracks beside individual maths fragments. */
+.lesson-math-inline {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+  padding-block: 0.35em;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.lesson-math-inline::-webkit-scrollbar {
+  display: none;
+}
+.lesson-math-inline .katex-html {
+  white-space: normal;
+}
+.lesson-math-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.lesson-math-display::-webkit-scrollbar {
+  display: none;
+}
+.lesson-math-display > .katex-display {
+  margin: 0;
+  min-width: 100%;
+  width: max-content;
+}
+
+[data-lesson-card] > p:first-child,
+[data-lesson-card] > div > p:first-child {
+  font-weight: 500;
+  color: #18181b;
+}

@@ -56,14 +56,16 @@ export function NativeDiagramLegend({ children }: { children: ReactNode }) {
 export function NativeDiagramLegendItem({
   children,
   dashed = false,
+  secondary = false,
 }: {
   children: ReactNode;
   dashed?: boolean;
+  secondary?: boolean;
 }) {
   return (
     <span className="inline-flex items-center gap-2.5">
       <span
-        className={`block w-7 border-t-2 ${dashed ? "border-dashed border-zinc-500" : "border-zinc-900"}`}
+        className={`block w-7 border-t-2 ${dashed ? "border-dashed" : ""} ${secondary || dashed ? "border-zinc-500" : "border-zinc-900"}`}
         aria-hidden="true"
       />
       {children}

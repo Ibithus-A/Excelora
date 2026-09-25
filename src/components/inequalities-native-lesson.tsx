@@ -56,10 +56,10 @@ function ParabolaDiagram({ direction }: { direction: "up" | "down" }) {
         <circle cx="240" cy="124" r="3.5" fill="#18181b" />
         <line x1="160" y1="119" x2="160" y2="129" stroke="#71717a" />
         <line x1="240" y1="119" x2="240" y2="129" stroke="#71717a" />
-        <text x="160" y="148" textAnchor="middle" fontSize="12" fill="#52525b">2</text>
-        <text x="240" y="148" textAnchor="middle" fontSize="12" fill="#52525b">3</text>
+        <text x={isUpward ? 160 : 176} y="150" textAnchor="middle" fontSize="12" fill="#52525b">2</text>
+        <text x={isUpward ? 240 : 224} y="150" textAnchor="middle" fontSize="12" fill="#52525b">3</text>
         <text x="374" y="128" fontSize="13" fill="#52525b">x</text>
-        <text x="75" y="22" fontSize="13" fill="#52525b">y</text>
+        <text x="65" y="16" fontSize="13" fill="#52525b">y</text>
       </NativePlotSvg>
     </NativeLessonDiagram>
   );

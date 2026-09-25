@@ -73,9 +73,9 @@ function TranslatedReciprocalGraph() {
         <path d="M42 104 C74 109 104 136 116 218" fill="none" stroke="#18181b" strokeWidth="2.25" strokeLinecap="round" />
         <path d="M140 30 C154 67 188 86 362 91" fill="none" stroke="#18181b" strokeWidth="2.25" strokeLinecap="round" />
         <line x1="128" y1="155" x2="128" y2="165" stroke="#71717a" />
-        <text x="118" y="184" textAnchor="end" fontSize="12" fill="#52525b">−1</text>
+        <text x="148" y="188" textAnchor="end" fontSize="12" fill="#52525b">−1</text>
         <line x1="203" y1="94" x2="213" y2="94" stroke="#71717a" />
-        <text x="198" y="84" textAnchor="end" fontSize="12" fill="#52525b">1</text>
+        <text x="32" y="88" textAnchor="end" fontSize="12" fill="#52525b">1</text>
         <text x="374" y="164" fontSize="13" fill="#52525b">x</text>
         <text x="215" y="21" fontSize="13" fill="#52525b">y</text>
       </NativePlotSvg>

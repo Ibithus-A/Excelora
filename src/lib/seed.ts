@@ -2,6 +2,7 @@ import type { FlowNode, FlowState } from "../types/flowstate.ts";
 
 export const A_LEVEL_MATHS_TITLE = "A Level Maths";
 export const END_OF_TOPIC_ASSESSMENT_TITLE = "Assessment";
+export const PRACTICE_QUESTIONS_TITLE = "Practice Questions";
 export const INTERACTIVE_ASSESSMENT_TITLE = "Assessment — Interactive";
 const LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE = "End Of Topic Assessment";
 const DEFAULT_PAGE_CONTENT = "";
@@ -567,6 +568,7 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
     }
 
     for (const chapter of subject.chapters) {
+      const nativeTitles: string[] = [];
       const usesInteractiveAssessment = chapter.subtopics.includes(
         INTERACTIVE_ASSESSMENT_TITLE,
       );
@@ -592,6 +594,21 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
           (childId) => childId !== duplicateChapterId,
         );
         delete next.nodes[duplicateChapterId];
+      }
+
+      // Native rendering now uses canonical page IDs. Remove only generated
+      // PDF/review siblings; canonical IDs and their saved progress stay intact.
+      for (const id of [...next.nodes[chapterId].childrenIds]) {
+        const node = next.nodes[id];
+        if (!node || !/ — (?:Native review|Original PDF)$/.test(node.title)) continue;
+        const source = node.title.replace(/ — (?:Native review|Original PDF)$/, "");
+        if (!chapter.subtopics.includes(source)) continue;
+        const canonical = next.nodes[chapterId].childrenIds.find(other => next.nodes[other]?.title === source);
+        if (canonical) {
+          if (next.selectedId === id) next.selectedId = canonical;
+          next.nodes[chapterId].childrenIds = next.nodes[chapterId].childrenIds.filter(other => other !== id);
+          delete next.nodes[id];
+        } else node.title = source;
       }
 
       // Existing browsers may still have both the legacy PDF page and the
@@ -660,7 +677,10 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
 
       const allowedPageTitles = new Set(
         [
-          ...chapter.subtopics,
+          ...chapter.subtopics.filter(title => title !== END_OF_TOPIC_ASSESSMENT_TITLE),
+          PRACTICE_QUESTIONS_TITLE, INTERACTIVE_ASSESSMENT_TITLE,
+
+          ...nativeTitles,
           ...(usesInteractiveAssessment
             ? []
             : [END_OF_TOPIC_ASSESSMENT_TITLE, LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE]),
@@ -677,7 +697,7 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
         return false;
       });
 
-      for (const subtopic of chapter.subtopics) {
+      for (const subtopic of chapter.subtopics.filter(title => title !== END_OF_TOPIC_ASSESSMENT_TITLE)) {
         const existingSubtopicId = next.nodes[chapterId]?.childrenIds.find((childId) => {
           const child = next.nodes[childId];
           return child?.kind === "page" && normalizeTitle(child.title) === normalizeTitle(subtopic);
@@ -692,16 +712,14 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
         }
       }
 
-      if (!usesInteractiveAssessment) {
-        const hasAssessment = next.nodes[chapterId]?.childrenIds.some((childId) => {
-          const child = next.nodes[childId];
-          return (
-            child?.kind === "page" &&
-            normalizeTitle(child.title) === normalizeTitle(END_OF_TOPIC_ASSESSMENT_TITLE)
-          );
-        });
-        if (!hasAssessment) {
-          createPage(END_OF_TOPIC_ASSESSMENT_TITLE, chapterId);
+      for (const title of [PRACTICE_QUESTIONS_TITLE, INTERACTIVE_ASSESSMENT_TITLE,  ...nativeTitles]) {
+        if (!next.nodes[chapterId].childrenIds.some(id => next.nodes[id]?.title === title)) createPage(title, chapterId);
+      }
+      for (const id of [...next.nodes[chapterId].childrenIds]) {
+        if ([END_OF_TOPIC_ASSESSMENT_TITLE, LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE].includes(next.nodes[id]?.title)) {
+          if (next.selectedId === id) next.selectedId = chapterId;
+          next.nodes[chapterId].childrenIds = next.nodes[chapterId].childrenIds.filter(other => other !== id);
+          delete next.nodes[id];
         }
       }
 

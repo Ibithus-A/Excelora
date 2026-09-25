@@ -1,0 +1,15 @@
+{
+  "date": "2026-09-24",
+  "checks": [
+    "disabled by default",
+    "daily user limit",
+    "global monthly limit",
+    "UTC month reset",
+    "old daily counters pruned",
+    "competing reservations bounded",
+    "anonymous and authenticated callers denied",
+    "service role allowed",
+    "idempotent migration preserves settings"
+  ],
+  "providerCalls": 0
+}

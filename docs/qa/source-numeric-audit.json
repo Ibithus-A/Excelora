@@ -1,0 +1,45 @@
+{
+  "method": "Direct finite binomial sum using Python math.comb; no approximating distribution. Source values are retained in the native drafts pending editorial approval.",
+  "findings": [
+    {
+      "lesson": "Statistics 6.2 The Binomial Distribution",
+      "location": "Practice solution 1(b)",
+      "sourceValue": 0.2327,
+      "expression": "P(X=3), X~B(36,0.08)",
+      "computedValue": 0.2333277940720565,
+      "effect": "Probability differs; native preserves source."
+    },
+    {
+      "lesson": "Statistics 6.2 The Binomial Distribution",
+      "location": "Practice solution 3(b)",
+      "sourceValue": 0.016,
+      "expression": "P(X>=32), X~B(50,0.5)",
+      "computedValue": 0.03245432353613609,
+      "effect": "Reported tail probability differs by approximately a factor of two."
+    },
+    {
+      "lesson": "Statistics 7.1 The Language of Hypothesis Testing",
+      "location": "Practice solution 2",
+      "sourceValue": 0.1031,
+      "expression": "P(X<=2), X~B(30,1/6)",
+      "computedValue": 0.10279037368733329,
+      "effect": "Intermediate/total probabilities differ; the non-rejection conclusion at 5% remains unchanged."
+    },
+    {
+      "lesson": "Statistics 7.2 Finding Critical Regions",
+      "location": "Practice solution 2 upper tail",
+      "sourceValue": 0.0468,
+      "expression": "P(X>=14), X~B(25,0.4)",
+      "computedValue": 0.07780106386707293,
+      "effect": "Exceeds the assigned 5% upper tail; X>=14 is not the correct critical region."
+    },
+    {
+      "lesson": "Statistics 7.2 Finding Critical Regions",
+      "location": "Practice solution 2 upper tail",
+      "sourceValue": 0.0173,
+      "expression": "P(X>=15), X~B(25,0.4)",
+      "computedValue": 0.03439151809067862,
+      "effect": "Correct upper critical region is X>=15, with lower region X<=5, under the stated equal-tail rule."
+    }
+  ]
+}

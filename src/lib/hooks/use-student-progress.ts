@@ -2,7 +2,6 @@
 
 import {
   CHAPTER_TITLES,
-  buildStudentStats,
   resolveAccessibleChapterTitles,
   resolveTaggedChapterTitle,
   sanitizeTaggedChapterTitle,
@@ -48,20 +47,6 @@ export function useStudentProgress(
       : selectedStudent;
   const activeStudentUnlocks = resolveAccessibleChapterTitles(activeStudentAccess);
   const activeStudentMilestone = resolveTaggedChapterTitle(activeStudentAccess);
-
-  const statsByStudent = useMemo(() => {
-    const entries = studentAccounts.map((student, index) => [
-      student.id,
-      buildStudentStats(resolveAccessibleChapterTitles(student).length, index + 1),
-    ]);
-
-    return Object.fromEntries(entries);
-  }, [studentAccounts]);
-
-  const currentStudentStats =
-    currentUser?.role === "student"
-      ? buildStudentStats(resolveAccessibleChapterTitles(viewerProfile).length, 1)
-      : statsByStudent[resolvedSelectedStudentId] ?? buildStudentStats(1, 1);
 
   const selectedStudentMilestone = resolveTaggedChapterTitle(selectedStudent);
 
@@ -159,7 +144,6 @@ export function useStudentProgress(
     selectedStudentPlan: selectedStudent?.plan ?? "basic",
     activeStudentUnlocks,
     activeStudentMilestone,
-    currentStudentStats,
     selectedStudentMilestone,
     chapterTagsByTitle,
     selectStudent,
