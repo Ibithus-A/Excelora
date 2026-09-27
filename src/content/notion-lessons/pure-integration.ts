@@ -1,4 +1,5 @@
 import { nativeLesson, transcript, group, table, m } from "./authoring.ts";
+import { addIntegrationVisuals } from "./visual-learning-diagrams.ts";
 const raw = String.raw;
 const lesson = (title: string, source: string) =>
   nativeLesson(
@@ -253,3 +254,4 @@ PURE_INTEGRATION_LESSONS[0].blocks.splice(
     m(raw`\text{Key pattern: }\int\frac{f'(x)}{f(x)}\,dx=\ln|f(x)|+c`),
   ]),
 );
+addIntegrationVisuals(PURE_INTEGRATION_LESSONS);

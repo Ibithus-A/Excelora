@@ -17,7 +17,9 @@ import {
   END_OF_TOPIC_ASSESSMENT_TITLE,
   INTERACTIVE_ASSESSMENT_TITLE,
   PRACTICE_QUESTIONS_TITLE,
+  SYNOPTIC_ASSESSMENT_TITLE,
 } from "@/lib/seed";
+import { getAssessmentKeyForSubject } from "@/lib/assessment-config";
 import {
   getDefaultTitle,
   getLessonChapterContext,
@@ -180,7 +182,7 @@ export function EditorPane({
     subtopic: string;
   } | null>(null);
   const [isAssistantHovered, setIsAssistantHovered] = useState(false);
-  const [isAssessmentMathsOpen] = useState(false);
+  const [isMathsSidebarOpen, setIsMathsSidebarOpen] = useState(false);
   const [mobileAssistantNodeId, setMobileAssistantNodeId] = useState<
     string | null
   >(null);
@@ -242,6 +244,11 @@ export function EditorPane({
   const isAssessmentPage = Boolean(lessonContext?.isAssessmentPage);
   const isInteractiveAssessment =
     selectedNode?.title === INTERACTIVE_ASSESSMENT_TITLE;
+  const isSynopticAssessment =
+    selectedNode?.kind === "page" && selectedNode.title === SYNOPTIC_ASSESSMENT_TITLE;
+  const synopticSubject = isSynopticAssessment && selectedNode?.parentId
+    ? state.nodes[selectedNode.parentId]?.title ?? ""
+    : "";
   const structuredLesson = getStructuredLesson(selectedNode?.title ?? "");
   const notionLesson = getNotionLesson(selectedNode?.title);
   const NativeLessonComponent = notionLesson?.Component ?? null;
@@ -382,7 +389,7 @@ export function EditorPane({
     !!selectedId && mobileAssistantNodeId === selectedId;
   const lessonView =
     lessonSurface.nodeId === selectedId ? lessonSurface.view : "notes";
-  useStudyActivity(role === "student" && Boolean(selectedNode), selectedNode?.title ?? "Workspace", selectedNode?.kind !== "page" ? "dashboard" : isPracticePage ? "practice" : isAssessmentPage ? "assessment" : lessonView === "video" ? "video" : "notes");
+  useStudyActivity(role === "student" && Boolean(selectedNode), selectedNode?.title ?? "Workspace", selectedNode?.kind !== "page" ? "dashboard" : isPracticePage ? "practice" : isAssessmentPage || isSynopticAssessment ? "assessment" : lessonView === "video" ? "video" : "notes");
   const isLessonSurfaceExiting =
     !!selectedId && lessonSurfaceExit?.nodeId === selectedId;
   const pdfZoom =
@@ -532,7 +539,7 @@ export function EditorPane({
       <div
         className={[
           "min-w-0 flex-1 transition-[padding] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          isAssessmentMathsOpen ? "lg:pr-[390px]" : "lg:pr-0",
+          isMathsSidebarOpen ? "lg:pr-[390px]" : "lg:pr-0",
         ].join(" ")}
         style={editorShellStyle}
       >
@@ -641,16 +648,62 @@ export function EditorPane({
                 </section>
               ) : null}
 
+              {isSynopticAssessment ? (
+                <>
+                  <button
+                    type="button"
+                    className="group mb-4 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-offset-2"
+                    onClick={() => selectedNode.parentId && revealNode(selectedNode.parentId)}
+                  >
+                    <span aria-hidden="true" className="text-base leading-none text-zinc-400 transition group-hover:-translate-x-0.5 group-hover:text-zinc-700">←</span>
+                    Back to {synopticSubject}
+                  </button>
+                  <section className="lesson-surface-reveal overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+                    <div className="border-b border-zinc-200/80 bg-[linear-gradient(135deg,rgba(244,244,245,0.95),rgba(255,255,255,1))] px-4 py-4 md:px-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">Timed Synoptic Assessment</p>
+                          <p className="mt-1 text-sm text-zinc-600">Twenty questions spanning every {synopticSubject} chapter</p>
+                        </div>
+                        <span className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600">90 minutes · Secure</span>
+                      </div>
+                    </div>
+                    <div className="px-4 py-5 md:px-5">
+                      <GeneratedChapterAssessment
+                        subjectTitle={synopticSubject}
+                        chapterTitle=""
+                        assessmentKeyOverride={getAssessmentKeyForSubject(synopticSubject) ?? ""}
+                        assessmentTitle={`${synopticSubject} Synoptic Assessment`}
+                        questionCount={20}
+                        role={role}
+                        onMathsSidebarOpenChange={setIsMathsSidebarOpen}
+                        onReview={(attemptId) => {
+                          setReviewTarget(attemptId ? { nodeId: selectedNode.id, attemptId } : null);
+                          if (attemptId) setMobileAssistantNodeId(selectedNode.id);
+                        }}
+                      />
+                    </div>
+                  </section>
+                </>
+              ) : null}
+
               {isPracticePage && lessonContext && (
                 <>
                   <button
-                    className="text-sm underline"
+                    type="button"
+                    className="group mb-2 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-offset-2"
                     onClick={() => {
                       setPracticeTarget(null);
                       if (selectedNode.title === PRACTICE_QUESTIONS_TITLE)
                         revealNode(lessonContext.chapterId);
                     }}
                   >
+                    <span
+                      aria-hidden="true"
+                      className="text-base leading-none text-zinc-400 transition group-hover:-translate-x-0.5 group-hover:text-zinc-700"
+                    >
+                      ←
+                    </span>
                     {practiceTarget ? "Back to lesson" : "Back to chapter"}
                   </button>
                   <PracticeQuestions
@@ -658,6 +711,7 @@ export function EditorPane({
                     subjectTitle={lessonContext.subjectTitle ?? ""}
                     chapterTitle={lessonContext.chapterTitle}
                     initialSubtopic={practiceTarget?.subtopic ?? ""}
+                    onMathsSidebarOpenChange={setIsMathsSidebarOpen}
                   />
                 </>
               )}
@@ -941,6 +995,7 @@ export function EditorPane({
                                 subjectTitle={lessonContext.subjectTitle ?? ""}
                                 chapterTitle={lessonContext.chapterTitle}
                                 role={role}
+                                onMathsSidebarOpenChange={setIsMathsSidebarOpen}
                                 onReview={(attemptId) => {
                                   setReviewTarget(
                                     attemptId
@@ -1154,7 +1209,7 @@ export function EditorPane({
       )}
 
       {selectedNode.kind === "page" &&
-      !isPracticePage && (!isAssessmentPage || reviewTarget?.nodeId === selectedNode.id) ? (
+      !isPracticePage && (!(isAssessmentPage || isSynopticAssessment) || reviewTarget?.nodeId === selectedNode.id) ? (
         <EditorActionsDrawer
           reviewAttemptId={
             reviewTarget?.nodeId === selectedNode.id

@@ -3,7 +3,7 @@ import { loadExposure } from "@/lib/question-bank/repository.server";
 import { getAssessmentConfig } from "@/lib/assessment-config";
 import type { BankQuestion } from "@/lib/question-bank/bank-types";
 import { markBankResponse } from "@/lib/question-bank/marking.server";
-import { calculateSubtopicResults, selectAssessmentQuestions } from "@/lib/question-bank/selector";
+import { calculateSubtopicResults, selectAssessmentQuestions, selectSynopticAssessmentQuestions } from "@/lib/question-bank/selector";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewerProfile } from "@/lib/supabase/profiles";
 import { createClient } from "@/lib/supabase/server";
@@ -34,12 +34,38 @@ function toQuestion(row: Record<string, unknown>): BankQuestion {
 
 async function prerequisite(studentId: string, config: NonNullable<ReturnType<typeof getAssessmentConfig>>) {
   const admin = createAdminClient();
-  const { data, error } = await admin.from("student_topic_progress").select("topic_title,status,watched_video")
-    .eq("student_id", studentId).eq("chapter_title", config.chapterTitle);
+  let query = admin.from("student_topic_progress").select("topic_title,chapter_title,status,watched_video")
+    .eq("student_id", studentId);
+  query = config.scope === "subject"
+    ? query.eq("subject_title", config.subjectTitle)
+    : query.eq("chapter_title", config.chapterTitle);
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
-  const complete = new Set((data ?? []).filter((r) => r.status === "completed" || r.watched_video).map((r) => String(r.topic_title).trim().toLowerCase()));
-  const count = config.requiredModuleTitles.filter((title) => complete.has(title.trim().toLowerCase())).length;
-  return { isComplete: count === config.requiredModuleTitles.length, completedCount: count, totalCount: config.requiredModuleTitles.length };
+  const complete = new Set((data ?? []).filter((r) => r.status === "completed" || r.watched_video).map((r) =>
+    `${String(r.chapter_title ?? "").trim().toLowerCase()}::${String(r.topic_title).trim().toLowerCase()}`,
+  ));
+  const count = config.requiredModules.filter((module) => complete.has(
+    `${module.chapterTitle.trim().toLowerCase()}::${module.title.trim().toLowerCase()}`,
+  )).length;
+  return { isComplete: count === config.requiredModules.length, completedCount: count, totalCount: config.requiredModules.length };
+}
+
+function hasAssessmentAccess(
+  profile: Parameters<typeof hasChapterAccess>[0],
+  config: NonNullable<ReturnType<typeof getAssessmentConfig>>,
+) {
+  if (config.scope === "chapter") return hasChapterAccess(profile, config.chapterTitle);
+  return config.requiredModules.every((module) => hasChapterAccess(profile, module.chapterTitle));
+}
+
+function selectPaper(
+  config: NonNullable<ReturnType<typeof getAssessmentConfig>>,
+  questions: BankQuestion[],
+  exposure: Awaited<ReturnType<typeof loadExposure>>,
+) {
+  return config.scope === "subject"
+    ? selectSynopticAssessmentQuestions({ questions, courseTopicKeys: config.bankCourseTopicKeys, exposure })
+    : selectAssessmentQuestions({ questions, courseTopicKey: config.bankCourseTopicKey, exposure });
 }
 
 async function presentAttempt(attemptId: string, reveal: boolean) {
@@ -71,13 +97,13 @@ export async function GET(request: Request) {
     if (context.profile.role === "student" && config.minimumStudentPlan === "premium" && context.profile.plan !== "premium") {
       return Response.json({ assessment: config, requiresPremium: true, isUnlocked: false, attempt: null });
     }
-    if (context.profile.role === "student" && !hasChapterAccess(context.profile, config.chapterTitle)) return fail("Chapter locked.", 403);
+    if (context.profile.role === "student" && !hasAssessmentAccess(context.profile, config)) return fail("Required course content is locked.", 403);
     const studentId = context.profile.role === "tutor" ? new URL(request.url).searchParams.get("studentId") : context.user.id;
     if (!studentId) {
       const admin = createAdminClient();
-      const { data, error } = await admin.from("assessment_question_bank").select(`${PUBLIC_FIELDS},answer,worked_solution`).eq("course_topic_key", config.bankCourseTopicKey).eq("exposed_in_notes", false);
+      const { data, error } = await admin.from("assessment_question_bank").select(`${PUBLIC_FIELDS},answer,worked_solution`).in("course_topic_key", config.bankCourseTopicKeys).eq("exposed_in_notes", false);
       if (error) throw new Error(error.message);
-      const selected = selectAssessmentQuestions({ questions: (data ?? []).map((row) => toQuestion(row)), courseTopicKey: config.bankCourseTopicKey, exposure: [] });
+      const selected = selectPaper(config, (data ?? []).map((row) => toQuestion(row)), []);
       const secrets = new Map((data ?? []).map((row) => [row.id, row]));
       return Response.json({ assessment: config, tutorPreview: true, attempt: {
         id: "tutor-preview", status: "active", attempt_number: 0,
@@ -92,7 +118,7 @@ export async function GET(request: Request) {
       admin.from("student_assessment_attempts").select("id,status").eq("student_id", studentId).eq("assessment_key", key).eq("is_legacy", false).order("attempt_number", { ascending: false }).limit(1).maybeSingle(),
     ]);
     if (accessError || attemptError) throw new Error(accessError?.message ?? attemptError?.message);
-    return Response.json({ assessment: config, prerequisite: requirement, isUnlocked: requirement.isComplete && Boolean(access?.is_unlocked), attempt: latest ? await presentAttempt(latest.id, latest.status === "submitted" || context.profile.role === "tutor") : null });
+    return Response.json({ assessment: config, prerequisite: requirement, isUnlocked: requirement.isComplete && (!config.requiresTutorUnlock || Boolean(access?.is_unlocked)), attempt: latest ? await presentAttempt(latest.id, latest.status === "submitted" || context.profile.role === "tutor") : null });
   } catch (error) { console.error("[generated assessment GET]", error); return fail("Unable to load assessment.", 500); }
 }
 
@@ -102,28 +128,34 @@ export async function POST(request: Request) {
     const body = await request.json() as { action?: string; assessmentKey?: string; attemptId?: string; questionId?: string; answers?: Record<string, string> };
     const config = getAssessmentConfig(body.assessmentKey ?? ""); if (!config) return fail("Unknown assessment.", 400);
     if (context.profile.role === "tutor" && body.action === "preview-check") {
-      const ids = Object.keys(body.answers ?? {}).slice(0, 15);
-      const { data, error } = await createAdminClient().from("assessment_question_bank").select("id,response_type,answer,worked_solution,marks").eq("course_topic_key", config.bankCourseTopicKey).in("id", ids);
+      const ids = Object.keys(body.answers ?? {}).slice(0, config.questionCount);
+      const { data, error } = await createAdminClient().from("assessment_question_bank").select("id,response_type,answer,worked_solution,marks").in("course_topic_key", config.bankCourseTopicKeys).in("id", ids);
       if (error) throw new Error(error.message);
       return Response.json({ grades: (data ?? []).map(q => ({ id: q.id, ...markBankResponse(q.response_type, body.answers?.[q.id] ?? "", { questionId: q.id, answer: q.answer, workedSolution: q.worked_solution }, q.marks) })) });
     }
     if (context.profile.role !== "student") return fail("Tutor previews do not create student records.", 400);
     if (config.minimumStudentPlan === "premium" && context.profile.plan !== "premium") return fail("This assessment requires Premium.", 403);
-    if (!hasChapterAccess(context.profile, config.chapterTitle)) return fail("Chapter locked.", 403);
+    if (!hasAssessmentAccess(context.profile, config)) return fail("Required course content is locked.", 403);
     const admin = createAdminClient();
     if (body.action === "start" || body.action === "retake") {
       const requirement = await prerequisite(context.user.id, config); if (!requirement.isComplete) return fail("Complete every chapter module first.", 403);
-      const { data: access } = await admin.from("student_assessment_access").select("is_unlocked").eq("student_id", context.user.id).eq("assessment_key", config.key).maybeSingle();
-      if (!access?.is_unlocked) return fail("This assessment is locked.", 403);
+      if (config.requiresTutorUnlock) {
+        const { data: access } = await admin.from("student_assessment_access").select("is_unlocked").eq("student_id", context.user.id).eq("assessment_key", config.key).maybeSingle();
+        if (!access?.is_unlocked) return fail("This assessment is locked.", 403);
+      }
       const { data: active } = await admin.from("student_assessment_attempts").select("id").eq("student_id", context.user.id).eq("assessment_key", config.key).eq("status", "active").maybeSingle();
       if (active) return Response.json({ attempt: await presentAttempt(active.id, false) });
       const [{ data: rawQuestions, error: bankError }, exposure] = await Promise.all([
-        admin.from("assessment_question_bank").select(PUBLIC_FIELDS).eq("course_topic_key", config.bankCourseTopicKey).eq("exposed_in_notes", false),
-        loadExposure(context.user.id, config.bankCourseTopicKey),
+        admin.from("assessment_question_bank").select(PUBLIC_FIELDS).in("course_topic_key", config.bankCourseTopicKeys).eq("exposed_in_notes", false),
+        Promise.all(config.bankCourseTopicKeys.map((topic) => loadExposure(context.user.id, topic))).then((rows) => rows.flat()),
       ]);
       if (bankError) throw new Error(bankError.message);
-      const selected = selectAssessmentQuestions({ questions: (rawQuestions ?? []).map(toQuestion), courseTopicKey: config.bankCourseTopicKey, exposure });
-      const { data: attemptId, error: startError } = await admin.rpc("start_generated_assessment", { p_student: context.user.id, p_key: config.key, p_topic: config.bankCourseTopicKey, p_duration: config.durationSeconds, p_ids: selected.map(q => q.id) });
+      const selected = selectPaper(config, (rawQuestions ?? []).map(toQuestion), exposure);
+      const rpc = config.scope === "subject" ? "start_synoptic_assessment" : "start_generated_assessment";
+      const parameters = config.scope === "subject"
+        ? { p_student: context.user.id, p_key: config.key, p_subject: config.subjectTitle, p_duration: config.durationSeconds, p_topics: config.bankCourseTopicKeys, p_ids: selected.map(q => q.id) }
+        : { p_student: context.user.id, p_key: config.key, p_topic: config.bankCourseTopicKey, p_duration: config.durationSeconds, p_ids: selected.map(q => q.id) };
+      const { data: attemptId, error: startError } = await admin.rpc(rpc, parameters);
       if (startError) throw new Error(startError.message);
       const attempt = { id: String(attemptId) };
       return Response.json({ attempt: await presentAttempt(attempt.id, false) });

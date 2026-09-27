@@ -123,6 +123,8 @@ Then using $\mathbf v=\mathbf u+\mathbf at$ and $\mathbf r=\mathbf r_0+\mathbf u
 
 Speed: $|\mathbf v|=\sqrt{v_x^2+v_y^2}$.
 
+@diagram process
+
 ## Worked Example 3
 
 A 4 kg particle at rest experiences resultant force $(6\mathbf i+8\mathbf j)$ N. Find the acceleration, speed after 5 s, and direction of motion.
@@ -150,6 +152,38 @@ Direction: $\theta=\arctan(10/7.5)=53.1^\circ$ above $\mathbf i$.
 $=(4\mathbf i-\mathbf j)+(6\mathbf i+4\mathbf j)+(4\mathbf i+6\mathbf j)=(14\mathbf i+9\mathbf j)$ m.
 `,
     {
+      process: {
+        type: "diagram",
+        description:
+          "A mechanics modelling chain showing how the resultant force and mass determine acceleration, which then updates velocity and position component by component.",
+        drawing: {
+          type: "scene",
+          lines: [
+            { from: [92, 125], to: [138, 125], arrow: true },
+            { from: [202, 125], to: [248, 125], arrow: true },
+            { from: [312, 125], to: [360, 125], arrow: true },
+          ],
+          rects: [
+            { x: 18, y: 94, width: 74, height: 62 },
+            { x: 138, y: 94, width: 64, height: 62 },
+            { x: 248, y: 94, width: 64, height: 62 },
+            { x: 360, y: 94, width: 28, height: 62 },
+          ],
+          labels: [
+            { x: 55, y: 105, text: raw`\mathbf F,m`, width: 62 },
+            { x: 170, y: 105, text: raw`\mathbf a`, width: 38 },
+            { x: 280, y: 105, text: raw`\mathbf v`, width: 38 },
+            { x: 374, y: 105, text: raw`\mathbf r`, width: 28 },
+            { x: 115, y: 78, text: raw`\div m`, width: 46 },
+            { x: 225, y: 78, text: raw`\times t`, width: 46 },
+            { x: 336, y: 78, text: raw`\times t`, width: 46 },
+          ],
+          caption: [
+            raw`\mathbf a=\mathbf F/m`,
+            raw`\mathbf v=\mathbf u+\mathbf at`,
+          ],
+        },
+      },
       vector: {
         type: "diagram",
         description:

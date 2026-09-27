@@ -1,7 +1,7 @@
 "use client";
 import katex from "katex";
 import { StructuredGraphSketch } from "./structured-graph-sketch";
-import { useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   RichMathAnswerInput,
   type RichMathAnswerHandle,
@@ -55,12 +55,14 @@ export function BankQuestion({
   onChange,
   readOnly = false,
   questionNumber,
+  onMathsSidebarOpenChange,
 }: {
   question: { id: string; prompt: string; subtopic: string; marks: number };
   value: string;
   onChange: (value: string) => void;
   readOnly?: boolean;
   questionNumber?: number;
+  onMathsSidebarOpenChange?: (isOpen: boolean) => void;
 }) {
   const inputId = useId();
   const hasSketch = /\bsketch\b/i.test(question.prompt);
@@ -68,7 +70,29 @@ export function BankQuestion({
   const values = decodeParts(value);
   const handles = useRef<Record<string, RichMathAnswerHandle | null>>({});
   const [focused, setFocused] = useState(parts[0].key);
-  const [open, setOpen] = useState(false);
+  const [isCalculatorPinnedOpen, setIsCalculatorPinnedOpen] = useState(false);
+  const [isCalculatorHoverOpen, setIsCalculatorHoverOpen] = useState(false);
+  const lastOpenRequestRef = useRef(0);
+  const isCalculatorOpen = isCalculatorPinnedOpen || isCalculatorHoverOpen;
+  const closeCalculator = useCallback(() => {
+    setIsCalculatorPinnedOpen(false);
+    setIsCalculatorHoverOpen(false);
+  }, [setIsCalculatorHoverOpen, setIsCalculatorPinnedOpen]);
+  const openCalculator = useCallback(() => {
+    lastOpenRequestRef.current = Date.now();
+    setIsCalculatorPinnedOpen(true);
+  }, [setIsCalculatorPinnedOpen]);
+
+  useEffect(() => {
+    onMathsSidebarOpenChange?.(isCalculatorOpen);
+  }, [isCalculatorOpen, onMathsSidebarOpenChange]);
+
+  useEffect(
+    () => () => {
+      onMathsSidebarOpenChange?.(false);
+    },
+    [onMathsSidebarOpenChange],
+  );
   return (
     <section className="min-w-0 py-7 text-base leading-8 text-zinc-800">
       <div className="flex justify-between gap-4">
@@ -78,9 +102,17 @@ export function BankQuestion({
           {!readOnly && (
             <button
               type="button"
-              aria-expanded={open}
-              onClick={() => setOpen(!open)}
-              className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium"
+              data-maths-input-trigger
+              aria-expanded={isCalculatorOpen}
+              onClick={() =>
+                isCalculatorOpen ? closeCalculator() : openCalculator()
+              }
+              className={[
+                "rounded-full border px-3 py-1 text-xs font-medium transition",
+                isCalculatorOpen
+                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  : "border-zinc-200 text-zinc-700 hover:bg-zinc-50",
+              ].join(" ")}
             >
               Calculator
             </button>
@@ -125,6 +157,7 @@ export function BankQuestion({
               value={values[part.key] ?? ""}
               onFocus={() => {
                 setFocused(part.key);
+                openCalculator();
               }}
               onChange={(next) =>
                 onChange(
@@ -154,13 +187,20 @@ export function BankQuestion({
       )}
       {!readOnly && (
         <CalculatorDrawer
-          isOpen={open}
+          isOpen={isCalculatorOpen}
           questionNumber={questionNumber}
-          onClose={() => setOpen(false)}
-          onHoverChange={() => {}}
+          onClose={closeCalculator}
+          onHoverChange={(isHovered) => {
+            setIsCalculatorHoverOpen(isHovered);
+            if (
+              !isHovered &&
+              Date.now() - lastOpenRequestRef.current > 220
+            ) {
+              setIsCalculatorPinnedOpen(false);
+            }
+          }}
           onInsertLatex={(latex) => {
             handles.current[focused]?.insertMath(latex);
-            setOpen(false);
           }}
         />
       )}

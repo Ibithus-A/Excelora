@@ -492,10 +492,22 @@ export function CalculatorDrawer({
       onMouseEnter={openFromHover}
       onMouseLeave={closeFromHover}
     >
-      <div
-        className="pointer-events-auto absolute inset-y-0 right-0 hidden w-10 md:block"
-        aria-hidden="true"
-      />
+      <button
+        type="button"
+        data-maths-input-trigger
+        aria-label="Open maths input"
+        tabIndex={isOpen ? -1 : 0}
+        onClick={() => onHoverChange(true)}
+        onFocus={() => onHoverChange(true)}
+        className={[
+          "pointer-events-auto absolute right-0 top-1/2 hidden h-32 w-9 -translate-y-1/2 items-center justify-center rounded-l-xl border border-r-0 border-zinc-200 bg-white/95 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 shadow-[-8px_0_24px_rgba(15,23,42,0.08)] backdrop-blur transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:flex",
+          isOpen
+            ? "pointer-events-none translate-x-full opacity-0"
+            : "translate-x-0 opacity-100 hover:w-10 hover:text-zinc-900",
+        ].join(" ")}
+      >
+        <span className="[writing-mode:vertical-rl]">Maths</span>
+      </button>
       <button
         type="button"
         tabIndex={isOpen ? 0 : -1}

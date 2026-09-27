@@ -105,7 +105,10 @@ function Blocks({
         switch (block.type) {
           case "heading":
             return (
-              <h2 key={i} className="mt-10 mb-4 text-2xl font-semibold">
+              <h2
+                key={i}
+                className="mt-12 mb-5 text-2xl font-semibold tracking-[-0.025em] text-zinc-950"
+              >
                 {block.title}
               </h2>
             );
@@ -142,22 +145,25 @@ function Blocks({
             );
           case "table":
             return (
-              <div key={i} className="max-w-full overflow-x-auto">
-                <table className="w-full border-collapse text-left">
+              <div
+                key={i}
+                className="max-w-full overflow-x-auto rounded-xl border border-zinc-200"
+              >
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr>
+                    <tr className="bg-zinc-50/80 text-zinc-700">
                       {block.headers.map((cell, j) => (
-                        <th key={j} className="border p-3">
+                        <th key={j} className="border-b border-r border-zinc-200 p-3 last:border-r-0">
                           <Inline content={cell} />
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="[&>tr:first-child>td]:border-t-0">
                     {block.rows.map((row, j) => (
                       <tr key={j}>
                         {row.map((cell, k) => (
-                          <td key={k} className="border p-3">
+                          <td key={k} className="border-r border-t border-zinc-200 p-3 last:border-r-0">
                             <Inline content={cell} />
                           </td>
                         ))}
@@ -224,7 +230,7 @@ function Blocks({
                 key={i}
                 className={
                   block.type === "callout"
-                    ? "rounded-xl border bg-zinc-50 p-4"
+                    ? "rounded-xl border border-zinc-200 bg-zinc-50/70 p-4 sm:p-6"
                     : "my-4 space-y-4"
                 }
               >
@@ -246,9 +252,15 @@ export function StructuredNativeLesson({ lesson }: { lesson: NativeLesson }) {
   return (
     <NotionLessonRenderer
       definition={lesson}
-      introduction={intro.length ? <Blocks blocks={intro} /> : null}
+      introduction={
+        intro.length ? (
+          <div className="[&>p]:my-0">
+            <Blocks blocks={intro} />
+          </div>
+        ) : null
+      }
     >
-      <div className="min-w-0">
+      <div className="min-w-0 text-[15px] leading-7 text-zinc-700 sm:text-base sm:leading-8">
         <TheoryBlocks blocks={body} />
       </div>
     </NotionLessonRenderer>

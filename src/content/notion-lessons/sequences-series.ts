@@ -430,6 +430,44 @@ export const SEQUENCES_SERIES_LESSONS = [
         "When solving modelling problems, identify whether the situation involves constant difference (arithmetic) or constant ratio (geometric), set up the appropriate formulae, and use logarithms when needed to find $n$.",
       ),
     ]),
+    {
+      type: "diagram",
+      description:
+        "A depreciation model V=20000(0.85)^n, showing the initial value, repeated percentage decay, and the first whole year below £5000.",
+      drawing: {
+        type: "teaching-plot",
+        xRange: [0, 12],
+        yRange: [0, 22000],
+        xLabel: "n",
+        yLabel: "V",
+        curves: [
+          {
+            kind: "exp",
+            amplitude: 20000,
+            frequency: Math.log(0.85),
+            label: raw`V=20000(0.85)^n`,
+          },
+          {
+            kind: "polynomial",
+            coefficients: [5000],
+            label: raw`V=5000`,
+            dashed: true,
+          },
+        ],
+        xTicks: [
+          { value: 5, label: "5" },
+          { value: 9, label: "9" },
+        ],
+        yTicks: [
+          { value: 5000, label: "5000" },
+          { value: 20000, label: "20000" },
+        ],
+        points: [
+          { x: 0, y: 20000, label: raw`V_0=20000`, dx: 48, dy: -8 },
+          { x: 9, y: 20000 * 0.85 ** 9, label: raw`n=9`, dy: 5 },
+        ],
+      },
+    },
     group("Worked Examples", [
       p(
         "Jamie takes out an interest-free loan of £8100. Jamie repays £400 in month 1, £390 in month 2, £380 in month 3, and so on. Show that Jamie repays £290 in month 12. After Jamie’s $N$th payment, the loan is completely paid back. Show that $N^2-81N+1620=0$ and find $N$.",

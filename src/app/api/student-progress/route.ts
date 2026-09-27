@@ -2,8 +2,13 @@ import { getStructuredLesson } from "@/lib/lessons/catalogue";
 import { hasChapterAccess } from "@/lib/access";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getViewerProfile } from "@/lib/supabase/profiles";
+import {
+  getStudentProfileById,
+  getViewerProfile,
+} from "@/lib/supabase/profiles";
 export const dynamic = "force-dynamic";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 async function viewer() {
   const client = await createClient();
   const {
@@ -17,12 +22,21 @@ export async function GET(request: Request) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   const url = new URL(request.url),
     student = url.searchParams.get("studentId") || profile.id;
+  if (!UUID_PATTERN.test(student))
+    return Response.json({ error: "Invalid student id." }, { status: 400 });
   if (profile.role !== "tutor" && student !== profile.id)
     return Response.json({ error: "Forbidden." }, { status: 403 });
+  if (profile.role === "tutor") {
+    const target = await getStudentProfileById(await createClient(), student);
+    if (!target)
+      return Response.json({ error: "Student not found." }, { status: 404 });
+  }
   const admin = createAdminClient();
   try {
     const attemptId = url.searchParams.get("attemptId");
     if (attemptId) {
+      if (!UUID_PATTERN.test(attemptId))
+        return Response.json({ error: "Invalid attempt id." }, { status: 400 });
       const { data: attempt, error } = await admin
         .from("student_assessment_attempts")
         .select("id,status")
@@ -38,25 +52,43 @@ export async function GET(request: Request) {
       const { data: rows, error: rowError } = await admin
         .from("student_assessment_attempt_questions")
         .select(
-          "question_id,question_order,student_answer,is_correct,marks_awarded,assessment_question_bank(prompt,subtopic,marks)",
+          "question_id,question_order,student_answer,is_correct,marks_awarded,assessment_question_bank(prompt,subtopic,marks,answer,worked_solution)",
         )
         .eq("attempt_id", attemptId)
         .order("question_order");
       if (rowError) throw rowError;
+      const canRevealSolutions =
+        profile.role === "tutor" || attempt.status === "submitted";
       return Response.json({
-        answers: (rows ?? []).map((row) => ({
-          ...row,
-          response:
-            typeof row.student_answer === "string"
-              ? row.student_answer
-              : (row.student_answer?.value ?? ""),
-          checked_at: attempt.status === "submitted" ? "submitted" : null,
-          requires_review: row.is_correct === null,
-        })),
+        answers: (rows ?? []).map((row) => {
+          const bank = Array.isArray(row.assessment_question_bank)
+            ? row.assessment_question_bank[0]
+            : row.assessment_question_bank;
+          return {
+            ...row,
+            assessment_question_bank: {
+              prompt: bank?.prompt ?? "",
+              subtopic: bank?.subtopic ?? "",
+              marks: bank?.marks ?? 0,
+              answer: canRevealSolutions ? bank?.answer : undefined,
+              worked_solution: canRevealSolutions
+                ? bank?.worked_solution
+                : undefined,
+            },
+            response:
+              typeof row.student_answer === "string"
+                ? row.student_answer
+                : (row.student_answer?.value ?? ""),
+            checked_at: attempt.status === "submitted" ? "submitted" : null,
+            requires_review: row.is_correct === null,
+          };
+        }),
       });
     }
     const sessionId = url.searchParams.get("sessionId");
     if (sessionId) {
+      if (!UUID_PATTERN.test(sessionId))
+        return Response.json({ error: "Invalid session id." }, { status: 400 });
       const { data: session, error } = await admin
         .from("practice_sessions")
         .select("id")
@@ -69,12 +101,32 @@ export async function GET(request: Request) {
       const { data: answers, error: answerError } = await admin
         .from("practice_session_questions")
         .select(
-          "question_id,question_order,response,checked_at,marks_awarded,requires_review,assessment_question_bank(prompt,subtopic,marks)",
+          "question_id,question_order,response,checked_at,marks_awarded,requires_review,assessment_question_bank(prompt,subtopic,marks,answer,worked_solution)",
         )
         .eq("session_id", sessionId)
         .order("question_order");
       if (answerError) throw answerError;
-      return Response.json({ answers });
+      return Response.json({
+        answers: (answers ?? []).map((row) => {
+          const bank = Array.isArray(row.assessment_question_bank)
+            ? row.assessment_question_bank[0]
+            : row.assessment_question_bank;
+          const canRevealSolution =
+            profile.role === "tutor" || Boolean(row.checked_at);
+          return {
+            ...row,
+            assessment_question_bank: {
+              prompt: bank?.prompt ?? "",
+              subtopic: bank?.subtopic ?? "",
+              marks: bank?.marks ?? 0,
+              answer: canRevealSolution ? bank?.answer : undefined,
+              worked_solution: canRevealSolution
+                ? bank?.worked_solution
+                : undefined,
+            },
+          };
+        }),
+      });
     }
     const results = await Promise.all([
       (profile.role === "tutor"

@@ -2,7 +2,22 @@
 import { useEffect, useRef, useState } from "react";
 import type { UserAccessProfile } from "@/types/auth";
 import { TutorAssessmentAccess } from "./tutor-assessment-access";
-import { BankQuestion } from "./bank-question";
+import { BankMath, BankQuestion } from "./bank-question";
+
+function titleCase(value: string) {
+  return value
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
+function assessmentTitle(value: string) {
+  return value
+    .split(":")
+    .map(titleCase)
+    .join(" · ");
+}
 type Activity = {
   student_id: string;
   page_title: string;
@@ -31,11 +46,40 @@ type Attempt = {
 };
 type Answer = {
   question_id: string;
+  question_order?: number;
   response: string;
   checked_at: string | null;
   requires_review: boolean;
-  assessment_question_bank: { prompt: string; subtopic: string; marks: number };
+  marks_awarded?: number | null;
+  is_correct?: boolean | null;
+  assessment_question_bank: {
+    prompt: string;
+    subtopic: string;
+    marks: number;
+    answer?: string;
+    worked_solution?: string;
+  };
 };
+
+function answerState(answer: Answer) {
+  if (answer.requires_review) return "review" as const;
+  if (!answer.checked_at) return "draft" as const;
+  const marks = answer.marks_awarded ?? 0;
+  if (answer.is_correct === true || marks >= answer.assessment_question_bank.marks)
+    return "correct" as const;
+  if (marks > 0) return "partial" as const;
+  return "incorrect" as const;
+}
+
+function answerStateClass(state: ReturnType<typeof answerState>) {
+  if (state === "correct")
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (state === "partial" || state === "review")
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  if (state === "incorrect")
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  return "border-zinc-200 bg-zinc-100 text-zinc-600";
+}
 export function StudentActivityPanel({
   students,
   studentId,
@@ -54,7 +98,10 @@ export function StudentActivityPanel({
     [error, setError] = useState(""),
     [retry, setRetry] = useState(0);
   const [answers, setAnswers] = useState<Answer[] | null>(null),
-    [answerError, setAnswerError] = useState("");
+    [answerError, setAnswerError] = useState(""),
+    [reviewLoading, setReviewLoading] = useState(false),
+    [reviewIndex, setReviewIndex] = useState(0),
+    [reviewTitle, setReviewTitle] = useState("");
   const reviewVersion = useRef(0);
   useEffect(() => {
     if (!studentId) return;
@@ -84,6 +131,9 @@ export function StudentActivityPanel({
     }
     setData(null);
     setAnswers(null);
+    setReviewLoading(false);
+    setReviewIndex(0);
+    setReviewTitle("");
     setAnswerError("");
     reviewVersion.current += 1;
     void refresh();
@@ -98,9 +148,16 @@ export function StudentActivityPanel({
       document.removeEventListener("visibilitychange", visible);
     };
   }, [studentId, retry]);
-  const review = async (id: string, kind = "sessionId") => {
+  const review = async (
+    id: string,
+    title: string,
+    kind = "sessionId",
+  ) => {
     const version = ++reviewVersion.current;
     setAnswers(null);
+    setReviewLoading(true);
+    setReviewIndex(0);
+    setReviewTitle(title);
     setAnswerError("");
     try {
       const r = await fetch(
@@ -115,33 +172,51 @@ export function StudentActivityPanel({
       setAnswerError(
         e instanceof Error ? e.message : "Unable to load answers.",
       );
+    } finally {
+      if (version === reviewVersion.current) setReviewLoading(false);
     }
   };
+  const selectedStudent = students.find((student) => student.id === studentId);
+  const selectedActivity = data?.activity.find(
+    (activity) => activity.student_id === studentId,
+  );
+  const reviewedAnswer = answers?.[reviewIndex];
+  const reviewedState = reviewedAnswer ? answerState(reviewedAnswer) : null;
   return (
-    <section className="mb-6 rounded-2xl border border-zinc-200 bg-white p-4 md:p-6">
+    <section className="mb-6 overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.07)]">
+      <div className="border-b border-zinc-200/80 bg-[linear-gradient(135deg,rgba(244,244,245,0.96),rgba(255,255,255,1))] p-4 md:p-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">
-            Student activity
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-700 shadow-sm" aria-hidden="true">
+            SA
+          </span>
+          <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">Tutor Workspace</p>
+          <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-zinc-950">
+            Student Activity
           </h2>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Recent workspace activity and saved work. Updates every 30 seconds
-            while this dashboard is open.
+            Live learning signals and saved work, refreshed every 30 seconds.
           </p>
+          </div>
         </div>
         <button
+          type="button"
           onClick={() => setRetry((n) => n + 1)}
-          className="rounded-full border px-3 py-1.5 text-xs"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
         >
+          <span aria-hidden="true">↻</span>
           Refresh
         </button>
       </div>
+      </div>
+      <div className="p-4 md:p-6">
       {!students.length ? (
         <p className="mt-5 text-sm text-zinc-500">
           Your students will appear here after joining.
         </p>
       ) : (
-        <div className="mt-5 max-h-64 divide-y divide-zinc-100 overflow-y-auto">
+        <div className="grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">
           {students.map((student) => {
             const activity = data?.activity.find(
               (a) => a.student_id === student.id,
@@ -151,25 +226,35 @@ export function StudentActivityPanel({
                 key={student.id}
                 onClick={() => onSelectStudent?.(student.id)}
                 aria-pressed={studentId === student.id}
-                className={`flex w-full items-center justify-between gap-4 rounded-lg p-3 text-left text-sm ${studentId === student.id ? "bg-zinc-50" : ""}`}
+                className={[
+                  "flex w-full items-center gap-3 rounded-2xl border p-3 text-left text-sm transition",
+                  studentId === student.id
+                    ? "border-zinc-300 bg-zinc-50 shadow-sm"
+                    : "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/70",
+                ].join(" ")}
               >
-                <span className="font-medium">{student.name}</span>
-                <span className="text-right text-xs text-zinc-500">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold uppercase text-white">
+                  {student.name.slice(0, 2)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-zinc-900">{student.name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-zinc-500">
                   {activity ? (
                     <>
-                      {activity.mode === "video" ? "Video page" : activity.mode}{" "}
+                      {activity.mode === "video" ? "Video Page" : titleCase(activity.mode)}{" "}
                       · {activity.page_title}
-                      <span className="mt-1 block">
-                        Last seen{" "}
-                        {new Date(activity.last_seen_at).toLocaleString()}
-                      </span>
                     </>
                   ) : data ? (
                     "No activity recorded yet"
                   ) : (
                     "Loading…"
                   )}
+                  </span>
                 </span>
+                <span className={[
+                  "h-2.5 w-2.5 shrink-0 rounded-full",
+                  activity ? "bg-emerald-500" : "bg-zinc-200",
+                ].join(" ")} aria-label={activity ? "Activity recorded" : "No activity recorded"} />
               </button>
             );
           })}
@@ -181,10 +266,16 @@ export function StudentActivityPanel({
         </p>
       )}
       {data && (
-        <div className="mt-6 grid gap-6 border-t border-zinc-200 pt-6 lg:grid-cols-2">
-          <section>
-            <h3 className="text-sm font-semibold">
-              Recent practice · {students.find((s) => s.id === studentId)?.name}
+        <>
+        <div className="mt-6 grid grid-cols-3 divide-x divide-zinc-200 rounded-2xl border border-zinc-200 bg-zinc-50/70 py-4 text-center">
+          <div><p className="text-xl font-semibold text-zinc-950">{data.practice.length}</p><p className="mt-1 text-[11px] text-zinc-500">Practice Runs</p></div>
+          <div><p className="text-xl font-semibold text-zinc-950">{data.assessments.length}</p><p className="mt-1 text-[11px] text-zinc-500">Assessments</p></div>
+          <div><p className="truncate px-2 text-sm font-semibold text-zinc-950">{selectedActivity ? titleCase(selectedActivity.mode) : "—"}</p><p className="mt-1 text-[11px] text-zinc-500">Latest Mode</p></div>
+        </div>
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <section className="rounded-2xl border border-zinc-200 p-4">
+            <h3 className="text-sm font-semibold text-zinc-950">
+              Recent Practice · {selectedStudent?.name}
             </h3>
             {!data.practice.length && (
               <p className="mt-3 text-sm text-zinc-500">
@@ -194,8 +285,13 @@ export function StudentActivityPanel({
             {data.practice.map((p) => (
               <button
                 key={p.id}
-                onClick={() => void review(p.id)}
-                className="mt-3 block w-full rounded-xl border border-zinc-200 p-3 text-left text-sm"
+                onClick={() =>
+                  void review(
+                    p.id,
+                    p.subtopic || titleCase(p.course_topic_key),
+                  )
+                }
+                className="group mt-3 block w-full rounded-xl border border-zinc-200 bg-white p-3 text-left text-sm transition hover:border-zinc-300 hover:bg-zinc-50/70"
               >
                 <span className="font-medium">
                   {p.subtopic || p.course_topic_key}
@@ -214,14 +310,14 @@ export function StudentActivityPanel({
                   }{" "}
                   awaiting review
                 </span>
-                <span className="mt-2 block text-xs underline">
-                  View saved responses
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-zinc-700">
+                  Review Marked Questions <span className="transition group-hover:translate-x-0.5">→</span>
                 </span>
               </button>
             ))}
           </section>
-          <section>
-            <h3 className="text-sm font-semibold">Recent assessments</h3>
+          <section className="rounded-2xl border border-zinc-200 p-4">
+            <h3 className="text-sm font-semibold text-zinc-950">Recent Assessments</h3>
             {!data.assessments.length && (
               <p className="mt-3 text-sm text-zinc-500">
                 No assessments recorded yet.
@@ -229,12 +325,18 @@ export function StudentActivityPanel({
             )}
             {data.assessments.map((a) => (
               <button
-                onClick={() => void review(a.id, "attemptId")}
+                onClick={() =>
+                  void review(
+                    a.id,
+                    assessmentTitle(a.assessment_key),
+                    "attemptId",
+                  )
+                }
                 key={a.id}
-                className="mt-3 block w-full rounded-xl border border-zinc-200 p-3 text-left text-sm"
+                className="group mt-3 block w-full rounded-xl border border-zinc-200 bg-white p-3 text-left text-sm transition hover:border-zinc-300 hover:bg-zinc-50/70"
               >
                 <p className="font-medium">
-                  {a.assessment_key.replace(/[-_]/g, " ")}
+                  {assessmentTitle(a.assessment_key)}
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">
                   {a.status === "active"
@@ -244,59 +346,155 @@ export function StudentActivityPanel({
                 <p className="mt-1 text-xs text-zinc-400">
                   {new Date(a.started_at).toLocaleString()}
                 </p>
-                <span className="mt-2 block text-xs underline">
-                  View saved responses
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-zinc-700">
+                  Review Marked Questions <span className="transition group-hover:translate-x-0.5">→</span>
                 </span>
               </button>
             ))}
           </section>
         </div>
+        </>
       )}
       {answerError && (
         <p role="alert" className="mt-4 text-sm text-rose-700">
           {answerError}
         </p>
       )}
-      {answers && (
-        <section className="mt-6 border-t pt-5">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold">Saved responses</h3>
+      {reviewLoading && (
+        <div
+          role="status"
+          className="mt-6 flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-5 text-sm text-zinc-600"
+        >
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" aria-hidden="true" />
+          Loading Marked Questions…
+        </div>
+      )}
+      {answers && reviewedAnswer && (
+        <section className="mt-6 overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-4 border-b border-zinc-200 bg-zinc-50/70 p-4 sm:p-5">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Marked Review</p>
+              <h3 className="mt-1 font-semibold text-zinc-950">{reviewTitle}</h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                Question {reviewIndex + 1} of {answers.length} · {selectedStudent?.name}
+              </p>
+            </div>
             <button
-              className="text-sm underline"
+              type="button"
+              className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50"
               onClick={() => {
                 reviewVersion.current += 1;
                 setAnswers(null);
+                setReviewTitle("");
               }}
             >
               Close
             </button>
           </div>
-          {answers.map((q) => (
-            <div key={q.question_id}>
+          <div className="p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.13em] text-zinc-400">
+                Question {reviewIndex + 1}
+              </p>
+              <span
+                className={[
+                  "rounded-full border px-3 py-1 text-xs font-semibold",
+                  reviewedState
+                    ? answerStateClass(reviewedState)
+                    : "border-zinc-200 bg-zinc-100 text-zinc-600",
+                ].join(" ")}
+              >
+                {reviewedState === "review"
+                  ? "Awaiting Tutor Review"
+                  : reviewedState === "draft"
+                    ? "Draft · Not Checked"
+                    : reviewedAnswer.checked_at
+                    ? `${reviewedAnswer.marks_awarded ?? 0}/${reviewedAnswer.assessment_question_bank.marks} Marks`
+                    : "Not Checked"}
+              </span>
+            </div>
+            <div key={reviewedAnswer.question_id}>
               <BankQuestion
-                question={{ id: q.question_id, ...q.assessment_question_bank }}
-                value={q.response}
+                question={{
+                  id: reviewedAnswer.question_id,
+                  ...reviewedAnswer.assessment_question_bank,
+                }}
+                questionNumber={reviewIndex + 1}
+                value={reviewedAnswer.response}
                 readOnly
                 onChange={() => {}}
               />
-              <p className="mb-5 text-xs text-zinc-500">
-                {q.checked_at
-                  ? q.requires_review
-                    ? "Awaiting tutor review"
-                    : "Checked"
-                  : "Draft · not checked"}
-              </p>
+              {(reviewedAnswer.assessment_question_bank.answer ||
+                reviewedAnswer.assessment_question_bank.worked_solution) && (
+                <div className="space-y-4 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 text-sm leading-7 text-zinc-700">
+                  {reviewedAnswer.assessment_question_bank.answer && (
+                    <div>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">Expected Answer</p>
+                      <BankMath value={reviewedAnswer.assessment_question_bank.answer} />
+                    </div>
+                  )}
+                  {reviewedAnswer.assessment_question_bank.worked_solution && (
+                    <div className="border-t border-zinc-200 pt-4">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">Worked Solution</p>
+                      <BankMath value={reviewedAnswer.assessment_question_bank.worked_solution} />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          ))}
+            <div className="mt-5 border-t border-zinc-200 pt-5">
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {answers.map((answer, answerIndex) => (
+                  <button
+                    key={answer.question_id}
+                    type="button"
+                    aria-label={`Review question ${answerIndex + 1}`}
+                    onClick={() => setReviewIndex(answerIndex)}
+                    className={[
+                      "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-medium transition",
+                      answerIndex === reviewIndex
+                        ? "border-zinc-900 bg-zinc-900 text-white"
+                        : answerStateClass(answerState(answer)),
+                    ].join(" ")}
+                  >
+                    {answerIndex + 1}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-5 flex justify-between gap-3">
+                <button
+                  type="button"
+                  disabled={reviewIndex === 0}
+                  onClick={() => setReviewIndex((index) => Math.max(0, index - 1))}
+                  className="rounded-full border border-zinc-200 bg-white px-5 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={reviewIndex === answers.length - 1}
+                  onClick={() =>
+                    setReviewIndex((index) =>
+                      Math.min(answers.length - 1, index + 1),
+                    )
+                  }
+                  className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-40"
+                >
+                  Next Question
+                </button>
+              </div>
+            </div>
+          </div>
         </section>
       )}
       <TutorAssessmentAccess studentId={studentId} />
       {data && (
-        <p className="mt-5 text-xs text-zinc-400">
+        <p className="mt-5 border-t border-zinc-100 pt-4 text-xs text-zinc-400">
           Last refreshed {new Date(data.asOf).toLocaleTimeString()}. An open
           page does not confirm that a student is actively studying.
         </p>
       )}
+      </div>
     </section>
   );
 }

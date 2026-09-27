@@ -1,4 +1,5 @@
 import { nativeLesson, transcript, p, group, table } from "./authoring.ts";
+import { addTrigonometryVisuals } from "./visual-learning-diagrams.ts";
 const raw = String.raw;
 const lesson = (title: string, source: string) =>
   nativeLesson(
@@ -551,3 +552,4 @@ Minimum: $R_{\min}=A-500=500$ rabbits.
 `,
   ),
 ];
+addTrigonometryVisuals(PURE_TRIGONOMETRY_LESSONS);

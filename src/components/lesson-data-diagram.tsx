@@ -6,6 +6,7 @@ import { BoxPlotLessonDiagram } from "./box-plot-lesson-diagram";
 import { VennLessonDiagram } from "./venn-lesson-diagram";
 import { ProbabilityTreeDiagram } from "./probability-tree-diagram";
 import { MotionLessonDiagram } from "./motion-lesson-diagram";
+import { TeachingPlotDiagram, UnitCircleDiagram } from "./teaching-plot-diagram";
 import { polynomialBezier } from "@/lib/lessons/geometry";
 import { useId } from "react";
 import {
@@ -29,6 +30,10 @@ export function LessonDataDiagram({
     return <SceneLessonDiagram drawing={drawing} description={description} />;
   if (drawing.type === "function-curves")
     return <FunctionCurvesDiagram drawing={drawing} description={description} />;
+  if (drawing.type === "teaching-plot")
+    return <TeachingPlotDiagram drawing={drawing} description={description} />;
+  if (drawing.type === "unit-circle")
+    return <UnitCircleDiagram drawing={drawing} description={description} />;
   if (drawing.type === "scatter")
     return <ScatterLessonDiagram drawing={drawing} description={description} />;
   if (drawing.type === "box-plot")
@@ -117,7 +122,7 @@ export function LessonDataDiagram({
               key={i}
               x={sx(label.x) + label.dx}
               y={sy(label.y) + label.dy}
-              width={58}
+              width={label.width ?? 58}
             >
               {label.text}
             </NativeDiagramMathLabel>

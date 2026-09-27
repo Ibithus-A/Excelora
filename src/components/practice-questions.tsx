@@ -8,6 +8,19 @@ import {
   assessmentKeyFor,
   getCourseBankMapping,
 } from "@/lib/question-bank/course-mapping";
+import type { PracticeDifficulty } from "@/lib/question-bank/practice-selector";
+
+const PRACTICE_DIFFICULTIES: PracticeDifficulty[] = [
+  "balanced",
+  "Foundation",
+  "Standard",
+  "Stretch",
+];
+const PRACTICE_LENGTHS = [5, 10, 15, 20] as const;
+type TopicOption = {
+  title: string;
+  counts: Record<PracticeDifficulty, number>;
+};
 type PracticeQuestion = {
   id: string;
   question_id: string;
@@ -42,16 +55,25 @@ export function PracticeQuestions({
   subjectTitle,
   chapterTitle,
   initialSubtopic = "",
+  onMathsSidebarOpenChange,
 }: {
   subjectTitle: string;
   chapterTitle: string;
   initialSubtopic?: string;
+  onMathsSidebarOpenChange?: (isOpen: boolean) => void;
 }) {
   const mapping = getCourseBankMapping(subjectTitle, chapterTitle),
     assessmentKey = mapping ? assessmentKeyFor(mapping) : "";
-  const [topics, setTopics] = useState<string[]>([]),
+  const [topicOptions, setTopicOptions] = useState<TopicOption[]>([]),
     [history, setHistory] = useState<History[]>([]),
     [subtopic, setSubtopic] = useState(initialSubtopic);
+  const [difficultyIndex, setDifficultyIndex] = useState(0);
+  const [lengthIndex, setLengthIndex] = useState(0);
+  const [isScopePickerOpen, setIsScopePickerOpen] = useState(false);
+  const scopePickerRef = useRef<HTMLDivElement>(null);
+  const difficulty = PRACTICE_DIFFICULTIES[difficultyIndex];
+  const questionCount = PRACTICE_LENGTHS[lengthIndex];
+  const topics = topicOptions.map((topic) => topic.title);
   const [session, setSession] = useState<Session | null>(null),
     [index, setIndex] = useState(0),
     [response, setResponse] = useState("");
@@ -75,8 +97,9 @@ export function PracticeQuestions({
       );
       const data = await res.json();
       if (!res.ok) throw Error(data.error);
-      const titles = data.subtopics.map((t: { title: string }) => t.title);
-      setTopics(titles);
+      const options = data.subtopics as TopicOption[];
+      const titles = options.map((t) => t.title);
+      setTopicOptions(options);
       setHistory(data.history);
       setPreview(Boolean(data.preview));
       const scope = resolvePracticeSubtopic(initialSubtopic, titles);
@@ -92,6 +115,25 @@ export function PracticeQuestions({
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    if (!isScopePickerOpen) return;
+    const closeFromOutside = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !scopePickerRef.current?.contains(event.target)
+      )
+        setIsScopePickerOpen(false);
+    };
+    const closeFromKeyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsScopePickerOpen(false);
+    };
+    document.addEventListener("pointerdown", closeFromOutside);
+    document.addEventListener("keydown", closeFromKeyboard);
+    return () => {
+      document.removeEventListener("pointerdown", closeFromOutside);
+      document.removeEventListener("keydown", closeFromKeyboard);
+    };
+  }, [isScopePickerOpen]);
   // Warn before a full-page exit if the current response has not been persisted.
   useEffect(() => {
     if (!session || session.status !== "active") return;
@@ -115,6 +157,8 @@ export function PracticeQuestions({
         sessionId: session?.id,
         questionId: session?.questions[index]?.id,
         response,
+        difficulty,
+        count: questionCount,
       }),
     });
     const data = await res.json();
@@ -266,6 +310,16 @@ export function PracticeQuestions({
   const question = session?.questions[index],
     checked = session?.questions.filter((q) => q.checked_at).length ?? 0;
   const active = session?.status === "active";
+  const availableQuestions = topicOptions.reduce(
+    (total, topic) =>
+      total +
+      (!subtopic || topic.title === subtopic
+        ? Number(topic.counts?.[difficulty] ?? 0)
+        : 0),
+    0,
+  );
+  const selectionUnavailable =
+    !loading && availableQuestions < questionCount;
   return (
     <div className="mx-auto min-w-0 max-w-3xl">
       {error && (
@@ -283,7 +337,7 @@ export function PracticeQuestions({
       )}
       {!session ? (
         <>
-          <div className="mx-auto max-w-xl py-12 text-center">
+          <div className="mx-auto max-w-2xl py-8 text-center sm:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
               {preview ? "Tutor preview" : "Practice"}
             </p>
@@ -295,23 +349,138 @@ export function PracticeQuestions({
               stop whenever you’re ready.
             </p>
             {!initialSubtopic && topics.length > 1 && (
-              <label className="mx-auto mt-6 block max-w-sm text-left text-xs text-zinc-500">
-                Questions from
-                <select
-                  aria-label="Questions from"
-                  value={subtopic}
-                  onChange={(e) => setSubtopic(e.target.value)}
-                  className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-800"
-                >
-                  <option value="">Whole chapter</option>
-                  {topics.map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-              </label>
+              <div className="mt-7 rounded-[24px] border border-zinc-200 bg-zinc-50/70 p-4 text-left shadow-[0_16px_40px_rgba(15,23,42,0.05)] sm:p-5">
+                <div ref={scopePickerRef} className="relative">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                    Practice Scope
+                  </p>
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={isScopePickerOpen}
+                    onClick={() => setIsScopePickerOpen((open) => !open)}
+                    className={[
+                      "mt-3 flex w-full items-center justify-between gap-4 rounded-2xl border bg-white px-4 py-3 text-left text-sm font-medium text-zinc-800 shadow-sm outline-none transition duration-200",
+                      isScopePickerOpen
+                        ? "border-zinc-400 ring-4 ring-zinc-950/5"
+                        : "border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/70",
+                    ].join(" ")}
+                  >
+                    <span className="truncate">
+                      {subtopic || "Whole Chapter"}
+                    </span>
+                    <svg
+                      viewBox="0 0 20 20"
+                      aria-hidden="true"
+                      className={[
+                        "h-4 w-4 shrink-0 text-zinc-400 transition-transform duration-300",
+                        isScopePickerOpen ? "rotate-180" : "rotate-0",
+                      ].join(" ")}
+                    >
+                      <path d="m5.5 7.5 4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <div
+                    role="listbox"
+                    aria-label="Practice scope"
+                    aria-hidden={!isScopePickerOpen}
+                    inert={!isScopePickerOpen}
+                    className={[
+                      "absolute inset-x-0 top-full z-30 mt-2 max-h-72 origin-top overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_24px_60px_rgba(15,23,42,0.16)] transition-[opacity,transform,visibility] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                      isScopePickerOpen
+                        ? "visible translate-y-0 scale-100 opacity-100"
+                        : "invisible -translate-y-2 scale-[0.98] opacity-0",
+                    ].join(" ")}
+                  >
+                    {["", ...topics].map((topic) => {
+                      const selected = subtopic === topic;
+                      return (
+                        <button
+                          key={topic || "whole-chapter"}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          onClick={() => {
+                            setSubtopic(topic);
+                            setIsScopePickerOpen(false);
+                          }}
+                          className={[
+                            "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition",
+                            selected
+                              ? "bg-zinc-900 font-medium text-white"
+                              : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950",
+                          ].join(" ")}
+                        >
+                          <span>{topic || "Whole Chapter"}</span>
+                          {selected ? <span aria-hidden="true">✓</span> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-5 border-t border-zinc-200 pt-5 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="flex items-center justify-between gap-3 text-xs font-medium text-zinc-600">
+                      <span>Challenge</span>
+                      <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 font-semibold text-zinc-900">
+                        {difficulty === "balanced" ? "Mixed" : difficulty}
+                      </span>
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={PRACTICE_DIFFICULTIES.length - 1}
+                      step={1}
+                      value={difficultyIndex}
+                      onChange={(event) =>
+                        setDifficultyIndex(Number(event.target.value))
+                      }
+                      aria-label="Practice challenge"
+                      className="practice-range mt-4 w-full"
+                    />
+                    <span className="mt-2 flex justify-between text-[10px] font-medium text-zinc-400">
+                      <span>Mixed</span>
+                      <span>Stretch</span>
+                    </span>
+                  </label>
+
+                  <label className="block">
+                    <span className="flex items-center justify-between gap-3 text-xs font-medium text-zinc-600">
+                      <span>Starting set</span>
+                      <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 font-semibold text-zinc-900">
+                        {questionCount} questions
+                      </span>
+                    </span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={PRACTICE_LENGTHS.length - 1}
+                      step={1}
+                      value={lengthIndex}
+                      onChange={(event) =>
+                        setLengthIndex(Number(event.target.value))
+                      }
+                      aria-label="Starting question count"
+                      className="practice-range mt-4 w-full"
+                    />
+                    <span className="mt-2 flex justify-between text-[10px] font-medium text-zinc-400">
+                      <span>5</span>
+                      <span>20</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            )}
+            {selectionUnavailable && (
+              <p role="status" className="mx-auto mt-4 max-w-lg text-xs leading-5 text-amber-700">
+                This selection has {availableQuestions} available question{availableQuestions === 1 ? "" : "s"}. {initialSubtopic ? "More questions need to be added before this practice can start." : "Choose a smaller starting set or Mixed challenge."}
+              </p>
             )}
             <button
-              disabled={busy || loading || Boolean(error)}
+              disabled={
+                busy || loading || Boolean(error) || selectionUnavailable
+              }
               onClick={() => void start()}
               className="mt-7 rounded-full bg-zinc-950 px-6 py-3 text-sm font-semibold text-white disabled:opacity-40"
             >
@@ -392,6 +561,7 @@ export function PracticeQuestions({
             value={response}
             onChange={setResponse}
             readOnly={!active || Boolean(question.checked_at)}
+            onMathsSidebarOpenChange={onMathsSidebarOpenChange}
           />
           {active && !question.checked_at && (
             <div className="flex gap-3 pb-6">

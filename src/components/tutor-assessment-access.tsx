@@ -6,13 +6,13 @@ export function TutorAssessmentAccess({ studentId }: { studentId: string }) {
   const [key, setKey] = useState<string>(GENERATED_ASSESSMENT_CONFIGS[0].key);
   const access = useAssessmentAccess(studentId || null, "", key);
   return (
-    <section className="mt-6 border-t border-zinc-200 pt-6">
-      <h3 className="text-sm font-semibold">Assessment access</h3>
+    <section className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50/50 p-4">
+      <h3 className="text-sm font-semibold text-zinc-950">Assessment Access</h3>
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <label className="min-w-0 flex-1 text-xs text-zinc-500">
           Chapter
           <select
-            className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white p-3 text-sm text-zinc-800"
+            className="mt-2 block w-full rounded-xl border border-zinc-200 bg-white p-3 text-sm font-medium text-zinc-800 shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-950/5"
             value={key}
             onChange={(e) => setKey(e.target.value)}
           >
@@ -30,7 +30,7 @@ export function TutorAssessmentAccess({ studentId }: { studentId: string }) {
             (!access.isUnlocked && !access.prerequisite.isComplete)
           }
           onClick={() => void access.toggle()}
-          className="rounded-full bg-zinc-950 px-5 py-3 text-sm text-white disabled:opacity-40"
+          className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-40"
         >
           {access.isLoading
             ? "Loading…"

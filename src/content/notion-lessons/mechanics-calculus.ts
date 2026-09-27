@@ -153,6 +153,29 @@ export const MECHANICS_CALCULUS_LESSONS = [
       p("Given $s(t)$:"),
       m(raw`v(t)=\frac{ds}{dt},\qquad a(t)=\frac{d^2s}{dt^2}`),
       p("Stationary points of $s$: $v=0$. Inflection in $s$: $a=0$."),
+      graph(
+        "A derivative ladder from displacement s(t), through velocity v(t), to acceleration a(t), showing that each downward step differentiates with respect to time.",
+        {
+          type: "scene",
+          lines: [
+            { from: [125, 70], to: [200, 112], arrow: true },
+            { from: [200, 138], to: [275, 180], arrow: true },
+          ],
+          circles: [
+            { x: 105, y: 58, r: 35 },
+            { x: 200, y: 125, r: 35 },
+            { x: 295, y: 192, r: 35 },
+          ],
+          labels: [
+            { x: 105, y: 47, text: raw`s(t)`, width: 48 },
+            { x: 200, y: 114, text: raw`v(t)`, width: 48 },
+            { x: 295, y: 181, text: raw`a(t)`, width: 48 },
+            { x: 160, y: 35, text: raw`d/dt`, width: 48 },
+            { x: 280, y: 112, text: raw`d/dt`, width: 48 },
+          ],
+          caption: [raw`v=s'`, raw`a=v'=s''`],
+        },
+      ),
     ]),
     group("Worked Example 3", [
       p("A particle moves with displacement $s=t^3-9t^2+24t$ from origin."),

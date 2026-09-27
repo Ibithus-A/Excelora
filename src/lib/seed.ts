@@ -4,6 +4,7 @@ export const A_LEVEL_MATHS_TITLE = "A Level Maths";
 export const END_OF_TOPIC_ASSESSMENT_TITLE = "Assessment";
 export const PRACTICE_QUESTIONS_TITLE = "Practice Questions";
 export const INTERACTIVE_ASSESSMENT_TITLE = "Assessment — Interactive";
+export const SYNOPTIC_ASSESSMENT_TITLE = "Synoptic Assessment";
 const LEGACY_END_OF_TOPIC_ASSESSMENT_TITLE = "End Of Topic Assessment";
 const DEFAULT_PAGE_CONTENT = "";
 
@@ -553,7 +554,10 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
     for (const childId of next.nodes[subjectId].childrenIds) {
       const child = next.nodes[childId];
       if (!child) continue;
-      if (child.kind === "folder" && subjectChapterTitles.has(normalizeTitle(child.title))) {
+      if (
+        (child.kind === "folder" && subjectChapterTitles.has(normalizeTitle(child.title))) ||
+        (child.kind === "page" && normalizeTitle(child.title) === normalizeTitle(SYNOPTIC_ASSESSMENT_TITLE))
+      ) {
         continue;
       }
       collectSubtreeIds(next.nodes, child.id, staleChapterIds);
@@ -736,10 +740,16 @@ export function insertALevelMathsTree(state: FlowState): FlowState {
       );
     }
 
+    const synopticAssessmentId = next.nodes[subjectId].childrenIds.find((childId) => {
+      const child = next.nodes[childId];
+      return child?.kind === "page" && normalizeTitle(child.title) === normalizeTitle(SYNOPTIC_ASSESSMENT_TITLE);
+    });
+    if (!synopticAssessmentId) createPage(SYNOPTIC_ASSESSMENT_TITLE, subjectId);
+
     next.nodes[subjectId].childrenIds = orderChildrenByTitle(
       next.nodes,
       next.nodes[subjectId].childrenIds,
-      subject.chapters.map((chapter) => chapter.title),
+      [...subject.chapters.map((chapter) => chapter.title), SYNOPTIC_ASSESSMENT_TITLE],
     );
   }
 

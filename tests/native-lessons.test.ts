@@ -1,7 +1,7 @@
 import { polynomialBezier } from "../src/lib/lessons/geometry.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import katex from "katex";
 import { NATIVE_DUPLICATES } from "../src/content/notion-lessons/native-duplicates.ts";
 import { createSeedState, insertALevelMathsTree } from "../src/lib/seed.ts";
@@ -154,4 +154,73 @@ test("motion graphs preserve the distances and velocities stated in the worked e
       );
       if (i) assert.ok(x > graph.points[i - 1][0]);
     }
+});
+
+function lessonDiagrams(lesson: (typeof NATIVE_DUPLICATES)[number]) {
+  const drawings: NonNullable<Extract<LessonBlock, { type: "diagram" }>["drawing"]>[] = [];
+  const walk = (blocks: LessonBlock[]) => {
+    for (const block of blocks) {
+      if (block.type === "diagram" && block.drawing) drawings.push(block.drawing);
+      else if ("children" in block) walk(block.children);
+    }
+  };
+  walk(lesson.blocks);
+  return drawings;
+}
+
+test("visual-heavy maths chapters give every native lesson a learning diagram", () => {
+  const visualLessons = NATIVE_DUPLICATES.filter(
+    (lesson) =>
+      lesson.subjectTitle === "Mechanics" ||
+      /Chapter (5: Trigonometry|7: Differentiation|8: Integration)/.test(
+        lesson.chapterTitle,
+      ) ||
+      /Modelling/.test(lesson.sourceTitle),
+  );
+  assert.ok(visualLessons.length >= 40, "unexpectedly small visual lesson set");
+  for (const lesson of visualLessons)
+    assert.ok(
+      lessonDiagrams(lesson).length > 0,
+      `${lesson.sourceTitle} has no explanatory diagram`,
+    );
+});
+
+test("teaching plots use finite ordered ranges and valid annotations", () => {
+  const plots = NATIVE_DUPLICATES.flatMap(lessonDiagrams).filter(
+    (drawing) => drawing.type === "teaching-plot",
+  );
+  assert.ok(plots.length >= 10);
+  for (const plot of plots) {
+    assert.ok(plot.xRange.every(Number.isFinite));
+    assert.ok(plot.yRange.every(Number.isFinite));
+    assert.ok(plot.xRange[0] < plot.xRange[1]);
+    assert.ok(plot.yRange[0] < plot.yRange[1]);
+    assert.ok(plot.curves.length > 0);
+    for (const area of plot.shade ?? []) {
+      assert.ok(area.from >= plot.xRange[0] && area.to <= plot.xRange[1]);
+      assert.ok(area.from < area.to);
+      assert.ok(area.curve >= 0 && area.curve < plot.curves.length);
+      if (area.against !== undefined)
+        assert.ok(area.against >= 0 && area.against < plot.curves.length);
+    }
+    for (const point of plot.points ?? []) {
+      assert.ok(point.x >= plot.xRange[0] && point.x <= plot.xRange[1]);
+      assert.ok(point.y >= plot.yRange[0] && point.y <= plot.yRange[1]);
+    }
+  }
+});
+
+test("teaching diagram labels stay out of the plotted data field", () => {
+  const source = readFileSync(
+    new URL("../src/components/teaching-plot-diagram.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /NativeDiagramLegend/);
+  assert.match(source, /drawing\.points\?\.map\(\(point, index\)/);
+  assert.doesNotMatch(
+    source,
+    /NativeDiagramMathLabel[^>]*>[^{]*\{point\.label\}/,
+    "point labels must remain in the protected legend rather than over a curve",
+  );
+  assert.match(source, /const round = \(number: number\)/);
 });

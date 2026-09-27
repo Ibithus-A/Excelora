@@ -2,6 +2,7 @@ import { hasChapterAccess } from "@/lib/access";
 import { getAssessmentConfig } from "@/lib/assessment-config";
 import { markBankResponse } from "@/lib/question-bank/marking.server";
 import {
+  PRACTICE_COUNTS,
   selectPracticeQuestions,
   type PracticeDifficulty,
 } from "@/lib/question-bank/practice-selector";
@@ -118,6 +119,7 @@ export async function GET(request: Request) {
             questions.filter(
               (q) =>
                 q.subtopic === title &&
+                !q.exposedInNotes &&
                 (d === "balanced" || q.difficulty === d),
             ).length,
           ]),
@@ -207,6 +209,18 @@ export async function POST(request: Request) {
         );
     }
     if (body.action === "start") {
+      const count = Number(body.count ?? 5);
+      const difficulty = (body.difficulty ?? "balanced") as PracticeDifficulty;
+      if (
+        !(PRACTICE_COUNTS as readonly number[]).includes(count) ||
+        count < 5 ||
+        !["balanced", "Foundation", "Standard", "Stretch"].includes(
+          difficulty,
+        ) ||
+        typeof body.subtopic !== "string" ||
+        body.subtopic.length > 250
+      )
+        return fail("Invalid practice selection.", 400);
       const [questions, exposure] = await Promise.all([
         loadBank(config.bankCourseTopicKey),
         profile.role === "tutor"
@@ -220,8 +234,8 @@ export async function POST(request: Request) {
           exposure,
           courseTopicKey: config.bankCourseTopicKey,
           subtopic: body.subtopic,
-          count: 5,
-          difficulty: "balanced" as PracticeDifficulty,
+          count,
+          difficulty,
         });
       } catch (error) {
         return fail(
@@ -248,6 +262,7 @@ export async function POST(request: Request) {
         p_student: profile.id,
         p_topic: config.bankCourseTopicKey,
         p_subtopic: body.subtopic,
+        p_difficulty: difficulty,
         p_ids: selected.map((q) => q.id),
       });
       if (error) throw new Error(error.message);
@@ -275,7 +290,10 @@ export async function POST(request: Request) {
           (q) => !current.questions.some((old) => old.question_id === q.id),
         );
         const eligible = bank.filter(
-          (q) => !current.subtopic || q.subtopic === current.subtopic,
+          (q) =>
+            (!current.subtopic || q.subtopic === current.subtopic) &&
+            (current.difficulty === "balanced" ||
+              q.difficulty === current.difficulty),
         );
         if (!eligible.length)
           return Response.json({ session: current, exhausted: true });
@@ -285,7 +303,7 @@ export async function POST(request: Request) {
           courseTopicKey: config.bankCourseTopicKey,
           subtopic: current.subtopic,
           count: Math.min(5, eligible.length),
-          difficulty: "balanced",
+          difficulty: current.difficulty as PracticeDifficulty,
         });
         const { error } = await admin.rpc("extend_practice_run", {
           p_student: profile.id,

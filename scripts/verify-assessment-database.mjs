@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { selectAssessmentQuestions } from "../src/lib/question-bank/selector.ts";
+import { selectAssessmentQuestions, selectSynopticAssessmentQuestions } from "../src/lib/question-bank/selector.ts";
 import { selectPracticeQuestions } from "../src/lib/question-bank/practice-selector.ts";
 import {
   markBankResponse,
@@ -53,6 +53,7 @@ for (const file of [
   "20260921_practice_and_attempt_safety.sql",
   "20260924_chapter_wide_practice.sql",
   "20260924_continuous_practice_and_activity.sql",
+  "20260926_synoptic_assessments.sql",
 ])
   await db.exec(readFileSync(`supabase/migrations/${file}`, "utf8"));
 const student = "11111111-1111-4111-8111-111111111111",
@@ -73,8 +74,20 @@ for(const domain of ["Pure Mathematics","Mechanics","Statistics"]){
  assert.equal(Number((await db.query("select count(*) from practice_session_questions where session_id=$1",[mixed])).rows[0].count),20);
  await assert.rejects(()=>db.query("select start_practice($1,$2,$3,$4,$5)",[chapterStudent,topic,selected[0].subtopic,"balanced",selected.map(q=>q.id)]));
 }
+const synopticStudent="44444444-4444-4444-8444-444444444444";
+await db.query("insert into auth.users values ($1)",[synopticStudent]);
+for(const domain of ["Pure Mathematics","Mechanics","Statistics"]){
+ const topics=[...new Set(bank.filter(q=>q.domain===domain).map(q=>q.courseTopicKey))];
+ const selected=selectSynopticAssessmentQuestions({questions:bank,courseTopicKeys:topics,exposure:[],random:()=>0.5});
+ const attempt=(await db.query("select start_synoptic_assessment($1,$2,$3,$4,$5,$6) as id",[synopticStudent,`synoptic:${domain.toLowerCase().replace(/[^a-z0-9]+/g,"-")}`,domain,5400,topics,selected.map(q=>q.id)])).rows[0].id;
+ const persisted=(await db.query("select q.course_topic_key,q.difficulty from student_assessment_attempt_questions aq join assessment_question_bank q on q.id=aq.question_id where aq.attempt_id=$1",[attempt])).rows;
+ assert.equal(persisted.length,20);
+ assert.equal(new Set(persisted.map(q=>q.course_topic_key)).size,topics.length);
+ assert.deepEqual(Object.fromEntries(["Foundation","Standard","Stretch"].map(d=>[d,persisted.filter(q=>q.difficulty===d).length])),{Foundation:5,Standard:10,Stretch:5});
+ await db.query("update student_assessment_attempts set status='submitted',submitted_at=now() where id=$1",[attempt]);
+}
 // Start/continue/stop are persisted independently of legacy fixed sets.
-const continuousStudent="44444444-4444-4444-8444-444444444444";
+const continuousStudent="55555555-5555-4555-8555-555555555555";
 await db.query("insert into auth.users values($1)",[continuousStudent]);
 const pool=bank.filter(q=>q.courseTopicKey===bank[0].courseTopicKey&&!q.exposedInNotes).slice(0,12);
 const runId=(await db.query("select start_practice_run($1,$2,$3,$4) as id",[continuousStudent,pool[0].courseTopicKey,"",pool.slice(0,5).map(q=>q.id)])).rows[0].id;
@@ -462,6 +475,7 @@ report.checks = [
   "unchecked drafts persist without grading, enforce ownership and cannot replace checked responses",
   "complete practice and formal sessions across all three subjects",
   "4/7/4 and exact persisted question order",
+  "20-question 5/10/5 synoptic papers cover every chapter in all three subjects",
   "idempotent start and submission",
   "stale marking rolls back",
   "duplicate marking rejected",

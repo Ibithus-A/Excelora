@@ -1,4 +1,5 @@
 import { nativeLesson, transcript, group, table } from "./authoring.ts";
+import { addDifferentiationVisuals } from "./visual-learning-diagrams.ts";
 const raw = String.raw;
 const lesson = (title: string, source: string) =>
   nativeLesson(
@@ -337,3 +338,4 @@ PURE_DIFFERENTIATION_LESSONS[1].blocks.unshift(
     ),
   ]),
 );
+addDifferentiationVisuals(PURE_DIFFERENTIATION_LESSONS);

@@ -42,6 +42,10 @@ export function GeneratedChapterAssessment({
   onCompleted,
   onPractice,
   onReview,
+  onMathsSidebarOpenChange,
+  assessmentKeyOverride,
+  assessmentTitle = "Chapter assessment",
+  questionCount = 15,
 }: {
   subjectTitle: string;
   chapterTitle: string;
@@ -49,9 +53,13 @@ export function GeneratedChapterAssessment({
   onCompleted?: () => void;
   onPractice?: (subtopic: string) => void;
   onReview?: (attemptId?: string) => void;
+  onMathsSidebarOpenChange?: (isOpen: boolean) => void;
+  assessmentKeyOverride?: string;
+  assessmentTitle?: string;
+  questionCount?: number;
 }) {
   const mapping = getCourseBankMapping(subjectTitle, chapterTitle);
-  const assessmentKey = mapping ? assessmentKeyFor(mapping) : "";
+  const assessmentKey = assessmentKeyOverride ?? (mapping ? assessmentKeyFor(mapping) : "");
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [index, setIndex] = useState(0);
@@ -300,10 +308,13 @@ export function GeneratedChapterAssessment({
   if (!attempt)
     return (
       <div className="mx-auto max-w-xl py-12 text-center">
-        <h2 className="text-3xl font-semibold">Chapter assessment</h2>
+        <h2 className="text-3xl font-semibold">{assessmentTitle}</h2>
         <p className="mt-3 text-sm leading-7 text-zinc-600">
-          15 questions · 4 Foundation · 7 Standard · 4 Stretch. Your exact paper
-          is saved when you start.
+          {questionCount} questions · 90 minutes
+          {questionCount === 20
+            ? " · every subject topic represented"
+            : " · 4 Foundation · 7 Standard · 4 Stretch"}
+          . Your exact paper is saved when you start.
         </p>
         <button
           onClick={() => void act("start").catch((e) => setError(e.message))}
@@ -430,7 +441,7 @@ export function GeneratedChapterAssessment({
     );
   return (
     <div className="mx-auto min-w-0 max-w-3xl">
-      <QuestionSessionHeader number={index+1} total={15} detail={<>{answered} answered · {role === "tutor" ? "Untimed preview" : `${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")} remaining`}</>} />
+      <QuestionSessionHeader number={index+1} total={attempt.questions.length} detail={<>{answered} answered · {role === "tutor" ? "Untimed preview" : `${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")} remaining`}</>} />
       <BankQuestion
         key={question.id}
         questionNumber={index+1}
@@ -440,6 +451,7 @@ export function GeneratedChapterAssessment({
         onChange={(value) =>
           setAnswers((current) => ({ ...current, [question.id]: value }))
         }
+        onMathsSidebarOpenChange={onMathsSidebarOpenChange}
       />
       <div className="border-t border-zinc-200 py-5">
         <div className="flex flex-wrap justify-center gap-1.5">
@@ -461,9 +473,9 @@ export function GeneratedChapterAssessment({
           >
             Previous
           </button>
-          {index < 14 ? (
+          {index < attempt.questions.length - 1 ? (
             <button
-              onClick={() => navigate(Math.min(14, index + 1))}
+              onClick={() => navigate(Math.min(attempt.questions.length - 1, index + 1))}
               className="rounded-full bg-zinc-950 px-5 py-2 text-sm text-white"
             >
               Next question
@@ -531,7 +543,7 @@ export function GeneratedChapterAssessment({
           <div className="w-full max-w-md rounded-2xl bg-white p-6">
             <h3 className="text-xl font-semibold">Submit this assessment?</h3>
             <p className="mt-3 text-sm leading-6 text-zinc-600">
-              You answered {answered} of 15 questions. Submission locks this
+              You answered {answered} of {attempt.questions.length} questions. Submission locks this
               attempt.
             </p>
             <div className="mt-6 flex gap-2">

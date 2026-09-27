@@ -1,11 +1,13 @@
 import {
   A_LEVEL_MATHS_CHAPTERS,
   A_LEVEL_MATHS_CHAPTER_TITLES,
+  A_LEVEL_MATHS_SUBJECTS,
   A_LEVEL_MATHS_SUBJECT_TITLES,
   A_LEVEL_MATHS_TITLE,
   END_OF_TOPIC_ASSESSMENT_TITLE,
   INTERACTIVE_ASSESSMENT_TITLE,
   PRACTICE_QUESTIONS_TITLE,
+  SYNOPTIC_ASSESSMENT_TITLE,
 } from "@/lib/seed";
 import type { FlowState } from "@/types/flowstate";
 import type { UserAccessProfile, UserPlan } from "@/types/auth";
@@ -196,6 +198,20 @@ export function canAccessNode(
   if (!mathRootId) return false;
   if (node.id === mathRootId) return true;
   if (isSubjectFolder(state, node.id)) return true;
+
+  const directParent = node.parentId ? state.nodes[node.parentId] : null;
+  if (
+    node.kind === "page" &&
+    normalizeTitle(node.title) === normalizeTitle(SYNOPTIC_ASSESSMENT_TITLE) &&
+    directParent &&
+    isSubjectFolder(state, directParent.id)
+  ) {
+    if (access?.plan !== "premium") return false;
+    const subject = A_LEVEL_MATHS_SUBJECTS.find(
+      (item) => normalizeTitle(item.title) === normalizeTitle(directParent.title),
+    );
+    return Boolean(subject?.chapters.every((chapter) => hasChapterAccess(access, chapter.title)));
+  }
 
   const chapter = getChapterNodeForNode(state, nodeId);
   if (!chapter) return false;

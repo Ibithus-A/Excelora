@@ -119,6 +119,26 @@ export const MECHANICS_VECTOR_KINEMATICS_LESSONS = [
       p(
         raw`These apply component-wise: i.e., each equation holds for the $\mathbf i$ and $\mathbf j$ components separately.`,
       ),
+      {
+        type: "diagram",
+        description:
+          "Two parallel component lanes showing that the same constant-acceleration equation is applied independently in the i and j directions before the components are recombined.",
+        drawing: {
+          type: "scene",
+          lines: [
+            { from: [92, 86], to: [300, 86], arrow: true },
+            { from: [92, 172], to: [300, 172], arrow: true },
+          ],
+          labels: [
+            { x: 55, y: 75, text: raw`\mathbf i`, width: 28 },
+            { x: 196, y: 47, text: raw`v_i=u_i+a_it`, width: 128 },
+            { x: 55, y: 161, text: raw`\mathbf j`, width: 28 },
+            { x: 196, y: 133, text: raw`v_j=u_j+a_jt`, width: 128 },
+            { x: 345, y: 108, text: raw`\binom{v_i}{v_j}`, width: 70 },
+          ],
+          caption: [raw`\text{solve components}`, raw`\text{then recombine}`],
+        },
+      },
     ]),
     group("Worked Example 3", [
       p(

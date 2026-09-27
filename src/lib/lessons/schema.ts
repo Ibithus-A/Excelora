@@ -33,6 +33,38 @@ export type LessonDrawing =
       yAxisAt?: number;
     }
   | {
+      type: "teaching-plot";
+      xRange: [number, number];
+      yRange: [number, number];
+      xLabel: string;
+      yLabel: string;
+      curves: {
+        kind: "polynomial" | "sin" | "cos" | "tan" | "sec" | "reciprocal" | "exp";
+        coefficients?: number[];
+        amplitude?: number;
+        frequency?: number;
+        phase?: number;
+        verticalShift?: number;
+        label?: string;
+        dashed?: boolean;
+      }[];
+      xTicks?: { value: number; label: string }[];
+      yTicks?: { value: number; label: string }[];
+      points?: { x: number; y: number; label: string; dx?: number; dy?: number }[];
+      tangents?: { x: number; y: number; slope: number; label: string }[];
+      asymptotes?: number[];
+      shade?: { from: number; to: number; curve: number; against?: number }[];
+      caption?: string[];
+    }
+  | {
+      type: "unit-circle";
+      angle: number;
+      angleLabel: string;
+      mode: "angle" | "sector" | "coordinates" | "solutions";
+      pointLabel?: string;
+      caption?: string[];
+    }
+  | {
       type: "scatter";
       points: [number, number][];
       xRange: [number, number];
@@ -114,6 +146,7 @@ export type LessonDrawing =
         text: string;
         dx: number;
         dy: number;
+        width?: number;
         guide?: boolean;
       }[];
     }
@@ -131,6 +164,7 @@ export type LessonDrawing =
         text: string;
         dx: number;
         dy: number;
+        width?: number;
         guide?: boolean;
       }[];
     }

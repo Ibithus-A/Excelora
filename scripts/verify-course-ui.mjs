@@ -126,8 +126,8 @@ for (const width of [320, 1280]) {
     false,
   );
   await p.goto("http://127.0.0.1:3007/qa-fixture?mode=tutor");
-  await p.getByRole("heading", { name: "Student activity" }).waitFor();
-  await p.getByText("View saved responses").first().waitFor();
+  await p.getByRole("heading", { name: "Student Activity" }).waitFor();
+  await p.getByText("Review Marked Questions").first().waitFor();
   await p
     .getByRole("combobox", { name: "Chapter", exact: true })
     .selectOption({ index: 12 });
