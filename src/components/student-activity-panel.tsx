@@ -414,6 +414,38 @@ export function StudentActivityPanel({
               </span>
             </div>
             <div key={reviewedAnswer.question_id}>
+              <div
+                className={[
+                  "mt-4 flex items-center gap-3 rounded-2xl border p-4",
+                  reviewedState === "correct"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : reviewedState === "incorrect"
+                      ? "border-rose-200 bg-rose-50 text-rose-800"
+                      : reviewedState === "partial" || reviewedState === "review"
+                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                        : "border-zinc-200 bg-zinc-50 text-zinc-700",
+                ].join(" ")}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-current bg-white text-lg font-semibold" aria-hidden="true">
+                  {reviewedState === "correct" ? "✓" : reviewedState === "incorrect" ? "×" : reviewedState === "partial" ? "½" : "…"}
+                </span>
+                <div>
+                  <p className="font-semibold">
+                    {reviewedState === "correct"
+                      ? "Correct answer"
+                      : reviewedState === "incorrect"
+                        ? "Incorrect answer"
+                        : reviewedState === "partial"
+                          ? "Partially correct"
+                          : reviewedState === "review"
+                            ? "Needs tutor review"
+                            : "Not checked"}
+                  </p>
+                  <p className="mt-0.5 text-xs opacity-80">
+                    {reviewedAnswer.marks_awarded ?? 0}/{reviewedAnswer.assessment_question_bank.marks} marks awarded
+                  </p>
+                </div>
+              </div>
               <BankQuestion
                 question={{
                   id: reviewedAnswer.question_id,
@@ -452,9 +484,10 @@ export function StudentActivityPanel({
                     onClick={() => setReviewIndex(answerIndex)}
                     className={[
                       "flex h-8 w-8 items-center justify-center rounded-full border text-xs font-medium transition",
+                      answerStateClass(answerState(answer)),
                       answerIndex === reviewIndex
-                        ? "border-zinc-900 bg-zinc-900 text-white"
-                        : answerStateClass(answerState(answer)),
+                        ? "ring-2 ring-zinc-900 ring-offset-2"
+                        : "",
                     ].join(" ")}
                   >
                     {answerIndex + 1}

@@ -181,7 +181,11 @@ textarea {
   .lesson-surface-reveal,
   .lesson-surface-exit,
   .tutorial-card,
-  .tutorial-spotlight {
+  .tutorial-spotlight,
+  .practice-pending,
+  .practice-feedback,
+  .practice-feedback-icon,
+  .practice-feedback-stroke {
     opacity: 1;
     transform: none;
     filter: none;
@@ -339,6 +343,65 @@ textarea {
 
 .loading-dot {
   animation: loadingPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes practicePendingIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes practiceFeedbackIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes practiceFeedbackIconIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.55) rotate(-8deg);
+  }
+  70% {
+    transform: scale(1.08) rotate(1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes practiceFeedbackStroke {
+  from { stroke-dashoffset: 28; }
+  to { stroke-dashoffset: 0; }
+}
+
+.practice-pending {
+  animation: practicePendingIn 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.practice-feedback {
+  animation: practiceFeedbackIn 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.practice-feedback-icon {
+  animation: practiceFeedbackIconIn 520ms 80ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.practice-feedback-stroke {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  animation: practiceFeedbackStroke 420ms 250ms ease-out forwards;
 }
 
 .assistant-message .katex-display {

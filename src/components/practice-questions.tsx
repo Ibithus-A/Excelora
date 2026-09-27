@@ -31,9 +31,17 @@ type PracticeQuestion = {
   checked_at: string | null;
   requires_review: boolean;
   marks_awarded: number;
+  is_correct?: boolean | null;
   answer?: string;
   worked_solution?: string;
 };
+type PracticeAction =
+  | "starting"
+  | "saving"
+  | "checking"
+  | "stopping"
+  | "navigating"
+  | "reviewing";
 type Session = {
   id: string;
   status: string;
@@ -79,6 +87,8 @@ export function PracticeQuestions({
     [response, setResponse] = useState("");
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
+    [pendingAction, setPendingAction] = useState<PracticeAction | null>(null),
+    [openingSessionId, setOpeningSessionId] = useState<string | null>(null),
     [error, setError] = useState(""),
     [preview, setPreview] = useState(false),
     [exhausted, setExhausted] = useState(false);
@@ -165,10 +175,14 @@ export function PracticeQuestions({
     if (!res.ok) throw Error(data.error ?? "Unable to save practice.");
     return data;
   };
-  const run = async (work: () => Promise<void>) => {
+  const run = async (
+    action: PracticeAction,
+    work: () => Promise<void>,
+  ) => {
     if (pending.current) return;
     pending.current = true;
     setBusy(true);
+    setPendingAction(action);
     setError("");
     try {
       await work();
@@ -176,11 +190,13 @@ export function PracticeQuestions({
       setError(e instanceof Error ? e.message : "Unable to save practice.");
     } finally {
       pending.current = false;
+      if (action === "reviewing") setOpeningSessionId(null);
       setBusy(false);
+      setPendingAction(null);
     }
   };
   const start = () =>
-    run(async () => {
+    run("starting", async () => {
       const data = await post("start");
       setExhausted(false);
       apply(
@@ -222,7 +238,7 @@ export function PracticeQuestions({
     )
       return;
     const timer = window.setTimeout(() => {
-      void run(async () => {
+      void run("saving", async () => {
         const saved = await save();
         if (saved) setSession(saved);
       });
@@ -232,7 +248,7 @@ export function PracticeQuestions({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, index, response, busy, error]);
   const stop = () =>
-    run(async () => {
+    run("stopping", async () => {
       await save();
       const data = await post("stop");
       if (data.session) apply(data.session, index);
@@ -240,7 +256,7 @@ export function PracticeQuestions({
       await load();
     });
   const check = () =>
-    run(async () => {
+    run("checking", async () => {
       const data = await post("check");
       if (data.session) apply(data.session, index);
       else if (data.previewQuestion && session)
@@ -257,12 +273,12 @@ export function PracticeQuestions({
         );
     });
   const navigate = (at: number) =>
-    run(async () => {
+    run("navigating", async () => {
       const saved = await save();
       if (saved) apply(saved, at);
     });
   const next = () =>
-    run(async () => {
+    run("navigating", async () => {
       if (!session) return;
       if (index < session.questions.length - 1) {
         const saved = await save();
@@ -290,12 +306,15 @@ export function PracticeQuestions({
       );
     });
   const resume = (id: string) =>
-    run(async () => {
+    run("reviewing", async () => {
+      setOpeningSessionId(id);
       const res = await fetch(
         `/api/practice?assessmentKey=${encodeURIComponent(assessmentKey)}&sessionId=${encodeURIComponent(id)}`,
       );
       const data = await res.json();
       if (!res.ok) throw Error(data.error);
+      if (!data.session?.questions?.length)
+        throw Error("This practice session has no questions to review.");
       apply(
         data.session,
         Math.max(
@@ -306,10 +325,18 @@ export function PracticeQuestions({
         ),
       );
       setSubtopic(data.session.subtopic);
+      setOpeningSessionId(null);
     });
   const question = session?.questions[index],
     checked = session?.questions.filter((q) => q.checked_at).length ?? 0;
   const active = session?.status === "active";
+  const feedbackState = !question?.checked_at
+    ? null
+    : question.requires_review || question.is_correct === null
+      ? "review"
+      : question.is_correct === true || question.marks_awarded === question.marks
+        ? "correct"
+        : "incorrect";
   const availableQuestions = topicOptions.reduce(
     (total, topic) =>
       total +
@@ -336,6 +363,9 @@ export function PracticeQuestions({
         </div>
       )}
       {!session ? (
+        loading ? (
+          <PracticeInitialLoading />
+        ) : (
         <>
           <div className="mx-auto max-w-2xl py-8 text-center sm:py-12">
             <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">
@@ -487,7 +517,7 @@ export function PracticeQuestions({
               {loading
                 ? "Loading practice…"
                 : busy
-                  ? "Preparing…"
+                  ? <span className="inline-flex items-center gap-2"><LoadingSpinner className="h-4 w-4" />Preparing…</span>
                   : "Start practice"}
             </button>
           </div>
@@ -500,7 +530,7 @@ export function PracticeQuestions({
                     key={h.id}
                     disabled={busy}
                     onClick={() => void resume(h.id)}
-                    className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm"
+                    className="group flex w-full items-center justify-between gap-4 rounded-xl px-2 py-4 text-left text-sm transition hover:bg-zinc-50 disabled:cursor-wait"
                   >
                     <span>
                       {h.subtopic || "Whole chapter"}
@@ -514,8 +544,15 @@ export function PracticeQuestions({
                         checked
                       </span>
                     </span>
-                    <span className="text-xs text-zinc-500">
-                      {h.status === "active" ? "Resume" : "Review"} →
+                    <span className="inline-flex min-w-[74px] items-center justify-end gap-2 text-xs font-medium text-zinc-500 transition group-hover:text-zinc-900">
+                      {openingSessionId === h.id ? (
+                        <>
+                          <LoadingSpinner className="h-3.5 w-3.5" />
+                          Opening
+                        </>
+                      ) : (
+                        <>{h.status === "active" ? "Resume" : "Review"} →</>
+                      )}
                     </span>
                   </button>
                 ))}
@@ -523,6 +560,7 @@ export function PracticeQuestions({
             </section>
           )}
         </>
+        )
       ) : question ? (
         <>
           <QuestionSessionHeader
@@ -539,7 +577,9 @@ export function PracticeQuestions({
                   onClick={() => void stop()}
                   className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-medium disabled:opacity-40"
                 >
-                  Stop practice
+                  {pendingAction === "stopping" ? (
+                    <span className="inline-flex items-center gap-2"><LoadingSpinner className="h-3.5 w-3.5" />Finishing…</span>
+                  ) : "Stop practice"}
                 </button>
               ) : (
                 <button
@@ -554,6 +594,52 @@ export function PracticeQuestions({
               )
             }
           />
+          {!active && (
+            <section className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_14px_35px_rgba(15,23,42,0.04)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-zinc-900">Reviewing your answers</p>
+                  <p className="mt-0.5 text-[11px] text-zinc-500">Select any question to revisit your answer and its solution.</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[10px] font-medium text-zinc-600">
+                  {checked}/{session.questions.length} checked
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2" aria-label="Review questions">
+                {session.questions.map((item, questionIndex) => {
+                  const itemState = item.requires_review || item.is_correct === null
+                    ? "review"
+                    : item.is_correct === true || item.marks_awarded === item.marks
+                      ? "correct"
+                      : "incorrect";
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      disabled={busy}
+                      aria-label={`Review question ${questionIndex + 1}`}
+                      aria-current={questionIndex === index ? "step" : undefined}
+                      onClick={() => void navigate(questionIndex)}
+                      className={[
+                        "relative flex h-9 w-9 items-center justify-center rounded-xl border text-xs font-semibold transition hover:-translate-y-0.5 disabled:opacity-50",
+                        questionIndex === index ? "ring-2 ring-zinc-900 ring-offset-2" : "",
+                        itemState === "correct"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : itemState === "incorrect"
+                            ? "border-rose-200 bg-rose-50 text-rose-700"
+                            : "border-amber-200 bg-amber-50 text-amber-700",
+                      ].join(" ")}
+                    >
+                      {questionIndex + 1}
+                      <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-[8px] shadow-sm">
+                        {itemState === "correct" ? "✓" : itemState === "incorrect" ? "×" : "•"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
           <BankQuestion
             questionNumber={index + 1}
             key={question.id}
@@ -564,35 +650,70 @@ export function PracticeQuestions({
             onMathsSidebarOpenChange={onMathsSidebarOpenChange}
           />
           {active && !question.checked_at && (
-            <div className="flex gap-3 pb-6">
+            <div className="pb-6">
+              {pendingAction === "checking" && (
+                <PracticePendingState
+                  title="Checking your answer"
+                  body="Comparing your response with the marking criteria…"
+                />
+              )}
+              <div className="flex gap-3">
               <button
                 disabled={busy}
                 onClick={() =>
-                  void run(async () => {
+                  void run("saving", async () => {
                     const saved = await save();
                     if (saved) apply(saved, index);
                   })
                 }
                 className="rounded-full border border-zinc-200 px-5 py-2 text-sm"
               >
-                Save draft
+                {pendingAction === "saving" ? (
+                  <span className="inline-flex items-center gap-2"><LoadingSpinner className="h-3.5 w-3.5" />Saving…</span>
+                ) : "Save draft"}
               </button>
               <button
                 disabled={busy || !responseHasContent(response)}
                 onClick={() => void check()}
                 className="rounded-full bg-zinc-950 px-5 py-2 text-sm text-white disabled:opacity-40"
               >
-                Check answer
+                {pendingAction === "checking" ? (
+                  <span className="inline-flex items-center gap-2"><LoadingSpinner className="h-3.5 w-3.5" />Marking…</span>
+                ) : "Check answer"}
               </button>
+              </div>
             </div>
           )}
           {question.checked_at && (
-            <section className="mb-6 space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-5 text-sm leading-7">
-              <h3 className="font-semibold">
-                {question.requires_review
-                  ? "Saved for tutor review"
-                  : `${question.marks_awarded}/${question.marks} marks`}
-              </h3>
+            <section
+              key={`${question.id}:${question.checked_at}`}
+              className={[
+                "practice-feedback mb-6 overflow-hidden rounded-2xl border text-sm leading-7",
+                feedbackState === "correct"
+                  ? "border-emerald-200 bg-emerald-50/60"
+                  : feedbackState === "incorrect"
+                    ? "border-rose-200 bg-rose-50/50"
+                    : "border-amber-200 bg-amber-50/50",
+              ].join(" ")}
+            >
+              <div className="flex items-center gap-3 border-b border-black/[0.06] px-5 py-4">
+                <FeedbackIcon state={feedbackState ?? "review"} />
+                <div>
+                  <h3 className="font-semibold text-zinc-900">
+                    {feedbackState === "correct"
+                      ? "Correct — well done"
+                      : feedbackState === "incorrect"
+                        ? "Not quite — review the solution"
+                        : "Saved for tutor review"}
+                  </h3>
+                  <p className="text-xs leading-5 text-zinc-600">
+                    {question.requires_review
+                      ? "Your work is saved and ready for review."
+                      : `${question.marks_awarded}/${question.marks} marks awarded`}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-4 bg-white/70 p-5">
               {question.requires_review && (
                 <p>
                   Your work is saved. Compare it with the solution while it
@@ -600,10 +721,13 @@ export function PracticeQuestions({
                 </p>
               )}
               <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-zinc-500">Answer</p>
                 <BankMath value={question.answer ?? ""} />
               </div>
               <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-zinc-500">Worked solution</p>
                 <BankMath value={question.worked_solution ?? ""} />
+              </div>
               </div>
             </section>
           )}
@@ -619,7 +743,7 @@ export function PracticeQuestions({
               onClick={() => void navigate(index - 1)}
               className="rounded-full border border-zinc-200 px-5 py-2 text-sm disabled:opacity-40"
             >
-              Previous
+              {pendingAction === "navigating" ? "Loading…" : "Previous"}
             </button>
             <button
               disabled={
@@ -630,11 +754,88 @@ export function PracticeQuestions({
               onClick={() => void next()}
               className="rounded-full bg-zinc-950 px-5 py-2 text-sm text-white disabled:opacity-40"
             >
-              Next question
+              {pendingAction === "navigating" ? (
+                <span className="inline-flex items-center gap-2"><LoadingSpinner className="h-3.5 w-3.5" />Loading…</span>
+              ) : "Next question"}
             </button>
           </div>
         </>
       ) : null}
     </div>
+  );
+}
+
+function LoadingSpinner({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={["animate-spin", className].join(" ")} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.2" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PracticePendingState({ title, body }: { title: string; body: string }) {
+  return (
+    <div role="status" aria-live="polite" className="practice-pending mb-4 flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm">
+        <LoadingSpinner className="h-4 w-4" />
+      </span>
+      <div>
+        <p className="text-sm font-semibold text-zinc-900">{title}</p>
+        <p className="mt-0.5 text-xs text-zinc-500">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+function PracticeInitialLoading() {
+  return (
+    <div role="status" aria-label="Loading practice" className="mx-auto max-w-2xl py-10 sm:py-14">
+      <div className="flex flex-col items-center text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm">
+          <LoadingSpinner className="h-5 w-5" />
+        </span>
+        <p className="mt-4 text-sm font-semibold text-zinc-900">Preparing your practice</p>
+        <p className="mt-1 text-xs text-zinc-500">Loading your topics and recent sessions…</p>
+      </div>
+      <div className="mt-8 rounded-[24px] border border-zinc-200 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
+        <div className="loading-skeleton h-3 w-24 rounded-full" />
+        <div className="loading-skeleton mt-4 h-12 w-full rounded-2xl" />
+        <div className="mt-5 grid grid-cols-2 gap-4">
+          <div className="loading-skeleton h-16 rounded-2xl" />
+          <div className="loading-skeleton h-16 rounded-2xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeedbackIcon({ state }: { state: "correct" | "incorrect" | "review" }) {
+  const isCorrect = state === "correct";
+  const isIncorrect = state === "incorrect";
+  return (
+    <span
+      aria-hidden="true"
+      className={[
+        "practice-feedback-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-white shadow-sm",
+        isCorrect
+          ? "border-emerald-500 text-emerald-600"
+          : isIncorrect
+            ? "border-rose-500 text-rose-600"
+            : "border-amber-500 text-amber-600",
+      ].join(" ")}
+    >
+      {isCorrect ? (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+          <path className="practice-feedback-stroke" d="m6.5 12.5 3.4 3.4 7.6-8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : isIncorrect ? (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+          <path className="practice-feedback-stroke" d="m8 8 8 8m0-8-8 8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+        </svg>
+      ) : (
+        <span className="text-base font-semibold">…</span>
+      )}
+    </span>
   );
 }

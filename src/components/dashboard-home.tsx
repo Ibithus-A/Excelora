@@ -14,6 +14,7 @@ import { A_LEVEL_MATHS_SUBJECTS } from "@/lib/seed";
 import { getLessonChapterContext } from "@/lib/tree-utils";
 import type { UserAccessProfile, UserPlan, UserRole } from "@/types/auth";
 import {StudentActivityPanel} from "./student-activity-panel";
+import { QuizPanel } from "./quiz-panel";
 import {useStudyActivity} from "@/lib/hooks/use-study-activity";
 import type { FlowNode } from "@/types/flowstate";
 import type { TopicProgressController } from "@/types/topic-progress";
@@ -424,6 +425,12 @@ export function DashboardHome({
           </div>
         </header>
 
+        <QuizPanel
+          role={role}
+          students={students}
+          selectedStudentId={selectedStudentId ?? ""}
+          onSelectStudent={onSelectStudent}
+        />
         {role === "tutor" && <StudentActivityPanel students={students} studentId={selectedStudentId??""} onSelectStudent={onSelectStudent}/>}
         <article
           data-tour="dashboard-progress"
