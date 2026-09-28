@@ -96,21 +96,16 @@ export function Sidebar({
       };
     }
 
-    visibleIds.add(mathRootId);
-    const chapters = state.nodes[mathRootId]?.childrenIds ?? [];
-    for (const chapterId of chapters) {
-      visibleIds.add(chapterId);
-      for (const childId of state.nodes[chapterId]?.childrenIds ?? []) {
-        if (!canAccessNode(state, childId, viewerProfile)) continue;
-        collectSubtreeIds(state.nodes, childId, visibleIds);
-      }
-    }
+    // Students can inspect the complete course structure even when their plan
+    // does not permit opening a chapter. Access is enforced separately by
+    // canAccessNode in the tree styling and editor surface.
+    collectSubtreeIds(state.nodes, mathRootId, visibleIds);
 
     return {
       visibleRootIds: [mathRootId],
       visibleNodeIds: visibleIds,
     };
-  }, [isStudent, state, viewerProfile]);
+  }, [isStudent, state]);
 
   useEffect(() => {
     if (!isStudent) return;

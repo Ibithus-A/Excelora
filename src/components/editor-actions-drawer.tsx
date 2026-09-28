@@ -634,11 +634,13 @@ type EditorActionsDrawerProps = {
   pageTitle: string;
   pdfTitle?: string;
   reviewAttemptId?: string;
+  practiceContext?: { sessionId: string; questionId: string };
   pageContent: string;
   pageNodeId: string;
   workspaceContext: string;
   canUseAssistant: boolean;
   forceOpen?: boolean;
+  onForceClose?: () => void;
   onHoverChange?: (isHovered: boolean) => void;
   isMobileOpen?: boolean;
   onMobileOpenChange?: (isOpen: boolean) => void;
@@ -648,11 +650,13 @@ export function EditorActionsDrawer({
   pageTitle,
   pdfTitle,
   reviewAttemptId,
+  practiceContext,
   pageContent,
   pageNodeId,
   workspaceContext,
   canUseAssistant,
   forceOpen = false,
+  onForceClose,
   onHoverChange,
   isMobileOpen = false,
   onMobileOpenChange,
@@ -741,11 +745,13 @@ export function EditorActionsDrawer({
             <DrawerContent
               pageTitle={pageTitle}
               reviewAttemptId={reviewAttemptId}
+              practiceContext={practiceContext}
               pdfTitle={pdfTitle}
               pageContent={pageContent}
               pageNodeId={pageNodeId}
               workspaceContext={workspaceContext}
               canUseAssistant={canUseAssistant}
+              onClose={onForceClose}
             />
           </aside>
         </div>
@@ -773,7 +779,10 @@ export function EditorActionsDrawer({
         >
           <button
             type="button"
-            onClick={() => onMobileOpenChange?.(false)}
+            onClick={() => {
+              onMobileOpenChange?.(false);
+              onForceClose?.();
+            }}
             className={[
               "absolute inset-0 bg-black/45 transition-opacity duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
               isMobileOpen || forceOpen ? "opacity-100" : "opacity-0",
@@ -803,7 +812,10 @@ export function EditorActionsDrawer({
                 </div>
                 <button
                   type="button"
-                  onClick={() => onMobileOpenChange?.(false)}
+                  onClick={() => {
+                    onMobileOpenChange?.(false);
+                    onForceClose?.();
+                  }}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700"
                   aria-label="Close AI assistant"
                 >
@@ -813,11 +825,13 @@ export function EditorActionsDrawer({
               <DrawerContent
                 pageTitle={pageTitle}
                 reviewAttemptId={reviewAttemptId}
-              pdfTitle={pdfTitle}
+                practiceContext={practiceContext}
+                pdfTitle={pdfTitle}
                 pageContent={pageContent}
                 pageNodeId={pageNodeId}
                 workspaceContext={workspaceContext}
                 canUseAssistant={canUseAssistant}
+                onClose={onForceClose}
               />
             </div>
           </aside>
@@ -831,18 +845,22 @@ function DrawerContent({
   pageTitle,
   pdfTitle,
   reviewAttemptId,
+  practiceContext,
   pageContent,
   pageNodeId,
   workspaceContext,
   canUseAssistant,
+  onClose,
 }: {
   pageTitle: string;
   pdfTitle?: string;
   reviewAttemptId?: string;
+  practiceContext?: { sessionId: string; questionId: string };
   pageContent: string;
   pageNodeId: string;
   workspaceContext: string;
   canUseAssistant: boolean;
+  onClose?: () => void;
 }) {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -892,12 +910,16 @@ function DrawerContent({
       return "Arthur is available on Premium. This is where AI support appears beside lesson notes and videos.";
     }
 
+    if (practiceContext) {
+      return "Ask Arthur to explain the method, identify the mistake, or walk through the solution one step at a time.";
+    }
+
     if (pageContent.trim()) {
       return "Arthur can explain this page, summarize it, or help you revise from the notes.";
     }
 
     return "This page is blank, so Arthur will work from your prompt alone.";
-  }, [canUseAssistant, pageContent]);
+  }, [canUseAssistant, pageContent, practiceContext]);
 
   const serializeComposer = (): string => {
     const root = composerRef.current;
@@ -953,7 +975,8 @@ function DrawerContent({
         body: JSON.stringify({
           pageTitle,
           pdfTitle,
-  reviewAttemptId,
+          reviewAttemptId,
+          practiceContext,
           pageContent,
           pageNodeId,
           workspaceContext,
@@ -1188,6 +1211,16 @@ function DrawerContent({
           >
             {canUseAssistant ? "Live" : "Locked"}
           </span>
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50"
+              aria-label="Close Arthur"
+            >
+              <CloseIcon className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
         </div>
       </header>
 

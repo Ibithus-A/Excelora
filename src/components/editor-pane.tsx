@@ -4,7 +4,10 @@ import {useStudyActivity} from "@/lib/hooks/use-study-activity";
 
 import { getStructuredLesson } from "@/lib/lessons/catalogue";
 import { StructuredNativeLesson } from "./structured-native-lesson";
-import { PracticeQuestions } from "./practice-questions";
+import {
+  PracticeQuestions,
+  type PracticeArthurContext,
+} from "./practice-questions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { canAccessNode, getLockedChapterMessage } from "@/lib/access";
@@ -72,7 +75,6 @@ type PdfPageImage = {
 const MAX_TITLE_FONT_SIZE_PX = 36;
 const MIN_TITLE_FONT_SIZE_PX = 20;
 const LEGACY_PLACEHOLDER_CONTENT = "use this space for notes and examples";
-const LESSON_VIDEO_ASSET_VERSION = "20260903-video-1-9-graphs-v2";
 const pdfBufferCache = new Map<string, Uint8Array>();
 
 function resolveSubjectAssetPath(
@@ -90,14 +92,6 @@ function resolveSubtopicPdfUrl(
   subjectTitle: string | null | undefined,
 ): string {
   return resolveSubjectAssetPath(subjectTitle, title);
-}
-
-function resolveSubtopicVideoUrl(title: string): string {
-  return `/assets/videos/${encodeURIComponent(title.trim())}.mp4?v=${LESSON_VIDEO_ASSET_VERSION}`;
-}
-
-function resolveSubtopicVideoPosterUrl(title: string): string {
-  return `/assets/videos/${encodeURIComponent(title.trim())}.jpg?v=${LESSON_VIDEO_ASSET_VERSION}`;
 }
 
 function resolveAssessmentPdfUrl(
@@ -181,6 +175,9 @@ export function EditorPane({
     nodeId: string;
     subtopic: string;
   } | null>(null);
+  const [practiceArthurContext, setPracticeArthurContext] =
+    useState<PracticeArthurContext | null>(null);
+  const [isPracticeArthurOpen, setIsPracticeArthurOpen] = useState(false);
   const [isAssistantHovered, setIsAssistantHovered] = useState(false);
   const [isMathsSidebarOpen, setIsMathsSidebarOpen] = useState(false);
   const [mobileAssistantNodeId, setMobileAssistantNodeId] = useState<
@@ -189,7 +186,7 @@ export function EditorPane({
   const [surfaceTransitionMode, setSurfaceTransitionMode] =
     useState<SurfaceTransitionMode>("fade");
   const workspaceTopicProgress = role === "student" ? topicProgress : undefined;
-  const {lessonProgress,currentSubtopicId,recordsByNode}=useMemo(()=>mapLessonProgress(state,workspaceTopicProgress?.rows??[]),[state,workspaceTopicProgress?.rows]);
+  const {lessonProgress,recordsByNode}=useMemo(()=>mapLessonProgress(state,workspaceTopicProgress?.rows??[]),[state,workspaceTopicProgress?.rows]);
   const [lessonSurface, setLessonSurface] = useState<LessonSurfaceState>({
     nodeId: null,
     view: "notes",
@@ -210,6 +207,8 @@ export function EditorPane({
   const isStudent = role === "student";
   const canChangeTopicProgress = Boolean(workspaceTopicProgress?.canMutate);
   const canUseAssistant = role === "tutor" || viewerProfile?.plan === "premium";
+  const canUsePracticeAssistant =
+    role === "student" && viewerProfile?.plan === "premium";
   const isAccessBlocked =
     isStudent && selectedNode
       ? !canAccessNode(state, selectedNode.id, viewerProfile)
@@ -239,6 +238,13 @@ export function EditorPane({
   const isPracticePage =
     selectedNode?.title === PRACTICE_QUESTIONS_TITLE ||
     practiceTarget?.nodeId === selectedId;
+  const handlePracticeArthurContextChange = useCallback(
+    (context: PracticeArthurContext | null) => {
+      setPracticeArthurContext(context);
+      if (!context) setIsPracticeArthurOpen(false);
+    },
+    [],
+  );
   const isLessonPage =
     selectedNode?.kind === "page" && Boolean(lessonContext) && !isPracticePage;
   const isAssessmentPage = Boolean(lessonContext?.isAssessmentPage);
@@ -276,7 +282,6 @@ export function EditorPane({
   const isLessonWatched = progressNodeId
     ? Boolean(lessonProgress[progressNodeId])
     : false;
-  const isCurrentSubtopic = selectedNode?.id === currentSubtopicId;
   const completedLessonsCount = lessonContext
     ? lessonContext.lessonIds.reduce(
         (count, lessonId) => count + (lessonProgress[lessonId] ? 1 : 0),
@@ -360,14 +365,6 @@ export function EditorPane({
     }
 
     void workspaceTopicProgress?.markTopicCompleted(metadata);
-  };
-
-  const setSelectedSubtopicAsCurrent = () => {
-    if (!selectedNode || !isLessonPage || isAssessmentPage) return;
-
-    const metadata = selectedTopicMetadata();
-    if (!metadata) return;
-    void workspaceTopicProgress?.setCurrentTopic(metadata);
   };
 
   const nextLessonActionId =
@@ -712,6 +709,9 @@ export function EditorPane({
                     chapterTitle={lessonContext.chapterTitle}
                     initialSubtopic={practiceTarget?.subtopic ?? ""}
                     onMathsSidebarOpenChange={setIsMathsSidebarOpen}
+                    canUseArthur={canUsePracticeAssistant}
+                    onArthurContextChange={handlePracticeArthurContextChange}
+                    onAskArthur={() => setIsPracticeArthurOpen(true)}
                   />
                 </>
               )}
@@ -888,7 +888,7 @@ export function EditorPane({
                               className="inline-flex items-center gap-2 rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-800"
                             >
                               <span className="ml-0.5 leading-none">▶</span>
-                              Watch the video here
+                              Video preview
                             </button>
                           </div>
                         </div>
@@ -1045,20 +1045,7 @@ export function EditorPane({
                         ) : (
                           <LessonVideoPlayer
                             key={selectedNode.id}
-                            videoUrl={resolveSubtopicVideoUrl(lessonAssetTitle)}
-                            posterUrl={resolveSubtopicVideoPosterUrl(
-                              lessonAssetTitle,
-                            )}
                             lessonTitle={selectedNode.title}
-                            isLessonWatched={Boolean(recordsByNode[selectedNode.id]?.watched_video)}
-                            onVideoComplete={() => {
-                              if (!selectedNode || recordsByNode[selectedNode.id]?.watched_video) return;
-                              const metadata = selectedTopicMetadata();
-                              if (!metadata) return;
-                              void workspaceTopicProgress?.markTopicCompleted(
-                                metadata,
-                              );
-                            }}
                           />
                         )}
 
@@ -1071,57 +1058,42 @@ export function EditorPane({
                                 : "rounded-[24px] border border-zinc-200 bg-white px-4 py-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)]",
                             ].join(" ")}
                           >
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span
-                                className={[
-                                  "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium",
-                                  isLessonWatched
-                                    ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                                    : "border border-zinc-200 bg-zinc-100 text-zinc-600",
-                                ].join(" ")}
-                              >
-                                {isAssessmentPage
-                                  ? isLessonWatched
-                                    ? "Completed"
-                                    : "Not completed yet"
-                                  : isLessonWatched
-                                    ? "Watched"
-                                    : "Not watched yet"}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={toggleLessonWatched}
-                                disabled={!canChangeTopicProgress}
-                                className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {isAssessmentPage
-                                  ? isLessonWatched
-                                    ? "Mark as not completed"
-                                    : "Mark as completed"
-                                  : isLessonWatched
-                                    ? "Mark as not watched"
-                                    : "Mark as watched"}
-                              </button>
-                              {!isAssessmentPage ? (
-                                <button
-                                  type="button"
-                                  onClick={setSelectedSubtopicAsCurrent}
-                                  disabled={
-                                    isCurrentSubtopic || !canChangeTopicProgress
-                                  }
+                            {isAssessmentPage ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span
                                   className={[
-                                    "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition",
-                                    isCurrentSubtopic
-                                      ? "cursor-default border-amber-200 bg-amber-50 text-amber-700"
-                                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50",
+                                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium",
+                                    isLessonWatched
+                                      ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border border-zinc-200 bg-zinc-100 text-zinc-600",
                                   ].join(" ")}
                                 >
-                                  {isCurrentSubtopic
-                                    ? "Current subtopic"
-                                    : "Set as current"}
+                                  {isLessonWatched ? "Completed" : "Not completed yet"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={toggleLessonWatched}
+                                  disabled={!canChangeTopicProgress}
+                                  className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {isLessonWatched ? "Mark as not completed" : "Mark as completed"}
                                 </button>
-                              ) : null}
-                            </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                                  In development
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => showLessonSurface(selectedId, "notes", pdfZoom)}
+                                  className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+                                >
+                                  Return to lesson notes
+                                </button>
+                              </div>
+                            )}
 
                             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                               <button
@@ -1209,22 +1181,28 @@ export function EditorPane({
       )}
 
       {selectedNode.kind === "page" &&
-      !isPracticePage && (!(isAssessmentPage || isSynopticAssessment) || reviewTarget?.nodeId === selectedNode.id) ? (
+      ((!isPracticePage && (!(isAssessmentPage || isSynopticAssessment) || reviewTarget?.nodeId === selectedNode.id)) ||
+        (isPracticePage && Boolean(practiceArthurContext))) ? (
         <EditorActionsDrawer
           reviewAttemptId={
             reviewTarget?.nodeId === selectedNode.id
               ? reviewTarget.attemptId
               : undefined
           }
-          pageTitle={selectedNode.title}
-          pdfTitle={assistantPdfTitle}
-          pageContent={visiblePageContent}
-          pageNodeId={selectedNode.id}
+          practiceContext={practiceArthurContext ? {
+            sessionId: practiceArthurContext.sessionId,
+            questionId: practiceArthurContext.questionId,
+          } : undefined}
+          pageTitle={practiceArthurContext ? `Practice · ${practiceArthurContext.questionTitle}` : selectedNode.title}
+          pdfTitle={practiceArthurContext ? undefined : assistantPdfTitle}
+          pageContent={practiceArthurContext ? "" : visiblePageContent}
+          pageNodeId={practiceArthurContext ? `${selectedNode.id}:${practiceArthurContext.questionId}` : selectedNode.id}
           workspaceContext={workspaceContext}
           canUseAssistant={canUseAssistant}
           forceOpen={
-            tutorialSurface === "ai" || reviewTarget?.nodeId === selectedNode.id
+            isPracticeArthurOpen || tutorialSurface === "ai" || reviewTarget?.nodeId === selectedNode.id
           }
+          onForceClose={isPracticeArthurOpen ? () => setIsPracticeArthurOpen(false) : undefined}
           onHoverChange={setIsAssistantHovered}
           isMobileOpen={isMobileAssistantOpen}
           onMobileOpenChange={(isOpen) => {
@@ -1579,219 +1557,34 @@ const PdfCanvasDocument = forwardRef<PdfCanvasHandle, PdfCanvasDocumentProps>(
   },
 );
 
-function LessonVideoPlayer({
-  videoUrl,
-  posterUrl,
-  lessonTitle,
-  isLessonWatched,
-  onVideoComplete,
-}: {
-  videoUrl: string;
-  posterUrl: string;
-  lessonTitle: string;
-  isLessonWatched: boolean;
-  onVideoComplete: () => void;
-}) {
-  const [videoStatus, setVideoStatus] = useState<
-    "checking" | "available" | "unavailable"
-  >("checking");
-  const [isVideoReady, setIsVideoReady] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const checkVideo = async () => {
-      try {
-        const response = await fetch(videoUrl, { method: "HEAD" });
-        if (isCancelled) return;
-        setVideoStatus(response.ok ? "available" : "unavailable");
-      } catch {
-        if (!isCancelled) setVideoStatus("unavailable");
-      }
-    };
-
-    void checkVideo();
-    return () => {
-      isCancelled = true;
-    };
-  }, [videoUrl]);
-
-  const togglePlayback = async () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (video.paused) {
-      await video.play();
-      setIsPlaying(true);
-      return;
-    }
-
-    video.pause();
-    setIsPlaying(false);
-  };
-
-  const toggleMute = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.muted = !video.muted;
-    setIsMuted(video.muted);
-  };
-
-  const seekTo = (value: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.currentTime = value;
-    setCurrentTime(value);
-  };
-
-  const enterFullscreen = async () => {
-    const video = videoRef.current;
-    if (!video || !video.requestFullscreen) return;
-    await video.requestFullscreen();
-  };
-
-  if (videoStatus !== "available") {
-    return (
-      <div className="flex aspect-video items-center justify-center overflow-hidden rounded-[24px] border border-zinc-200 bg-zinc-950 shadow-[0_24px_60px_rgba(15,23,42,0.16)]">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-white/10 shadow-sm">
-            <span className="ml-1 text-2xl text-white">▶</span>
-          </div>
-          <div>
-            <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-white/70">
-              {videoStatus === "checking" ? "Loading" : "Coming soon"}
-            </span>
-            <p className="mt-3 text-base font-medium text-white">
-              Video walkthrough coming soon
-            </p>
-            <p className="mt-1 max-w-md text-sm text-white/55">
-              This lesson’s full walkthrough will appear here once the video
-              course is released.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+function LessonVideoPlayer({ lessonTitle }: { lessonTitle: string }) {
   return (
-    <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-zinc-950 shadow-[0_24px_60px_rgba(15,23,42,0.16)]">
-      <div className="border-b border-white/10 bg-[linear-gradient(135deg,rgba(24,24,27,0.96),rgba(39,39,42,0.92))] px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">
-              Lesson Video
-            </p>
-            <p className="mt-1 text-sm font-medium text-white">{lessonTitle}</p>
-          </div>
-          <span
-            className={[
-              "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em]",
-              isLessonWatched
-                ? "border border-emerald-400/40 bg-emerald-500/15 text-emerald-200"
-                : "border border-white/15 bg-white/10 text-white/70",
-            ].join(" ")}
-          >
-            {isLessonWatched ? "Watched" : "Not watched"}
-          </span>
+    <div className="relative isolate flex aspect-video min-h-[300px] overflow-hidden rounded-[24px] border border-zinc-200 bg-zinc-950 shadow-[0_24px_60px_rgba(15,23,42,0.16)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(255,255,255,0.12),transparent_28%),radial-gradient(circle_at_78%_72%,rgba(113,113,122,0.2),transparent_34%),linear-gradient(145deg,#09090b,#18181b_52%,#27272a)]" />
+      <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:42px_42px]" />
+      <div className="absolute left-[12%] top-[18%] h-px w-[30%] rotate-[-8deg] bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+      <div className="absolute bottom-[20%] right-[10%] h-24 w-40 rotate-3 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm" />
+
+      <div className="relative z-10 m-auto flex max-w-xl flex-col items-center px-6 py-10 text-center sm:px-10">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-[0_12px_35px_rgba(0,0,0,0.28)] backdrop-blur-sm" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="none">
+            <path d="M8.5 6.75 17 12l-8.5 5.25V6.75Z" fill="currentColor" />
+          </svg>
         </div>
-      </div>
-      <div className="bg-black">
-        <video
-          ref={videoRef}
-          key={videoUrl}
-          preload="metadata"
-          poster={posterUrl}
-          className={[
-            "block aspect-video w-full bg-black transition-opacity duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
-            isVideoReady ? "opacity-100" : "opacity-0",
-          ].join(" ")}
-          onClick={() => {
-            void togglePlayback();
-          }}
-          onLoadedMetadata={(event) => {
-            setIsVideoReady(true);
-            setDuration(event.currentTarget.duration || 0);
-            setCurrentTime(event.currentTarget.currentTime || 0);
-            setIsMuted(event.currentTarget.muted);
-          }}
-          onTimeUpdate={(event) =>
-            setCurrentTime(event.currentTarget.currentTime || 0)
-          }
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-          onEnded={() => {
-            setIsPlaying(false);
-            onVideoComplete();
-          }}
-          onError={() => setVideoStatus("unavailable")}
-        >
-          <source src={videoUrl} type="video/mp4" />
-          Your browser does not support embedded videos.
-        </video>
-        <div className="border-t border-white/10 bg-zinc-950 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                void togglePlayback();
-              }}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"
-              aria-label={isPlaying ? "Pause video" : "Play video"}
-            >
-              {isPlaying ? "II" : "▶"}
-            </button>
-            <span className="min-w-[84px] text-xs font-medium tabular-nums text-white/70">
-              {formatVideoTime(currentTime)} / {formatVideoTime(duration)}
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={duration || 0}
-              step={0.1}
-              value={Math.min(currentTime, duration || currentTime)}
-              onChange={(event) => seekTo(Number(event.target.value))}
-              className="h-1.5 min-w-0 flex-1 accent-white"
-              aria-label="Video progress"
-            />
-            <button
-              type="button"
-              onClick={toggleMute}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-xs font-semibold text-white transition hover:bg-white/15"
-              aria-label={isMuted ? "Unmute video" : "Mute video"}
-            >
-              {isMuted ? "M" : "V"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                void enterFullscreen();
-              }}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-xs font-semibold text-white transition hover:bg-white/15"
-              aria-label="Enter fullscreen"
-            >
-              ⛶
-            </button>
-          </div>
+        <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-amber-100">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
+          In development
+        </span>
+        <p className="mt-4 text-xs uppercase tracking-[0.14em] text-white/45">{lessonTitle}</p>
+        <h3 className="mt-2 text-xl font-medium tracking-tight text-white sm:text-2xl">Video walkthroughs are being refined</h3>
+        <p className="mt-3 max-w-md text-sm leading-6 text-white/60">
+          We’re producing a consistent library of clear, animated explanations. This lesson remains fully available through the notes while its video is prepared.
+        </p>
+        <div className="mt-6 flex items-center gap-2 text-xs text-white/40">
+          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-white/10"><span className="block h-full w-2/3 rounded-full bg-white/25" /></span>
+          Production in progress
         </div>
       </div>
     </div>
   );
-}
-
-function formatVideoTime(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "0:00";
-
-  const minutes = Math.floor(value / 60);
-  const seconds = Math.floor(value % 60)
-    .toString()
-    .padStart(2, "0");
-  return `${minutes}:${seconds}`;
 }

@@ -20,7 +20,7 @@ export function parseNumericAnswer(value: string): number | null {
 }
 
 export function markBankResponse(
-  responseType: string,
+  _responseType: string,
   studentAnswer: string,
   secret: BankQuestionSecret,
   availableMarks: number,
@@ -28,7 +28,10 @@ export function markBankResponse(
   const parts = Object.values(decodeParts(studentAnswer));
   if (!parts.some((p) => answerText(p)))
     return { marks: 0, isCorrect: false, requiresReview: false };
-  if (responseType === "numeric" && parts.length === 1) {
+  // Some legacy bank rows contain a numeric final answer while retaining a
+  // broader response_type label. Numeric equivalence is still deterministic
+  // and safe whenever both sides parse as numbers.
+  if (parts.length === 1) {
     const submitted = parseNumericAnswer(parts[0]);
     const expected = parseNumericAnswer(secret.answer);
     if (submitted !== null && expected !== null) {

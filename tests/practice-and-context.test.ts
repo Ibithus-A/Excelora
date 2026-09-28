@@ -129,6 +129,15 @@ test("numeric marking accepts rich fractions but never strips units or case-fold
     ),
     { marks: 3, isCorrect: true, requiresReview: false },
   );
+  assert.deepEqual(
+    markBankResponse(
+      "short_text",
+      "2",
+      { questionId: "legacy-numeric", answer: "2", workedSolution: "" },
+      2,
+    ),
+    { marks: 2, isCorrect: true, requiresReview: false },
+  );
   assert.equal(
     markBankResponse(
       "numeric",
@@ -198,14 +207,14 @@ test("Arthur blocks active attempts on server before context construction and pr
     "utf8",
   );
   assert.ok(
-    source.indexOf('.eq("status", "active")') < source.indexOf("const body ="),
+    source.indexOf('.eq("status", "active")') < source.indexOf("const pageTitle ="),
   );
   assert.ok(
     source.indexOf("if (active?.length) return") <
       source.indexOf("await fetch(COHERE_API_URL"),
   );
   assert.match(source, /getStructuredLesson\(pageTitle\)/);
-  assert.match(source, /if \(pdfTitle && !nativeLesson && !reviewContext\)/);
+  assert.match(source, /if \(pdfTitle && !nativeLesson && !reviewContext && !verifiedPracticeContext\)/);
   assert.match(source, /\.eq\("status", "submitted"\)/);
   assert.match(source, /\.eq\("student_id", user.id\)/);
 });

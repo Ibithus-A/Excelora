@@ -76,14 +76,14 @@ async function presentAttempt(attemptId: string, reveal: boolean) {
     ? `${PUBLIC_FIELDS}, answer, worked_solution`
     : PUBLIC_FIELDS;
   const { data: rows, error: rowsError } = await admin.from("student_assessment_attempt_questions")
-    .select(`question_order,student_answer,submission_state,marks_awarded,is_correct,assessment_question_bank(${questionFields})`)
+    .select(`question_order,student_answer,submission_state,marks_awarded,is_correct,review_status,reviewed_at,assessment_question_bank(${questionFields})`)
     .eq("attempt_id", attemptId).order("question_order");
   if (rowsError) throw new Error(rowsError.message);
   const questions = (rows ?? []).map((row) => {
     const raw = Array.isArray(row.assessment_question_bank) ? row.assessment_question_bank[0] : row.assessment_question_bank;
     const safe = { ...(raw as Record<string, unknown>) };
     if (!reveal) { delete safe.answer; delete safe.worked_solution; }
-    return { order: row.question_order, response: row.student_answer, state: row.submission_state, ...(reveal ? { marksAwarded: row.marks_awarded, isCorrect: row.is_correct } : {}), ...safe };
+    return { order: row.question_order, response: row.student_answer, state: row.submission_state, ...(reveal ? { marksAwarded: row.marks_awarded, isCorrect: row.is_correct, reviewStatus: row.review_status, reviewedAt: row.reviewed_at } : {}), ...safe };
   });
   const publicAttempt = { id: attempt.id, status: attempt.status, attempt_number: attempt.attempt_number, total_marks: attempt.total_marks, deadline_at: attempt.deadline_at, questions };
   return reveal ? { ...publicAttempt, score: attempt.score, percentage: attempt.percentage, pending_review_marks: attempt.pending_review_marks } : publicAttempt;

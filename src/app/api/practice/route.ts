@@ -41,7 +41,7 @@ async function present(sessionId: string, studentId: string) {
   const { data: rows, error: rowError } = await admin
     .from("practice_session_questions")
     .select(
-      `question_id,question_order,response,marks_awarded,is_correct,requires_review,checked_at,assessment_question_bank(${PUBLIC_BANK_FIELDS})`,
+      `question_id,question_order,response,marks_awarded,is_correct,requires_review,review_status,reviewed_at,checked_at,assessment_question_bank(${PUBLIC_BANK_FIELDS})`,
     )
     .eq("session_id", session.id)
     .order("question_order");
@@ -128,54 +128,9 @@ export async function GET(request: Request) {
     if (profile.role === "tutor")
       return Response.json({
         subtopics,
-        history: [],
-        recommendations: [],
         preview: true,
       });
-    const { data: history, error } = await createAdminClient()
-      .from("practice_sessions")
-      .select(
-        "id,subtopic,status,question_count,created_at,practice_session_questions(marks_awarded,requires_review,checked_at,assessment_question_bank(marks,subtopic))",
-      )
-      .eq("student_id", profile.id)
-      .eq("course_topic_key", config.bankCourseTopicKey)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    if (error?.code === "PGRST205" || error?.code === "42P01")
-      return Response.json(
-        {
-          error:
-            "Practice is not available yet. Please ask your tutor to finish setting it up.",
-          code: "PRACTICE_NOT_CONFIGURED",
-        },
-        { status: 503 },
-      );
-    if (error) throw new Error(error.message);
-    const performance = new Map<string, { marks: number; available: number }>();
-    for (const session of history ?? [])
-      for (const question of session.practice_session_questions) {
-        if (!question.checked_at || question.requires_review) continue;
-        const bankQuestion = Array.isArray(question.assessment_question_bank)
-          ? question.assessment_question_bank[0]
-          : question.assessment_question_bank;
-        const row = performance.get(
-          bankQuestion?.subtopic ?? session.subtopic,
-        ) ?? {
-          marks: 0,
-          available: 0,
-        };
-        row.marks += question.marks_awarded ?? 0;
-        row.available += bankQuestion?.marks ?? 0;
-        performance.set(bankQuestion?.subtopic ?? session.subtopic, row);
-      }
-    const recommendations = [...performance]
-      .filter(([, row]) => row.available > 0)
-      .map(([subtopic, row]) => ({
-        subtopic,
-        percentage: Math.round((100 * row.marks) / row.available),
-      }))
-      .sort((a, b) => a.percentage - b.percentage);
-    return Response.json({ subtopics, history, recommendations });
+    return Response.json({ subtopics, preview: false });
   } catch (error) {
     console.error("[practice GET]", error);
     return fail("Unable to load practice.", 500);

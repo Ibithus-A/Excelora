@@ -162,6 +162,7 @@ export default function HomePage() {
             chapterOneAssessmentAttempt={assessmentAccess.attempt}
             chapterOneAssessmentPrerequisite={assessmentAccess.prerequisite}
             onToggleChapterOneAssessment={assessmentAccess.toggle}
+            onAssessmentAttemptCleared={() => void assessmentAccess.refresh()}
             onDeleteStudent={deleteSelectedStudent}
             topicProgress={topicProgress}
           />

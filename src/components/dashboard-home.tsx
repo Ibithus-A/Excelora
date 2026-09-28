@@ -14,6 +14,7 @@ import { A_LEVEL_MATHS_SUBJECTS } from "@/lib/seed";
 import { getLessonChapterContext } from "@/lib/tree-utils";
 import type { UserAccessProfile, UserPlan, UserRole } from "@/types/auth";
 import {StudentActivityPanel} from "./student-activity-panel";
+import { StudentPracticeHistory } from "./student-practice-history";
 import { QuizPanel } from "./quiz-panel";
 import {useStudyActivity} from "@/lib/hooks/use-study-activity";
 import type { FlowNode } from "@/types/flowstate";
@@ -52,6 +53,7 @@ type DashboardHomeProps = {
   chapterOneAssessmentAttempt?: AssessmentAttemptSummary | null;
   chapterOneAssessmentPrerequisite?: AssessmentPrerequisiteSummary;
   onToggleChapterOneAssessment?: () => Promise<void>;
+  onAssessmentAttemptCleared?: () => void;
   onDeleteStudent?: () => Promise<{ ok: boolean; error?: string }>;
   topicProgress?: TopicProgressController;
 };
@@ -101,6 +103,7 @@ export function DashboardHome({
   chapterOneAssessmentAttempt = null,
   chapterOneAssessmentPrerequisite = { isComplete: false, completedCount: 0, totalCount: 0 },
   onToggleChapterOneAssessment,
+  onAssessmentAttemptCleared,
   onDeleteStudent,
   topicProgress,
 }: DashboardHomeProps) {
@@ -276,12 +279,6 @@ export function DashboardHome({
   const visibleProgressItems =
     role === "student" || selectedStudent ? studentLessonItems : chapterProgressItems;
   useStudyActivity(role === "student", "Dashboard", "dashboard");
-  const progressOwnerLabel =
-    role === "tutor" && selectedStudent
-      ? `Viewing ${selectedStudent.name}'s progress`
-      : role === "student"
-        ? "Viewing your progress"
-        : "";
   const accessibleTopicCount = Math.max(
     role === "student" || selectedStudent
       ? visibleProgressItems.completed.length +
@@ -378,13 +375,13 @@ export function DashboardHome({
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Welcome Page</p>
-                <h1 className="text-xl font-semibold text-zinc-900 md:text-2xl">
+                <h1 className="text-xl font-medium text-zinc-900 md:text-2xl">
                   Welcome back
                 </h1>
                 <p className="text-sm text-zinc-600">{name}</p>
                 {role === "student" ? (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-600">
+                    <span className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">
                       {currentPlan} plan
                     </span>
                   </div>
@@ -425,36 +422,136 @@ export function DashboardHome({
           </div>
         </header>
 
+        {role === "tutor" ? (
+          <section className="relative z-30 rounded-[24px] border border-zinc-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.15fr)] lg:items-center">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Student workspace</p>
+                <h2 className="mt-1 text-lg font-medium tracking-tight text-zinc-950">Choose who you’re working with</h2>
+                <p className="mt-1 text-xs leading-5 text-zinc-500">Your quizzes, activity, progress and access controls will all follow this selection.</p>
+              </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={isSearchOpen}
+                  onClick={() => setIsSearchOpen((open) => !open)}
+                  className={[
+                    "flex w-full items-center gap-3 rounded-2xl border bg-zinc-50/70 p-3 text-left outline-none transition",
+                    isSearchOpen ? "border-zinc-400 ring-4 ring-zinc-950/5" : "border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50",
+                  ].join(" ")}
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-medium uppercase text-white">
+                    {selectedStudent ? selectedStudent.name.slice(0, 2) : "—"}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-zinc-900">{selectedStudent?.name ?? "Select a student"}</span>
+                    <span className="mt-0.5 block truncate text-xs text-zinc-500">{selectedStudent?.email ?? `${students.length} students available`}</span>
+                  </span>
+                  <svg viewBox="0 0 20 20" className={["h-4 w-4 shrink-0 text-zinc-400 transition-transform", isSearchOpen ? "rotate-180" : ""].join(" ")} aria-hidden="true">
+                    <path d="m5.5 7.5 4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                {isSearchOpen ? (
+                  <div className="absolute inset-x-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-2 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                    <div className="relative mb-2">
+                      <svg viewBox="0 0 20 20" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.5"/><path d="m13 13 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      <input
+                        autoFocus
+                        type="search"
+                        value={studentSearch}
+                        onChange={(event) => setStudentSearch(event.target.value)}
+                        placeholder="Search by name or email"
+                        className="h-10 w-full rounded-xl border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm outline-none focus:border-zinc-400 focus:bg-white"
+                      />
+                    </div>
+                    <div role="listbox" className="max-h-64 overflow-y-auto">
+                      {visibleStudents.length ? visibleStudents.map((student) => (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={student.id === selectedStudentId}
+                          key={student.id}
+                          onClick={() => {
+                            onSelectStudent?.(student.id);
+                            setStudentSearch("");
+                            setIsSearchOpen(false);
+                          }}
+                          className={[
+                            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition",
+                            student.id === selectedStudentId ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100",
+                          ].join(" ")}
+                        >
+                          <span className={["flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-medium uppercase", student.id === selectedStudentId ? "bg-white/15 text-white" : "bg-zinc-200 text-zinc-700"].join(" ")}>{student.name.slice(0, 2)}</span>
+                          <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{student.name}</span><span className={["block truncate text-xs", student.id === selectedStudentId ? "text-white/60" : "text-zinc-400"].join(" ")}>{student.email}</span></span>
+                          {student.id === selectedStudentId ? <span className="text-xs">✓</span> : null}
+                        </button>
+                      )) : <p className="px-3 py-5 text-center text-sm text-zinc-500">No matching students.</p>}
+                    </div>
+                  </div>
+                ) : null}
+                {selectedStudent ? (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+                      <span><span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />{selectedStudentMilestone ?? "No current chapter"}</span>
+                      <span>{accessibleChapterTitles.length} of {chapterTitles.length} chapters unlocked</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="relative grid grid-cols-2 rounded-full border border-zinc-200 bg-zinc-50 p-0.5" aria-label="Student plan">
+                        <span aria-hidden="true" className={["pointer-events-none absolute bottom-0.5 left-0.5 top-0.5 w-[calc(50%-2px)] rounded-full bg-white shadow-sm transition-transform duration-200", selectedStudentPlan === "premium" ? "translate-x-full" : "translate-x-0"].join(" ")} />
+                        {(["basic", "premium"] as const).map((plan) => (
+                          <button key={plan} type="button" onClick={() => void onSetStudentPlan?.(plan)} className={["relative z-10 rounded-full px-3.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.08em] transition", selectedStudentPlan === plan ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-800"].join(" ")}>{plan}</button>
+                        ))}
+                      </div>
+                      <button type="button" onClick={() => { setDeleteConfirmationStudentId(selectedStudent.id); setDeleteError(""); }} disabled={isDeletingStudent || isDeleteConfirming} aria-label={`Delete ${selectedStudent.name}`} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"><TrashIcon className="h-3.5 w-3.5" /></button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            {isDeleteConfirming && selectedStudent ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-800">
+                <span>Permanently delete <span className="font-medium">{selectedStudent.name}</span>? This cannot be undone.</span>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => { setDeleteConfirmationStudentId(null); setDeleteError(""); }} disabled={isDeletingStudent} className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-medium text-zinc-700">Cancel</button>
+                  <button type="button" onClick={() => void handleDeleteStudent()} disabled={isDeletingStudent} className="rounded-full bg-rose-600 px-3.5 py-1.5 text-xs font-medium text-white disabled:opacity-60">{isDeletingStudent ? "Deleting…" : "Delete"}</button>
+                </div>
+              </div>
+            ) : null}
+            {deleteError ? <p className="mt-3 text-sm text-rose-700">{deleteError}</p> : null}
+          </section>
+        ) : null}
+
         <QuizPanel
           role={role}
-          students={students}
           selectedStudentId={selectedStudentId ?? ""}
-          onSelectStudent={onSelectStudent}
         />
-        {role === "tutor" && <StudentActivityPanel students={students} studentId={selectedStudentId??""} onSelectStudent={onSelectStudent}/>}
+        {role === "student" ? <StudentPracticeHistory /> : null}
+        {role === "tutor" && (
+          <StudentActivityPanel
+            students={students}
+            studentId={selectedStudentId ?? ""}
+            onAssessmentAttemptCleared={onAssessmentAttemptCleared}
+          />
+        )}
         <article
           data-tour="dashboard-progress"
           className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
                 Course Progress
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <h2 className="text-xl font-semibold tracking-tight text-zinc-950 md:text-2xl">
+                <h2 className="text-xl font-medium tracking-tight text-zinc-950 md:text-2xl">
                   A Level Maths
                 </h2>
-                {progressOwnerLabel ? (
-                  <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-600">
-                    {progressOwnerLabel}
-                  </span>
-                ) : null}
               </div>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
                 {role === "tutor"
                   ? selectedStudent
-                    ? `This read-only overview shows ${selectedStudent.name}'s completed, current, and available subtopics.`
+                    ? "Completed, current and available subtopics for the selected student."
                     : "Select a student to view their current course position."
                   : "Your current course position and available topics are shown here."}
               </p>
@@ -481,7 +578,7 @@ export function DashboardHome({
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className={`h-2 w-2 shrink-0 rounded-full ${card.dotClassName}`} />
-                    <h3 className="truncate text-sm font-semibold text-zinc-900">
+                    <h3 className="truncate text-sm font-medium text-zinc-900">
                       {card.title}
                     </h3>
                   </div>
@@ -500,7 +597,7 @@ export function DashboardHome({
                               {item.title}
                             </p>
                             {item.isCurrent ? (
-                              <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700">
+                              <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-amber-700">
                                 Current
                               </span>
                             ) : null}
@@ -587,10 +684,10 @@ export function DashboardHome({
           <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
                   Assessment Result
                 </p>
-                <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-950 md:text-2xl">
+                <h2 className="mt-2 text-xl font-medium tracking-tight text-zinc-950 md:text-2xl">
                   Chapter 1: Algebra and Functions
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-600">
@@ -600,7 +697,7 @@ export function DashboardHome({
 
               {submittedAssessmentScore !== null && submittedAssessmentMaximum !== null ? (
                 <div className="min-w-36 rounded-xl border border-zinc-200 bg-white px-5 py-4 text-right">
-                  <p className="text-3xl font-semibold tabular-nums tracking-tight text-zinc-950">
+                  <p className="text-3xl font-medium tabular-nums tracking-tight text-zinc-950">
                     {submittedAssessmentScore}
                     <span className="text-lg font-medium text-zinc-400">
                       {` / ${submittedAssessmentMaximum}`}
@@ -626,7 +723,7 @@ export function DashboardHome({
               ) : chapterOneAssessmentAttempt?.status === "submitted" ? (
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-zinc-900">Submitted</p>
+                    <p className="text-sm font-medium text-zinc-900">Submitted</p>
                     <p className="mt-1 text-xs text-zinc-500">
                       {chapterOneAssessmentAttempt.submitted_at
                         ? `Completed ${new Date(chapterOneAssessmentAttempt.submitted_at).toLocaleDateString()}`
@@ -642,7 +739,7 @@ export function DashboardHome({
                 </div>
               ) : chapterOneAssessmentAttempt?.status === "active" ? (
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">Attempt in progress</p>
+                  <p className="text-sm font-medium text-zinc-900">Attempt in progress</p>
                   <p className="mt-1 text-xs text-zinc-500">
                     {chapterOneAssessmentAttempt.locked_questions.length} of 15 questions locked in.
                     Your final score will appear here after submission.
@@ -650,14 +747,14 @@ export function DashboardHome({
                 </div>
               ) : assessmentRequiresPremium ? (
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">Premium required</p>
+                  <p className="text-sm font-medium text-zinc-900">Premium required</p>
                   <p className="mt-1 text-xs text-zinc-500">
                     Upgrade your plan to access this assessment.
                   </p>
                 </div>
               ) : assessmentModulesIncomplete ? (
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">Assessment locked</p>
+                  <p className="text-sm font-medium text-zinc-900">Assessment locked</p>
                   <p className="mt-1 text-xs text-zinc-500">
                     Complete all Chapter 1 modules first
                     {chapterOneAssessmentPrerequisite.totalCount > 0
@@ -668,14 +765,14 @@ export function DashboardHome({
                 </div>
               ) : isChapterOneAssessmentUnlocked ? (
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">Ready to begin</p>
+                  <p className="text-sm font-medium text-zinc-900">Ready to begin</p>
                   <p className="mt-1 text-xs text-zinc-500">
                     Your Chapter 1 assessment is unlocked in the workspace.
                   </p>
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm font-semibold text-zinc-900">Awaiting unlock</p>
+                  <p className="text-sm font-medium text-zinc-900">Awaiting unlock</p>
                   <p className="mt-1 text-xs text-zinc-500">
                     You have completed the chapter. Your tutor can now unlock the assessment.
                   </p>
@@ -686,218 +783,17 @@ export function DashboardHome({
         ) : null}
 
         {role === "tutor" && chapterTitles.length > 0 ? (
-          <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
+          <article id="student-access" className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-500">
-                Student Management
-              </h2>
-              {students.length > 0 ? (
-                <span className="text-xs text-zinc-500">
-                  {students.length} student{students.length === 1 ? "" : "s"}
-                </span>
-              ) : null}
-            </div>
-
-            {students.length > 0 ? (
-              <div className="relative mt-4 w-full sm:max-w-[360px]">
-                <input
-                  type="text"
-                  value={studentSearch}
-                  onFocus={() => setIsSearchOpen(true)}
-                  onChange={(event) => {
-                    setStudentSearch(event.target.value);
-                    setIsSearchOpen(true);
-                  }}
-                  placeholder="Search student by name or email..."
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 pr-16 text-sm text-zinc-800 outline-none transition focus:border-zinc-400"
-                />
-                {studentSearch ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStudentSearch("");
-                      setIsSearchOpen(false);
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
-                  >
-                    Clear
-                  </button>
-                ) : null}
-                {isSearchOpen ? (
-                  <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
-                    {visibleStudents.length > 0 ? (
-                      visibleStudents.slice(0, 6).map((student) => (
-                        <button
-                          key={student.id}
-                          type="button"
-                          onClick={() => {
-                            onSelectStudent?.(student.id);
-                            setStudentSearch(student.name);
-                            setIsSearchOpen(false);
-                          }}
-                          className="flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2.5 text-left text-sm text-zinc-700 transition last:border-b-0 hover:bg-zinc-50"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate">{student.name}</span>
-                            <span className="block truncate text-xs text-zinc-500">
-                              {student.email}
-                            </span>
-                          </span>
-                          {student.id === selectedStudentId ? (
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
-                              Selected
-                            </span>
-                          ) : null}
-                        </button>
-                      ))
-                    ) : (
-                      <p className="px-3 py-2.5 text-sm text-zinc-500">No matching users found.</p>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4 md:p-5">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white">
-                    {selectedStudent ? selectedStudent.name.charAt(0).toUpperCase() : "—"}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[15px] font-semibold text-zinc-900">
-                      {selectedStudent?.name ?? "No student selected"}
-                    </p>
-                    {selectedStudent ? (
-                      <p className="truncate text-xs text-zinc-500">{selectedStudent.email}</p>
-                    ) : (
-                      <p className="text-xs text-zinc-500">
-                        Search above to load a student&apos;s workspace.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <div className="relative grid grid-cols-2 rounded-full border border-zinc-200 bg-zinc-50 p-0.5">
-                    <span
-                      aria-hidden="true"
-                      className={[
-                        "pointer-events-none absolute bottom-0.5 left-0.5 top-0.5 w-[calc(50%-2px)] rounded-full bg-white shadow-sm transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                        selectedStudentPlan === "premium" ? "translate-x-full" : "translate-x-0",
-                      ].join(" ")}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void onSetStudentPlan?.("basic");
-                      }}
-                      className={[
-                        "relative z-10 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors duration-300",
-                        selectedStudentPlan === "basic"
-                          ? "text-zinc-900"
-                          : "text-zinc-500 hover:text-zinc-800",
-                      ].join(" ")}
-                    >
-                      Basic
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void onSetStudentPlan?.("premium");
-                      }}
-                      className={[
-                        "relative z-10 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors duration-300",
-                        selectedStudentPlan === "premium"
-                          ? "text-zinc-900"
-                          : "text-zinc-500 hover:text-zinc-800",
-                      ].join(" ")}
-                    >
-                      Premium
-                    </button>
-                  </div>
-                  {selectedStudent ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDeleteConfirmationStudentId(selectedStudent.id);
-                        setDeleteError("");
-                      }}
-                      disabled={isDeletingStudent || isDeleteConfirming}
-                      aria-label={`Delete ${selectedStudent.name}`}
-                      title="Delete student"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-
-              {selectedStudent ? (
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      className={[
-                        "h-1.5 w-1.5 rounded-full",
-                        selectedStudentMilestone ? "bg-emerald-500" : "bg-zinc-300",
-                      ].join(" ")}
-                    />
-                    Current chapter:{" "}
-                    <span className="text-zinc-800">
-                      {selectedStudentMilestone ?? "Not tagged"}
-                    </span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
-                    {accessibleChapterTitles.length} of {chapterTitles.length} chapters unlocked
-                  </span>
-                </div>
-              ) : null}
-
-              {isDeleteConfirming && selectedStudent ? (
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-800">
-                  <span>
-                    Permanently delete{" "}
-                    <span className="font-semibold">{selectedStudent.name}</span>? This cannot be
-                    undone.
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDeleteConfirmationStudentId(null);
-                        setDeleteError("");
-                      }}
-                      disabled={isDeletingStudent}
-                      className="inline-flex items-center justify-center rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void handleDeleteStudent();
-                      }}
-                      disabled={isDeletingStudent}
-                      className="inline-flex items-center justify-center rounded-full border border-rose-600 bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {isDeletingStudent ? "Deleting…" : "Delete"}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {deleteError ? (
-                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700">
-                  {deleteError}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-8 flex flex-wrap items-end justify-between gap-3 border-b border-zinc-200 pb-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-500">
+                <h2 className="text-sm font-medium uppercase tracking-[0.1em] text-zinc-500">Access &amp; Curriculum</h2>
+                <p className="mt-1 text-xs text-zinc-500">Set the current chapter and control which course material is available.</p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-end justify-between gap-3 border-b border-zinc-200 pb-3">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-500">
                   Chapter Access
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">
@@ -1064,7 +960,7 @@ export function DashboardHome({
                               ].join(" ")}
                               title={`${taggedStudent.name} (${taggedStudent.email})`}
                             >
-                              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-900 text-[9px] font-semibold text-white">
+                              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-zinc-900 text-[9px] font-medium text-white">
                                 {studentInitial}
                               </span>
                               <span className="truncate">{taggedStudent.name}</span>

@@ -32,6 +32,8 @@ type PracticeQuestion = {
   requires_review: boolean;
   marks_awarded: number;
   is_correct?: boolean | null;
+  review_status?: "not_required" | "pending" | "completed";
+  reviewed_at?: string | null;
   answer?: string;
   worked_solution?: string;
 };
@@ -40,8 +42,7 @@ type PracticeAction =
   | "saving"
   | "checking"
   | "stopping"
-  | "navigating"
-  | "reviewing";
+  | "navigating";
 type Session = {
   id: string;
   status: string;
@@ -49,31 +50,31 @@ type Session = {
   subtopic: string;
   questions: PracticeQuestion[];
 };
-type History = {
-  id: string;
-  subtopic: string;
-  status: string;
-  created_at: string;
-  practice_session_questions: {
-    checked_at: string | null;
-    requires_review: boolean;
-  }[];
+export type PracticeArthurContext = {
+  sessionId: string;
+  questionId: string;
+  questionTitle: string;
 };
 export function PracticeQuestions({
   subjectTitle,
   chapterTitle,
   initialSubtopic = "",
   onMathsSidebarOpenChange,
+  canUseArthur = false,
+  onArthurContextChange,
+  onAskArthur,
 }: {
   subjectTitle: string;
   chapterTitle: string;
   initialSubtopic?: string;
   onMathsSidebarOpenChange?: (isOpen: boolean) => void;
+  canUseArthur?: boolean;
+  onArthurContextChange?: (context: PracticeArthurContext | null) => void;
+  onAskArthur?: () => void;
 }) {
   const mapping = getCourseBankMapping(subjectTitle, chapterTitle),
     assessmentKey = mapping ? assessmentKeyFor(mapping) : "";
   const [topicOptions, setTopicOptions] = useState<TopicOption[]>([]),
-    [history, setHistory] = useState<History[]>([]),
     [subtopic, setSubtopic] = useState(initialSubtopic);
   const [difficultyIndex, setDifficultyIndex] = useState(0);
   const [lengthIndex, setLengthIndex] = useState(0);
@@ -88,15 +89,24 @@ export function PracticeQuestions({
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [pendingAction, setPendingAction] = useState<PracticeAction | null>(null),
-    [openingSessionId, setOpeningSessionId] = useState<string | null>(null),
     [error, setError] = useState(""),
     [preview, setPreview] = useState(false),
     [exhausted, setExhausted] = useState(false);
   const pending = useRef(false);
   const apply = useCallback((next: Session, at = 0) => {
-    setSession(next);
-    setIndex(at);
-    setResponse(next.questions[at]?.response ?? "");
+    const visibleQuestions = next.status === "active"
+      ? next.questions
+      : next.questions.filter((question) => Boolean(question.checked_at));
+    if (!visibleQuestions.length) {
+      setSession(null);
+      setIndex(0);
+      setResponse("");
+      return;
+    }
+    const safeIndex = Math.max(0, Math.min(at, visibleQuestions.length - 1));
+    setSession({ ...next, questions: visibleQuestions });
+    setIndex(safeIndex);
+    setResponse(visibleQuestions[safeIndex]?.response ?? "");
   }, []);
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,7 +120,6 @@ export function PracticeQuestions({
       const options = data.subtopics as TopicOption[];
       const titles = options.map((t) => t.title);
       setTopicOptions(options);
-      setHistory(data.history);
       setPreview(Boolean(data.preview));
       const scope = resolvePracticeSubtopic(initialSubtopic, titles);
       if (scope === null)
@@ -190,7 +199,6 @@ export function PracticeQuestions({
       setError(e instanceof Error ? e.message : "Unable to save practice.");
     } finally {
       pending.current = false;
-      if (action === "reviewing") setOpeningSessionId(null);
       setBusy(false);
       setPendingAction(null);
     }
@@ -305,28 +313,6 @@ export function PracticeQuestions({
           : Math.min(index + 1, data.session.questions.length - 1),
       );
     });
-  const resume = (id: string) =>
-    run("reviewing", async () => {
-      setOpeningSessionId(id);
-      const res = await fetch(
-        `/api/practice?assessmentKey=${encodeURIComponent(assessmentKey)}&sessionId=${encodeURIComponent(id)}`,
-      );
-      const data = await res.json();
-      if (!res.ok) throw Error(data.error);
-      if (!data.session?.questions?.length)
-        throw Error("This practice session has no questions to review.");
-      apply(
-        data.session,
-        Math.max(
-          0,
-          data.session.questions.findIndex(
-            (q: PracticeQuestion) => !q.checked_at,
-          ),
-        ),
-      );
-      setSubtopic(data.session.subtopic);
-      setOpeningSessionId(null);
-    });
   const question = session?.questions[index],
     checked = session?.questions.filter((q) => q.checked_at).length ?? 0;
   const active = session?.status === "active";
@@ -337,6 +323,33 @@ export function PracticeQuestions({
       : question.is_correct === true || question.marks_awarded === question.marks
         ? "correct"
         : "incorrect";
+  useEffect(() => {
+    if (
+      !active ||
+      !canUseArthur ||
+      !session ||
+      !question ||
+      feedbackState !== "incorrect"
+    ) {
+      onArthurContextChange?.(null);
+      return;
+    }
+    onArthurContextChange?.({
+      sessionId: session.id,
+      questionId: question.question_id,
+      questionTitle: question.subtopic || subtopic || chapterTitle,
+    });
+    return () => onArthurContextChange?.(null);
+  }, [
+    active,
+    canUseArthur,
+    chapterTitle,
+    feedbackState,
+    onArthurContextChange,
+    question,
+    session,
+    subtopic,
+  ]);
   const availableQuestions = topicOptions.reduce(
     (total, topic) =>
       total +
@@ -521,44 +534,6 @@ export function PracticeQuestions({
                   : "Start practice"}
             </button>
           </div>
-          {!preview && history.length > 0 && (
-            <section className="border-t border-zinc-200 py-7">
-              <h3 className="text-sm font-semibold">Recent practice</h3>
-              <div className="mt-4 divide-y divide-zinc-100">
-                {history.map((h) => (
-                  <button
-                    key={h.id}
-                    disabled={busy}
-                    onClick={() => void resume(h.id)}
-                    className="group flex w-full items-center justify-between gap-4 rounded-xl px-2 py-4 text-left text-sm transition hover:bg-zinc-50 disabled:cursor-wait"
-                  >
-                    <span>
-                      {h.subtopic || "Whole chapter"}
-                      <span className="mt-1 block text-xs text-zinc-400">
-                        {new Date(h.created_at).toLocaleDateString()} ·{" "}
-                        {
-                          h.practice_session_questions.filter(
-                            (q) => q.checked_at,
-                          ).length
-                        }{" "}
-                        checked
-                      </span>
-                    </span>
-                    <span className="inline-flex min-w-[74px] items-center justify-end gap-2 text-xs font-medium text-zinc-500 transition group-hover:text-zinc-900">
-                      {openingSessionId === h.id ? (
-                        <>
-                          <LoadingSpinner className="h-3.5 w-3.5" />
-                          Opening
-                        </>
-                      ) : (
-                        <>{h.status === "active" ? "Resume" : "Review"} →</>
-                      )}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
         </>
         )
       ) : question ? (
@@ -704,22 +679,37 @@ export function PracticeQuestions({
                       ? "Correct — well done"
                       : feedbackState === "incorrect"
                         ? "Not quite — review the solution"
-                        : "Saved for tutor review"}
+                        : "Answer saved — compare the solution"}
                   </h3>
                   <p className="text-xs leading-5 text-zinc-600">
-                    {question.requires_review
-                      ? "Your work is saved and ready for review."
-                      : `${question.marks_awarded}/${question.marks} marks awarded`}
+                    {feedbackState === "review"
+                      ? "This response needs tutor oversight; it has not been marked wrong."
+                      : `${question.marks_awarded}/${question.marks} marks awarded${question.review_status === "completed" ? " · Tutor reviewed" : ""}`}
                   </p>
                 </div>
               </div>
               <div className="space-y-4 bg-white/70 p-5">
-              {question.requires_review && (
-                <p>
-                  Your work is saved. Compare it with the solution while it
-                  awaits review.
-                </p>
-              )}
+              {feedbackState === "incorrect" && active ? (
+                <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-zinc-900">Want help understanding the method?</p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-500">
+                        Arthur can use this question, your answer and the worked solution to explain where to improve.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!canUseArthur}
+                      onClick={onAskArthur}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 py-2.5 text-xs font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
+                    >
+                      <span aria-hidden="true">✦</span>
+                      {canUseArthur ? "Ask Arthur to explain" : "Arthur requires Premium"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               <div>
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-zinc-500">Answer</p>
                 <BankMath value={question.answer ?? ""} />

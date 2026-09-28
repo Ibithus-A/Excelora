@@ -123,7 +123,7 @@ export function SidebarNode({
           onClick={(event) => {
             event.stopPropagation();
             selectNode(node.id);
-            if (hasChildren && !isLocked) toggleExpanded(node.id);
+            if (hasChildren) toggleExpanded(node.id);
           }}
           className="mr-1 inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-200/70 hover:text-zinc-600 disabled:opacity-30"
           disabled={!hasChildren}
@@ -146,7 +146,7 @@ export function SidebarNode({
               return;
             }
             selectNode(node.id);
-            if (!canManage && hasChildren && !isLocked) {
+            if (!canManage && hasChildren) {
               toggleExpanded(node.id);
             }
           }}
@@ -157,7 +157,7 @@ export function SidebarNode({
             setIsEditing(true);
           }}
           className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left"
-          title="Double-click name to rename"
+          title={canManage ? "Double-click name to rename" : isLocked ? "Locked content" : node.title}
         >
           {node.kind === "folder" ? (
             <FolderIcon className="h-4 w-4 shrink-0 text-zinc-500" />

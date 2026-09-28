@@ -1,8 +1,8 @@
 "use client";
 
 import { BankMath, BankQuestion } from "./bank-question";
-import type { UserAccessProfile, UserRole } from "@/types/auth";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { UserRole } from "@/types/auth";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type QuizSummary = {
   id: string;
@@ -44,14 +44,10 @@ function Spinner() {
 
 export function QuizPanel({
   role,
-  students = [],
   selectedStudentId = "",
-  onSelectStudent,
 }: {
   role: UserRole;
-  students?: UserAccessProfile[];
   selectedStudentId?: string;
-  onSelectStudent?: (id: string) => void;
 }) {
   const [assignments, setAssignments] = useState<QuizSummary[]>([]);
   const [topics, setTopics] = useState<QuizTopic[]>([]);
@@ -116,13 +112,13 @@ export function QuizPanel({
   }
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 bg-[linear-gradient(135deg,#f4f4f5,#fff)] p-5 md:p-6">
+    <section className="relative rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
+      <div className="flex flex-wrap items-start justify-between gap-4 rounded-t-[27px] border-b border-zinc-200 bg-[linear-gradient(135deg,#f4f4f5,#fff)] p-5 md:p-6">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">
             {role === "tutor" ? "Set work" : "Your work"}
           </p>
-          <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-950">
+          <h2 className="mt-1 text-xl font-medium tracking-tight text-zinc-950">
             {role === "tutor" ? "Quizzes" : outstanding.length ? `${outstanding.length} quiz${outstanding.length === 1 ? "" : "zes"} to complete` : "You’re all caught up"}
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
@@ -130,7 +126,7 @@ export function QuizPanel({
           </p>
         </div>
         {role === "tutor" && selectedStudentId ? (
-          <button type="button" onClick={() => setIsCreating((value) => !value)} className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800">
+          <button type="button" onClick={() => setIsCreating((value) => !value)} className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800">
             {isCreating ? "Close" : "+ Set a quiz"}
           </button>
         ) : null}
@@ -144,10 +140,8 @@ export function QuizPanel({
         ) : null}
         {role === "tutor" && selectedStudentId && isCreating ? (
           <QuizComposer
-            students={students}
             selectedStudentId={selectedStudentId}
             topics={topics}
-            onSelectStudent={onSelectStudent}
             onCreated={() => {
               setIsCreating(false);
               setRefreshKey((value) => value + 1);
@@ -172,10 +166,10 @@ export function QuizPanel({
                   <span className="min-w-0">
                     <span className="flex items-center gap-2">
                       <span className={["h-2 w-2 rounded-full", quiz.status === "completed" ? "bg-emerald-500" : overdue ? "bg-rose-500" : "bg-amber-400"].join(" ")} />
-                      <span className="truncate font-semibold text-zinc-900">{quiz.title}</span>
+                      <span className="truncate font-medium text-zinc-900">{quiz.title}</span>
                     </span>
                     <span className="mt-2 block text-xs text-zinc-500">{quiz.subtopic || "Whole chapter"} · {quiz.question_count} questions</span>
-                    <span className={["mt-3 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", quiz.status === "completed" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : overdue ? "border-rose-200 bg-rose-50 text-rose-700" : "border-amber-200 bg-amber-50 text-amber-700"].join(" ")}>
+                    <span className={["mt-3 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium", quiz.status === "completed" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : overdue ? "border-rose-200 bg-rose-50 text-rose-700" : "border-amber-200 bg-amber-50 text-amber-700"].join(" ")}>
                       {quiz.status === "completed" ? `${quiz.score ?? 0}/${quiz.total_marks} marks` : dueLabel(quiz.due_at)}
                     </span>
                   </span>
@@ -197,11 +191,9 @@ export function QuizPanel({
   );
 }
 
-function QuizComposer({ students, selectedStudentId, topics, onSelectStudent, onCreated }: {
-  students: UserAccessProfile[];
+function QuizComposer({ selectedStudentId, topics, onCreated }: {
   selectedStudentId: string;
   topics: QuizTopic[];
-  onSelectStudent?: (id: string) => void;
   onCreated: () => void;
 }) {
   const [title, setTitle] = useState("");
@@ -252,40 +244,259 @@ function QuizComposer({ students, selectedStudentId, topics, onSelectStudent, on
   return (
     <div className="mb-6 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 sm:p-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-xs font-medium text-zinc-600">Student
-          <select value={selectedStudentId} onChange={(event) => onSelectStudent?.(event.target.value)} className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900">
-            {students.map((student) => <option key={student.id} value={student.id}>{student.name}</option>)}
-          </select>
-        </label>
         <label className="text-xs font-medium text-zinc-600">Quiz title
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Chain rule review" className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900" />
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Chain rule review" className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-950/5" />
         </label>
-        <label className="text-xs font-medium text-zinc-600">Chapter
-          <select value={topicKey} onChange={(event) => setTopicKey(event.target.value)} className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900">
-            {topics.map((topic) => <option key={topic.key} value={topic.key}>{topic.subjectTitle} · {topic.chapterTitle}</option>)}
-          </select>
-        </label>
-        <label className="text-xs font-medium text-zinc-600">Topic
-          <select value={subtopic} onChange={(event) => setSubtopic(event.target.value)} className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900">
-            <option value="">Whole chapter</option>
-            {subtopics.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        <label className="text-xs font-medium text-zinc-600">Questions
-          <select value={count} onChange={(event) => setCount(Number(event.target.value))} className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900">
-            {[5, 10, 15, 20].map((value) => <option key={value} value={value}>{value} questions</option>)}
-          </select>
-        </label>
-        <label className="text-xs font-medium text-zinc-600">Deadline
-          <input type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900" />
-        </label>
+        <QuizSelect
+          label="Chapter"
+          value={topicKey}
+          options={topics.map((topic) => ({ value: topic.key, label: `${topic.subjectTitle} · ${topic.chapterTitle}` }))}
+          onChange={setTopicKey}
+        />
+        <QuizSelect
+          label="Topic"
+          value={subtopic}
+          options={[{ value: "", label: "Whole chapter" }, ...subtopics.map((item) => ({ value: item, label: item }))]}
+          onChange={setSubtopic}
+        />
+        <fieldset>
+          <legend className="text-xs font-medium text-zinc-600">Questions</legend>
+          <div className="mt-2 grid h-12 grid-cols-4 rounded-2xl border border-zinc-200 bg-white p-1 shadow-sm">
+            {[5, 10, 15, 20].map((value) => (
+              <button
+                type="button"
+                key={value}
+                onClick={() => setCount(value)}
+                aria-pressed={count === value}
+                className={[
+                  "rounded-xl text-xs font-medium transition duration-200",
+                  count === value ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
+                ].join(" ")}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <QuizDateTimePicker value={dueAt} onChange={setDueAt} />
       </div>
       {error ? <p role="alert" className="mt-4 text-sm text-rose-700">{error}</p> : null}
       <div className="mt-5 flex justify-end">
-        <button type="button" disabled={busy || !title.trim() || !topicKey || !dueAt} onClick={() => void submit()} className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">
+        <button type="button" disabled={busy || !title.trim() || !topicKey || !dueAt} onClick={() => void submit()} className="inline-flex items-center gap-2 rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-medium text-white disabled:opacity-40">
           {busy ? <><Spinner />Setting quiz…</> : "Assign quiz"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function QuizSelect({ label, value, options, onChange }: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+  return (
+    <div ref={rootRef} className="relative">
+      <p className="text-xs font-medium text-zinc-600">{label}</p>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className={[
+          "mt-2 flex h-12 w-full items-center justify-between gap-3 rounded-2xl border bg-white px-4 text-left text-sm text-zinc-900 shadow-sm outline-none transition duration-200",
+          open ? "border-zinc-400 ring-4 ring-zinc-950/5" : "border-zinc-200 hover:border-zinc-300",
+        ].join(" ")}
+      >
+        <span className="truncate">{selected?.label ?? `Choose ${label.toLowerCase()}`}</span>
+        <svg viewBox="0 0 20 20" className={["h-4 w-4 shrink-0 text-zinc-400 transition-transform duration-200", open ? "rotate-180" : ""].join(" ")} aria-hidden="true">
+          <path d="m5.5 7.5 4.5 4.5 4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open ? (
+        <div role="listbox" className="absolute inset-x-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-[0_24px_60px_rgba(15,23,42,0.16)]">
+          {options.map((option) => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              key={option.value || "all"}
+              onClick={() => { onChange(option.value); setOpen(false); }}
+              className={[
+                "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition",
+                option.value === value ? "bg-zinc-900 font-medium text-white" : "text-zinc-700 hover:bg-zinc-100",
+              ].join(" ")}
+            >
+              <span>{option.label}</span>
+              {option.value === value ? <span aria-hidden="true">✓</span> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const CALENDAR_WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
+const CALENDAR_MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function localDateTimeValue(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function QuizDateTimePicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const initial = value ? new Date(value) : new Date();
+  const [visibleMonth, setVisibleMonth] = useState(() => new Date(initial.getFullYear(), initial.getMonth(), 1));
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = value ? new Date(value) : null;
+  const selectedTime = selected && Number.isFinite(selected.getTime())
+    ? `${String(selected.getHours()).padStart(2, "0")}:${String(selected.getMinutes()).padStart(2, "0")}`
+    : "17:00";
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+
+  const firstDay = visibleMonth.getDay() === 0 ? 6 : visibleMonth.getDay() - 1;
+  const gridStart = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1 - firstDay);
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    return date;
+  });
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const sameDay = (left: Date | null, right: Date) => Boolean(left) &&
+    left!.getFullYear() === right.getFullYear() &&
+    left!.getMonth() === right.getMonth() &&
+    left!.getDate() === right.getDate();
+
+  const chooseDate = (date: Date) => {
+    const next = new Date(date);
+    const [hours, minutes] = selectedTime.split(":").map(Number);
+    next.setHours(hours, minutes, 0, 0);
+    onChange(localDateTimeValue(next));
+  };
+  const chooseTime = (time: string) => {
+    const next = selected && Number.isFinite(selected.getTime()) ? new Date(selected) : new Date();
+    const [hours, minutes] = time.split(":").map(Number);
+    next.setHours(hours, minutes, 0, 0);
+    onChange(localDateTimeValue(next));
+    setVisibleMonth(new Date(next.getFullYear(), next.getMonth(), 1));
+  };
+  const displayValue = selected && Number.isFinite(selected.getTime())
+    ? `${selected.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })} · ${selected.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+    : "Choose a date and time";
+
+  return (
+    <div ref={rootRef} className="relative">
+      <p className="text-xs font-medium text-zinc-600">Deadline</p>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className={[
+          "mt-2 flex h-12 w-full items-center justify-between gap-3 rounded-2xl border bg-white px-4 text-left text-sm shadow-sm outline-none transition",
+          open ? "border-zinc-400 ring-4 ring-zinc-950/5" : "border-zinc-200 hover:border-zinc-300",
+          selected ? "text-zinc-900" : "text-zinc-400",
+        ].join(" ")}
+      >
+        <span className="truncate">{displayValue}</span>
+        <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-zinc-500" fill="none" aria-hidden="true">
+          <rect x="3" y="4.5" width="14" height="12.5" rx="2.5" stroke="currentColor" strokeWidth="1.4" />
+          <path d="M6.5 3v3M13.5 3v3M3 8h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      </button>
+      {open ? (
+        <div role="dialog" aria-label="Choose quiz deadline" className="absolute right-0 top-full z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.2)]">
+          <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3.5">
+            <button type="button" aria-label="Previous month" onClick={() => setVisibleMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1))} className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900">←</button>
+            <p className="text-sm font-medium text-zinc-900">{CALENDAR_MONTHS[visibleMonth.getMonth()]} {visibleMonth.getFullYear()}</p>
+            <button type="button" aria-label="Next month" onClick={() => setVisibleMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1))} className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900">→</button>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {CALENDAR_WEEKDAYS.map((day, index) => <span key={`${day}-${index}`} className="py-1 text-[10px] font-medium text-zinc-400">{day}</span>)}
+              {days.map((date) => {
+                const isSelected = sameDay(selected, date);
+                const isToday = sameDay(today, date);
+                const outside = date.getMonth() !== visibleMonth.getMonth();
+                const isPast = date.getTime() < todayStart.getTime();
+                return (
+                  <button
+                    type="button"
+                    key={date.toISOString()}
+                    disabled={isPast}
+                    onClick={() => chooseDate(date)}
+                    className={[
+                      "relative flex aspect-square items-center justify-center rounded-xl text-xs font-medium transition",
+                      isSelected ? "bg-zinc-900 text-white shadow-sm" : outside ? "text-zinc-300 hover:bg-zinc-50" : "text-zinc-700 hover:bg-zinc-100",
+                      isPast ? "cursor-not-allowed opacity-25" : "",
+                    ].join(" ")}
+                  >
+                    {date.getDate()}
+                    {isToday && !isSelected ? <span className="absolute bottom-1 h-1 w-1 rounded-full bg-zinc-900" /> : null}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 border-t border-zinc-100 pt-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400">Due time</p>
+                  <p className="mt-1 text-sm font-medium text-zinc-900">{selectedTime}</p>
+                </div>
+                <div className="flex gap-1.5">
+                  {["09:00", "16:00", "18:00"].map((time) => (
+                    <button type="button" key={time} onClick={() => chooseTime(time)} className={["rounded-full border px-2.5 py-1.5 text-[10px] font-medium transition", selectedTime === time ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-200 text-zinc-600 hover:border-zinc-300"].join(" ")}>{time}</button>
+                  ))}
+                </div>
+              </div>
+              <label className="mt-3 flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
+                Custom time
+                <input type="time" value={selectedTime} onChange={(event) => chooseTime(event.target.value)} className="bg-transparent text-sm font-medium text-zinc-900 outline-none" />
+              </label>
+            </div>
+          </div>
+          <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50/70 px-4 py-3">
+            <button type="button" onClick={() => { onChange(""); setOpen(false); }} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">Clear</button>
+            <button type="button" disabled={!selected} onClick={() => setOpen(false)} className="rounded-full bg-zinc-900 px-4 py-2 text-xs font-medium text-white disabled:opacity-40">Set deadline</button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -319,8 +530,8 @@ function QuizRunner({ quiz, canAnswer, onClose, onUpdate }: { quiz: QuizDetail; 
     <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.07)]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50/70 p-4 sm:p-5">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">Quiz · Question {index + 1} of {quiz.questions.length}</p>
-          <h2 className="mt-1 text-lg font-semibold text-zinc-950">{quiz.title}</h2>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Quiz · Question {index + 1} of {quiz.questions.length}</p>
+          <h2 className="mt-1 text-lg font-medium text-zinc-950">{quiz.title}</h2>
           <p className="mt-1 text-xs text-zinc-500">{dueLabel(quiz.due_at)} · {answered}/{quiz.questions.length} answered</p>
         </div>
         <button type="button" onClick={onClose} className="rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-600">Close</button>

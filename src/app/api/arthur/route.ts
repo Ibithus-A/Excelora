@@ -17,6 +17,7 @@ type AssistantMessage = {
 
 type ArthurRequestBody = {
   reviewAttemptId?: string;
+  practiceContext?: { sessionId?: string; questionId?: string };
   pageTitle?: string;
   pdfTitle?: string;
   pageContent?: string;
@@ -89,12 +90,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  let body: ArthurRequestBody;
+  try {
+    body = (await request.json()) as ArthurRequestBody;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  let verifiedPracticeContext = "";
+
   try {
     const viewer = await getViewerProfile(supabase, user.id);
     if (!viewer) {
       return NextResponse.json(
         { error: "Profile not found." },
         { status: 404 },
+      );
+    }
+    if (viewer.role === "student" && viewer.plan !== "premium") {
+      return NextResponse.json(
+        { error: "Arthur AI is not available on the Basic Plan." },
+        { status: 403 },
       );
     }
     if (viewer.role === "student") {
@@ -113,7 +129,69 @@ export async function POST(request: Request) {
           { status: 403 },
         );
     }
-    if (viewer.role === "student") {
+    const requestedPracticeSessionId = body.practiceContext?.sessionId?.trim();
+    const requestedPracticeQuestionId = body.practiceContext?.questionId?.trim();
+    if (requestedPracticeSessionId || requestedPracticeQuestionId) {
+      if (
+        viewer.role !== "student" ||
+        !requestedPracticeSessionId ||
+        !requestedPracticeQuestionId
+      ) {
+        return NextResponse.json(
+          { error: "Invalid practice explanation request." },
+          { status: 403 },
+        );
+      }
+      const admin = createAdminClient();
+      const { data: practiceSession, error: sessionError } = await admin
+        .from("practice_sessions")
+        .select("id,status")
+        .eq("id", requestedPracticeSessionId)
+        .eq("student_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+      if (sessionError) throw sessionError;
+      if (!practiceSession) {
+        return NextResponse.json(
+          { error: "This practice session is no longer active." },
+          { status: 403 },
+        );
+      }
+      const { data: practiceQuestion, error: questionError } = await admin
+        .from("practice_session_questions")
+        .select(
+          "response,marks_awarded,is_correct,requires_review,checked_at,assessment_question_bank(prompt,subtopic,marks,answer,worked_solution)",
+        )
+        .eq("session_id", practiceSession.id)
+        .eq("question_id", requestedPracticeQuestionId)
+        .maybeSingle();
+      if (questionError) throw questionError;
+      const bankQuestion = Array.isArray(practiceQuestion?.assessment_question_bank)
+        ? practiceQuestion.assessment_question_bank[0]
+        : practiceQuestion?.assessment_question_bank;
+      if (
+        !practiceQuestion?.checked_at ||
+        !bankQuestion ||
+        practiceQuestion.is_correct === true ||
+        Number(practiceQuestion.marks_awarded ?? 0) >= Number(bankQuestion.marks ?? 0)
+      ) {
+        return NextResponse.json(
+          { error: "Arthur is available here only after an incorrect answer has been marked." },
+          { status: 403 },
+        );
+      }
+      verifiedPracticeContext = [
+        `Practice question: ${bankQuestion.prompt}`,
+        `Subtopic: ${bankQuestion.subtopic}`,
+        `Student response: ${String(practiceQuestion.response ?? "(blank)")}`,
+        `Mark awarded: ${practiceQuestion.marks_awarded ?? 0}/${bankQuestion.marks}`,
+        `Expected answer: ${bankQuestion.answer}`,
+        `Worked solution: ${bankQuestion.worked_solution}`,
+        practiceQuestion.requires_review
+          ? "Tutor tracking note: this response has also been queued for tutor review. Do not describe tutor review as a prerequisite for feedback."
+          : "",
+      ].filter(Boolean).join("\n");
+    } else if (viewer.role === "student") {
       const { data: practice, error } = await createAdminClient()
         .from("practice_sessions")
         .select("id")
@@ -127,12 +205,6 @@ export async function POST(request: Request) {
           { error: "Stop your practice session before using Arthur." },
           { status: 403 },
         );
-    }
-    if (viewer.role === "student" && viewer.plan !== "premium") {
-      return NextResponse.json(
-        { error: "Arthur AI is not available on the Basic Plan." },
-        { status: 403 },
-      );
     }
   } catch (error) {
     console.error("[arthur] profile lookup failed", error);
@@ -154,7 +226,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as ArthurRequestBody;
     const rawMessages = Array.isArray(body.messages) ? body.messages : [];
     const messages = rawMessages
       .slice(-MAX_MESSAGES)
@@ -170,9 +241,9 @@ export async function POST(request: Request) {
       }));
     const pageTitle = body.pageTitle?.trim().slice(0, 500) || "Untitled page";
     const pdfTitle = body.pdfTitle?.trim().slice(0, 500) || pageTitle;
-    if (/practi[cs]e/i.test(pageTitle))
+    if (/practi[cs]e/i.test(pageTitle) && !verifiedPracticeContext)
       return NextResponse.json(
-        { error: "Arthur is unavailable in practice." },
+        { error: "Arthur becomes available after an incorrect practice answer is marked." },
         { status: 403 },
       );
     let reviewContext = "";
@@ -223,6 +294,7 @@ export async function POST(request: Request) {
     }
     const nativeLesson = getStructuredLesson(pageTitle);
     const pageContent =
+      verifiedPracticeContext ||
       reviewContext ||
       (nativeLesson
         ? serializeLesson(nativeLesson, 18000)
@@ -233,7 +305,7 @@ export async function POST(request: Request) {
     const latestUserMessage = messages[messages.length - 1];
 
     let lessonNotes = "";
-    if (pdfTitle && !nativeLesson && !reviewContext) {
+    if (pdfTitle && !nativeLesson && !reviewContext && !verifiedPracticeContext) {
       try {
         lessonNotes = truncateAtParagraph(
           (await readPdfTextForSubtopic(pdfTitle)) ?? "",

@@ -57,8 +57,8 @@ const STEPS: TutorialStep[] = [
     id: "video",
     selector: "[data-tour='lesson-video']",
     eyebrow: "Video",
-    title: "Switch to the walkthrough",
-    body: "Switch from the lesson page to its animated walkthrough. Completing the video records it as watched before students move to the next topic.",
+    title: "Video lessons are in development",
+    body: "The video area previews where professionally produced walkthroughs will appear as they are completed and released.",
     placement: "left",
   },
   {

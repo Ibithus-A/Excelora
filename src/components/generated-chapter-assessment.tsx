@@ -22,6 +22,8 @@ type Question = {
   worked_solution?: string;
   marksAwarded?: number | null;
   isCorrect?: boolean | null;
+  reviewStatus?: "not_required" | "pending" | "completed";
+  reviewedAt?: string | null;
 };
 type Attempt = {
   id: string;
@@ -411,7 +413,7 @@ export function GeneratedChapterAssessment({
                 <span className="text-xs text-zinc-500">
                   {q.isCorrect === null
                     ? "Pending review"
-                    : `${q.marksAwarded ?? 0}/${q.marks}`}
+                    : `${q.marksAwarded ?? 0}/${q.marks}${q.reviewStatus === "completed" ? " · Tutor reviewed" : ""}`}
                 </span>
               </div>
               <BankQuestion
