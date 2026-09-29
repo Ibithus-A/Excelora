@@ -1,5 +1,5 @@
 export type UserRole = "tutor" | "student";
-export type UserPlan = "basic" | "premium";
+export type UserPlan = "basic" | "plus" | "pro";
 
 export type AuthenticatedAccount = {
   id: string;

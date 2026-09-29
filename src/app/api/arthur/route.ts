@@ -1,513 +1,178 @@
-import { getStructuredLesson } from "@/lib/lessons/catalogue";
-import { serializeLesson } from "@/lib/lessons/schema";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { NextResponse } from "next/server";
-import { readPdfTextForSubtopic } from "@/lib/pdf-text";
+import { createAIProvider } from "@/lib/ai/deepseek";
+import type { AIUsage } from "@/lib/ai/provider";
+import { getCanonicalCourseContext } from "@/lib/arthur/course-context";
+import { appendMessage, createConversation, getLatestConversation, getOwnedConversation, listConversationMessages, logArthurRequest } from "@/lib/arthur/conversations.server";
+import { getLearningEvidence, summarizeLearningEvidence } from "@/lib/arthur/learning-context.server";
+import { buildArthurSystemPrompt, shouldUseMathMode } from "@/lib/arthur/prompt";
+import { parseArthurRequest, type ArthurRequest } from "@/lib/arthur/schema";
+import { executeRelevantArthurTools } from "@/lib/arthur/tools.server";
+import { hasPlusAccess } from "@/lib/access";
+import { COURSE_BANK_MAPPINGS } from "@/lib/question-bank/course-mapping";
 import { createRateLimiter } from "@/lib/security/rate-limit";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewerProfile } from "@/lib/supabase/profiles";
 import { createClient } from "@/lib/supabase/server";
+import { randomUUID } from "node:crypto";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type AssistantMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
+const enforceArthurRateLimit = createRateLimiter({ maxRequests: 60, windowMs: 10 * 60 * 1000 });
+function jsonError(error: string, status: number, headers?: HeadersInit) { return NextResponse.json({ error }, { status, headers }); }
 
-type ArthurRequestBody = {
-  reviewAttemptId?: string;
-  practiceContext?: { sessionId?: string; questionId?: string };
-  pageTitle?: string;
-  pdfTitle?: string;
-  pageContent?: string;
-  workspaceContext?: string;
-  messages?: AssistantMessage[];
-};
+async function authenticatedContext() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: jsonError("Unauthorized.", 401) } as const;
+  const viewer = await getViewerProfile(supabase, user.id);
+  if (!viewer) return { error: jsonError("Profile not found.", 404) } as const;
+  if (viewer.role === "student" && !hasPlusAccess(viewer.plan)) return { error: jsonError("Arthur AI is available on Plus and Pro.", 403) } as const;
+  return { user, viewer, admin: createAdminClient() } as const;
+}
 
-const COHERE_API_URL = "https://api.cohere.com/v2/chat";
-const MAX_MESSAGES = 12;
-const MAX_MESSAGE_CHARS = 4000;
-const MAX_CONTEXT_CHARS = 20000;
+async function hasActiveAssessment(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  const { data, error } = await admin.from("student_assessment_attempts").select("id").eq("student_id", userId).eq("status", "active").limit(1);
+  if (error) throw error;
+  return Boolean(data?.length);
+}
 
-const enforceArthurRateLimit = createRateLimiter({
-  maxRequests: 60,
-  windowMs: 10 * 60 * 1000,
-});
-const MATH_MODE_PROMPT = `
-Math mode is active for this request.
-Give a shorter, verification-first answer.
-First, state the target clearly in one sentence.
-Then solve using only valid transformations, with no skipped algebra where errors are likely.
-Before the final answer, perform a visible check when practical. For an integral, differentiate the proposed antiderivative. For an equation, substitute or test the solution. For simplification, compare equivalent forms.
-If the check fails, correct the work before answering.
-If the problem is too long for a reliable full solution in one response, give the safest next step and say exactly what still needs checking.
-Do not include a long exploratory path. Prefer the simplest reliable method.
-`.trim();
-const ARTHUR_SYSTEM_PROMPT = `
-You are Arthur, a friendly AI study assistant inside the Excelora workspace.
-Be concise, accurate, and encouraging.
-Use the provided current page, lesson notes, workspace context, and user messages together.
-Treat the current page and lesson notes as high-value context, but not as a hard limit.
-When the current page or extracted PDF notes are incomplete, ambiguous, or insufficient, use the wider workspace context and your general reasoning to answer correctly.
-Prefer the most reliable answer over a narrowly grounded but wrong answer.
-If the available workspace material is genuinely incomplete and the answer depends on missing specifics, say what is uncertain instead of guessing.
-Prefer helpful study actions like explanation, recap, quizzes, worked examples, and revision support.
-Do not claim to see hidden tools, browse the web, or access materials that were not provided in the workspace context or user messages.
-You may still use your general subject knowledge to explain maths accurately when the local materials are not enough.
-For maths questions, correctness matters more than speed.
-When solving a maths problem:
-- Identify the exact target before solving.
-- Use a method that actually matches the problem instead of forcing a familiar template.
-- Check each major algebraic or calculus step for consistency before continuing.
-- If you produce a final antiderivative, derivative, factorisation, or equation solution, verify it mentally before presenting it.
-- For integrals and derivatives, prefer a quick self-check such as differentiating the final result or testing whether the transformation is valid.
-- If you are not confident a result is correct, say so and give the most reliable partial progress rather than inventing a polished but wrong answer.
-Never present an unverified result as certain when the working is shaky.
-Format answers so they are easy to scan in a narrow chat panel:
-- Use short paragraphs with natural prose.
-- Avoid Markdown markers such as #, -, *, or numbered list formatting in the final answer.
-- If you need structure, use short lead-ins like "Here is the idea." or "Step 1." inside normal sentences.
-- When writing maths, prefer plain notation like (27t^3)/(3t - 1) unless LaTeX is genuinely helpful.
-- Never output escaped Markdown or escaped LaTeX like \\( ... \\), \\[ ... \\], or literal backslashes before formatting characters unless the user explicitly asks for raw syntax.
-- If you give a worked solution, present it like a clean tutor reply, not like notes or a markdown document.
-`.trim();
+class ArthurRouteError extends Error { constructor(message: string, readonly status: number) { super(message); } }
+type VerifiedActivity = { text: string; contextKey: string | null; subject?: string; chapter?: string; topic?: string };
+
+async function getVerifiedActivity(admin: ReturnType<typeof createAdminClient>, userId: string, viewerRole: string, body: ArthurRequest): Promise<VerifiedActivity> {
+  if (body.practiceContext) {
+    if (viewerRole !== "student") throw new ArthurRouteError("Invalid practice explanation request.", 403);
+    const { data: session, error: sessionError } = await admin.from("practice_sessions").select("id,status,course_topic_key").eq("id", body.practiceContext.sessionId).eq("student_id", userId).maybeSingle();
+    if (sessionError) throw sessionError;
+    if (!session) throw new ArthurRouteError("Practice session not found.", 403);
+    const { data: row, error } = await admin.from("practice_session_questions").select("response,marks_awarded,is_correct,requires_review,checked_at,assessment_question_bank(prompt,subtopic,marks,answer,worked_solution)").eq("session_id", session.id).eq("question_id", body.practiceContext.questionId).maybeSingle();
+    if (error) throw error;
+    const question = Array.isArray(row?.assessment_question_bank) ? row.assessment_question_bank[0] : row?.assessment_question_bank;
+    if (!row?.checked_at || !question || row.is_correct === true || Number(row.marks_awarded ?? 0) >= Number(question.marks ?? 0)) throw new ArthurRouteError("Arthur is available here only after an incorrect answer has been marked.", 403);
+    const mapping = COURSE_BANK_MAPPINGS.find((item) => item.courseTopicKey === session.course_topic_key);
+    return {
+      text: [`Practice question: ${question.prompt}`, `Subtopic: ${question.subtopic}`, `Student response: ${String(row.response || "(blank)")}`, `Deterministic mark: ${row.marks_awarded ?? 0}/${question.marks}`, `Expected answer: ${question.answer}`, `Worked solution: ${question.worked_solution}`, row.requires_review ? "Tutor tracking status: awaiting tutor review. This does not delay student feedback." : ""].filter(Boolean).join("\n"),
+      contextKey: `practice:${session.id}:${body.practiceContext.questionId}`,
+      subject: mapping?.subjectTitle,
+      chapter: mapping?.chapterTitle,
+      topic: question.subtopic,
+    };
+  }
+  if (body.reviewAttemptId) {
+    const { data: attempt, error } = await admin.from("student_assessment_attempts").select("id,score,total_marks,pending_review_marks,submitted_at").eq("id", body.reviewAttemptId).eq("student_id", userId).eq("status", "submitted").maybeSingle();
+    if (error || !attempt) throw new ArthurRouteError("Submitted assessment not found.", 403);
+    const { data: rows, error: questionError } = await admin.from("student_assessment_attempt_questions").select("question_order,student_answer,marks_awarded,is_correct,assessment_question_bank(prompt,subtopic,marks,answer,worked_solution)").eq("attempt_id", attempt.id).order("question_order").limit(30);
+    if (questionError) throw questionError;
+    return { text: [`Submitted assessment: ${attempt.score}/${attempt.total_marks}; ${attempt.pending_review_marks} marks pending tutor review; submitted ${attempt.submitted_at}.`, ...(rows ?? []).map((row) => {
+      const question = Array.isArray(row.assessment_question_bank) ? row.assessment_question_bank[0] : row.assessment_question_bank;
+      if (!question) return "";
+      const answer = row.student_answer && typeof row.student_answer === "object" && "value" in row.student_answer ? String(row.student_answer.value ?? "") : "";
+      return `Question ${row.question_order}: ${question.prompt}\nStudent answer: ${answer || "(blank)"}\nResult: ${row.is_correct == null ? "pending tutor review" : `${row.marks_awarded ?? 0}/${question.marks}`}\nExpected answer: ${question.answer}\nWorked solution: ${question.worked_solution}`;
+    })].filter(Boolean).join("\n\n").slice(0, 18_000), contextKey: `assessment-review:${attempt.id}` };
+  }
+  return { text: "", contextKey: null };
+}
+
+export async function GET(request: Request) {
+  try {
+    const auth = await authenticatedContext();
+    if ("error" in auth) return auth.error;
+    const url = new URL(request.url);
+    const course = await getCanonicalCourseContext(url.searchParams.get("pageTitle") ?? "Workspace", url.searchParams.get("pdfTitle") ?? "");
+    const practiceSessionId = url.searchParams.get("practiceSessionId");
+    const practiceQuestionId = url.searchParams.get("practiceQuestionId");
+    const reviewAttemptId = url.searchParams.get("reviewAttemptId");
+    if (practiceSessionId || practiceQuestionId || reviewAttemptId) {
+      const parsed = parseArthurRequest({
+        pageTitle: url.searchParams.get("pageTitle") ?? "Workspace",
+        reviewAttemptId,
+        practiceContext: practiceSessionId && practiceQuestionId ? { sessionId: practiceSessionId, questionId: practiceQuestionId } : undefined,
+        messages: [{ role: "user", content: "load conversation" }],
+      });
+      if (!parsed) return jsonError("Invalid conversation context.", 400);
+      const activity = await getVerifiedActivity(auth.admin, auth.user.id, auth.viewer.role, parsed);
+      if (activity.contextKey) course.contextKey = activity.contextKey;
+    }
+    const requestedId = url.searchParams.get("conversationId");
+    const conversation = requestedId ? await getOwnedConversation(auth.admin, auth.user.id, requestedId) : await getLatestConversation(auth.admin, auth.user.id, course.contextKey);
+    if (!conversation || conversation.context_key !== course.contextKey) return NextResponse.json({ conversationId: null, messages: [] });
+    const result = await listConversationMessages(auth.admin, auth.user.id, conversation.id, 24);
+    return NextResponse.json({ conversationId: conversation.id, messages: result?.messages.map(({ role, content }) => ({ role, content })) ?? [] });
+  } catch (error) {
+    if (error instanceof ArthurRouteError) return jsonError(error.message, error.status);
+    console.error("[arthur.GET]", error);
+    return jsonError("Unable to load this Arthur conversation.", 500);
+  }
+}
 
 export async function POST(request: Request) {
-  const apiKey = process.env.COHERE_API_KEY?.trim();
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "Missing COHERE_API_KEY on the server." },
-      { status: 500 },
-    );
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  let body: ArthurRequestBody;
+  const startedAt = Date.now();
+  const requestId = randomUUID();
   try {
-    body = (await request.json()) as ArthurRequestBody;
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
+    const auth = await authenticatedContext();
+    if ("error" in auth) return auth.error;
+    const limiter = enforceArthurRateLimit(`${auth.user.id}:/api/arthur`);
+    if (!limiter.allowed) return jsonError("Too many requests. Please slow down.", 429, { "Retry-After": String(limiter.retryAfterSeconds) });
+    let raw: unknown;
+    try { raw = await request.json(); } catch { return jsonError("Invalid request body.", 400); }
+    const body = parseArthurRequest(raw);
+    if (!body) return jsonError("A valid user message and page context are required.", 400);
+    if (auth.viewer.role === "student" && await hasActiveAssessment(auth.admin, auth.user.id)) return jsonError("Finish your active formal assessment before using Arthur.", 403);
+    const activity = await getVerifiedActivity(auth.admin, auth.user.id, auth.viewer.role, body);
+    if (/practi[cs]e/i.test(body.pageTitle) && !activity.text) return jsonError("Arthur becomes available after an incorrect practice answer is marked.", 403);
+    if (!activity.text && /assessment/i.test(body.pageTitle)) return jsonError("Arthur is disabled on active assessment pages.", 403);
 
-  let verifiedPracticeContext = "";
+    const course = await getCanonicalCourseContext(body.pageTitle, body.pdfTitle);
+    if (activity.contextKey) course.contextKey = activity.contextKey;
+    if (activity.subject) course.subject = activity.subject;
+    if (activity.chapter) course.chapter = activity.chapter;
+    if (activity.topic) course.topic = activity.topic;
+    const evidence = await getLearningEvidence(auth.admin, auth.user.id);
+    const latestUserMessage = body.messages.at(-1)?.content ?? "";
+    const tools = executeRelevantArthurTools(latestUserMessage, { admin: auth.admin, userId: auth.user.id, course, evidence });
+    let conversation = body.conversationId ? await getOwnedConversation(auth.admin, auth.user.id, body.conversationId) : null;
+    if (body.conversationId && !conversation) return jsonError("Conversation not found.", 404);
+    if (conversation?.context_key !== course.contextKey) conversation = null;
+    const provider = createAIProvider();
+    const systemPrompt = buildArthurSystemPrompt({ studentName: auth.viewer.name, qualification: course.qualification, subject: course.subject, chapter: course.chapter, topic: course.topic, pageTitle: course.pageTitle, lessonContent: course.lessonContent, verifiedActivityContext: activity.text, learningData: summarizeLearningEvidence(evidence), toolData: tools.output, mathMode: shouldUseMathMode(latestUserMessage) });
+    const { data: allowance, error: allowanceError } = await auth.admin.rpc("reserve_arthur_request", { p_user_id: auth.user.id });
+    if (allowanceError || allowance !== "allowed") return jsonError(allowance === "daily_limit" ? "You have reached today's Arthur allowance." : allowance === "monthly_limit" ? "Arthur has reached this month's allowance." : "Arthur is temporarily unavailable. Ask your tutor to enable an allowance.", allowanceError || allowance === "disabled" ? 503 : 429);
+    conversation ??= await createConversation(auth.admin, { userId: auth.user.id, contextKey: course.contextKey, pageTitle: course.pageTitle, subject: course.subject, chapter: course.chapter, topic: course.topic });
+    await appendMessage(auth.admin, conversation.id, { role: "user", content: latestUserMessage });
+    const stored = await listConversationMessages(auth.admin, auth.user.id, conversation.id, 12);
 
-  try {
-    const viewer = await getViewerProfile(supabase, user.id);
-    if (!viewer) {
-      return NextResponse.json(
-        { error: "Profile not found." },
-        { status: 404 },
-      );
-    }
-    if (viewer.role === "student" && viewer.plan !== "premium") {
-      return NextResponse.json(
-        { error: "Arthur AI is not available on the Basic Plan." },
-        { status: 403 },
-      );
-    }
-    if (viewer.role === "student") {
-      const { data: active, error } = await createAdminClient()
-        .from("student_assessment_attempts")
-        .select("id")
-        .eq("student_id", user.id)
-        .eq("status", "active")
-        .limit(1);
-      if (error) throw new Error(error.message);
-      if (active?.length)
-        return NextResponse.json(
-          {
-            error: "Finish your active formal assessment before using Arthur.",
-          },
-          { status: 403 },
-        );
-    }
-    const requestedPracticeSessionId = body.practiceContext?.sessionId?.trim();
-    const requestedPracticeQuestionId = body.practiceContext?.questionId?.trim();
-    if (requestedPracticeSessionId || requestedPracticeQuestionId) {
-      if (
-        viewer.role !== "student" ||
-        !requestedPracticeSessionId ||
-        !requestedPracticeQuestionId
-      ) {
-        return NextResponse.json(
-          { error: "Invalid practice explanation request." },
-          { status: 403 },
-        );
-      }
-      const admin = createAdminClient();
-      const { data: practiceSession, error: sessionError } = await admin
-        .from("practice_sessions")
-        .select("id,status")
-        .eq("id", requestedPracticeSessionId)
-        .eq("student_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
-      if (sessionError) throw sessionError;
-      if (!practiceSession) {
-        return NextResponse.json(
-          { error: "This practice session is no longer active." },
-          { status: 403 },
-        );
-      }
-      const { data: practiceQuestion, error: questionError } = await admin
-        .from("practice_session_questions")
-        .select(
-          "response,marks_awarded,is_correct,requires_review,checked_at,assessment_question_bank(prompt,subtopic,marks,answer,worked_solution)",
-        )
-        .eq("session_id", practiceSession.id)
-        .eq("question_id", requestedPracticeQuestionId)
-        .maybeSingle();
-      if (questionError) throw questionError;
-      const bankQuestion = Array.isArray(practiceQuestion?.assessment_question_bank)
-        ? practiceQuestion.assessment_question_bank[0]
-        : practiceQuestion?.assessment_question_bank;
-      if (
-        !practiceQuestion?.checked_at ||
-        !bankQuestion ||
-        practiceQuestion.is_correct === true ||
-        Number(practiceQuestion.marks_awarded ?? 0) >= Number(bankQuestion.marks ?? 0)
-      ) {
-        return NextResponse.json(
-          { error: "Arthur is available here only after an incorrect answer has been marked." },
-          { status: 403 },
-        );
-      }
-      verifiedPracticeContext = [
-        `Practice question: ${bankQuestion.prompt}`,
-        `Subtopic: ${bankQuestion.subtopic}`,
-        `Student response: ${String(practiceQuestion.response ?? "(blank)")}`,
-        `Mark awarded: ${practiceQuestion.marks_awarded ?? 0}/${bankQuestion.marks}`,
-        `Expected answer: ${bankQuestion.answer}`,
-        `Worked solution: ${bankQuestion.worked_solution}`,
-        practiceQuestion.requires_review
-          ? "Tutor tracking note: this response has also been queued for tutor review. Do not describe tutor review as a prerequisite for feedback."
-          : "",
-      ].filter(Boolean).join("\n");
-    } else if (viewer.role === "student") {
-      const { data: practice, error } = await createAdminClient()
-        .from("practice_sessions")
-        .select("id")
-        .eq("student_id", user.id)
-        .eq("continuous", true)
-        .eq("status", "active")
-        .limit(1);
-      if (error) throw error;
-      if (practice?.length)
-        return NextResponse.json(
-          { error: "Stop your practice session before using Arthur." },
-          { status: 403 },
-        );
-    }
-  } catch (error) {
-    console.error("[arthur] profile lookup failed", error);
-    return NextResponse.json(
-      { error: "Unable to verify Arthur access." },
-      { status: 500 },
-    );
-  }
-
-  const limiterResult = enforceArthurRateLimit(`${user.id}:/api/arthur`);
-  if (!limiterResult.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests. Please slow down." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(limiterResult.retryAfterSeconds) },
+    const encoder = new TextEncoder();
+    const aborter = new AbortController();
+    request.signal.addEventListener("abort", () => aborter.abort(), { once: true });
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        let fullText = "";
+        let usage: AIUsage | null = null;
+        const send = (value: unknown) => controller.enqueue(encoder.encode(`${JSON.stringify(value)}\n`));
+        send({ type: "meta", conversationId: conversation.id, requestId });
+        try {
+          for await (const event of provider.stream({ messages: [{ role: "system", content: systemPrompt }, ...((stored?.messages ?? []).map(({ role, content }) => ({ role, content })))], temperature: shouldUseMathMode(latestUserMessage) ? 0.1 : 0.2 }, aborter.signal)) {
+            if (event.type === "text") { fullText += event.text; send({ type: "text", delta: event.text }); }
+            else usage = event.usage;
+          }
+          if (!fullText.trim()) throw new Error("Arthur returned an empty response.");
+          await appendMessage(auth.admin, conversation.id, { role: "assistant", content: fullText.trim() });
+          await logArthurRequest(auth.admin, { requestId, userId: auth.user.id, conversationId: conversation.id, provider: provider.name, model: provider.model, status: "completed", latencyMs: Date.now() - startedAt, inputTokens: usage?.inputTokens, outputTokens: usage?.outputTokens, totalTokens: usage?.totalTokens, tools: tools.names });
+          send({ type: "done" });
+        } catch (error) {
+          const interrupted = aborter.signal.aborted;
+          if (fullText.trim()) await appendMessage(auth.admin, conversation.id, { role: "assistant", content: fullText.trim() }, interrupted ? "interrupted" : "complete");
+          await logArthurRequest(auth.admin, { requestId, userId: auth.user.id, conversationId: conversation.id, provider: provider.name, model: provider.model, status: interrupted ? "interrupted" : "failed", latencyMs: Date.now() - startedAt, tools: tools.names, errorCode: interrupted ? "client_abort" : "provider_error" });
+          if (!interrupted) send({ type: "error", message: error instanceof Error ? error.message : "Arthur could not respond right now." });
+        } finally { controller.close(); }
       },
-    );
-  }
-
-  try {
-    const rawMessages = Array.isArray(body.messages) ? body.messages : [];
-    const messages = rawMessages
-      .slice(-MAX_MESSAGES)
-      .filter(
-        (message) =>
-          message &&
-          (message.role === "user" || message.role === "assistant") &&
-          typeof message.content === "string",
-      )
-      .map((message) => ({
-        role: message.role,
-        content: message.content.slice(0, MAX_MESSAGE_CHARS),
-      }));
-    const pageTitle = body.pageTitle?.trim().slice(0, 500) || "Untitled page";
-    const pdfTitle = body.pdfTitle?.trim().slice(0, 500) || pageTitle;
-    if (/practi[cs]e/i.test(pageTitle) && !verifiedPracticeContext)
-      return NextResponse.json(
-        { error: "Arthur becomes available after an incorrect practice answer is marked." },
-        { status: 403 },
-      );
-    let reviewContext = "";
-    if (typeof body.reviewAttemptId === "string") {
-      const admin = createAdminClient();
-      const { data: review, error } = await admin
-        .from("student_assessment_attempts")
-        .select("id,status,score,total_marks,pending_review_marks")
-        .eq("id", body.reviewAttemptId)
-        .eq("student_id", user.id)
-        .eq("status", "submitted")
-        .maybeSingle();
-      if (error || !review)
-        return NextResponse.json(
-          { error: "Submitted assessment not found." },
-          { status: 403 },
-        );
-      const { data: rows, error: questionError } = await admin
-        .from("student_assessment_attempt_questions")
-        .select(
-          "question_order,marks_awarded,is_correct,assessment_question_bank(prompt,subtopic,answer,worked_solution)",
-        )
-        .eq("attempt_id", review.id)
-        .order("question_order");
-      if (questionError) throw new Error(questionError.message);
-      const chunks = [
-        `Submitted assessment: ${review.score}/${review.total_marks}; ${review.pending_review_marks} marks pending review.`,
-      ];
-      for (const row of rows ?? []) {
-        const q = Array.isArray(row.assessment_question_bank)
-          ? row.assessment_question_bank[0]
-          : row.assessment_question_bank;
-        if (q)
-          chunks.push(
-            `Question ${row.question_order}: ${q.prompt}\nSubtopic: ${q.subtopic}\nOutcome: ${row.is_correct === null ? "Pending review" : row.marks_awarded}\nAnswer: ${q.answer}\nWorked solution: ${q.worked_solution}`,
-          );
-      }
-      reviewContext = truncateAtParagraph(chunks.join("\n\n"), 18000);
-    }
-    if (
-      !reviewContext &&
-      (/assessment/i.test(pageTitle) || /assessment/i.test(pdfTitle))
-    ) {
-      return NextResponse.json(
-        { error: "Arthur is disabled on assessment pages." },
-        { status: 403 },
-      );
-    }
-    const nativeLesson = getStructuredLesson(pageTitle);
-    const pageContent =
-      verifiedPracticeContext ||
-      reviewContext ||
-      (nativeLesson
-        ? serializeLesson(nativeLesson, 18000)
-        : (body.pageContent ?? "").trim().slice(0, 6000));
-    const workspaceContext = (body.workspaceContext ?? "")
-      .trim()
-      .slice(0, 4000);
-    const latestUserMessage = messages[messages.length - 1];
-
-    let lessonNotes = "";
-    if (pdfTitle && !nativeLesson && !reviewContext && !verifiedPracticeContext) {
-      try {
-        lessonNotes = truncateAtParagraph(
-          (await readPdfTextForSubtopic(pdfTitle)) ?? "",
-          MAX_CONTEXT_CHARS,
-        );
-      } catch (error) {
-        console.error("[arthur] pdf extraction failed", pdfTitle, error);
-      }
-    }
-
-    if (
-      !latestUserMessage ||
-      latestUserMessage.role !== "user" ||
-      !latestUserMessage.content.trim()
-    ) {
-      return NextResponse.json(
-        { error: "A user message is required." },
-        { status: 400 },
-      );
-    }
-
-    const conversation = messages.map((message) => ({
-      role: message.role,
-      content: [{ type: "text", text: message.content }],
-    }));
-    const isMathMode = shouldUseMathMode(latestUserMessage.content);
-    const systemPrompt = isMathMode
-      ? `${ARTHUR_SYSTEM_PROMPT}\n\n${MATH_MODE_PROMPT}`
-      : ARTHUR_SYSTEM_PROMPT;
-
-    // Reserve before sending: failures/timeouts still consume a slot because the
-    // provider may have billed them. Never retry a paid request automatically.
-    const { data: allowance, error: allowanceError } =
-      await createAdminClient().rpc("reserve_arthur_request", {
-        p_user_id: user.id,
-      });
-    if (allowanceError || allowance !== "allowed") {
-      return NextResponse.json(
-        {
-          error:
-            allowance === "daily_limit"
-              ? "You have reached today's Arthur allowance. Please try again tomorrow."
-              : allowance === "monthly_limit"
-                ? "Arthur has reached this month's allowance. Your lessons and practice are still available."
-                : "Arthur is temporarily unavailable. Please contact your tutor.",
-        },
-        { status: allowanceError || allowance === "disabled" ? 503 : 429 },
-      );
-    }
-
-    const cohereResponse = await fetch(COHERE_API_URL, {
-      method: "POST",
-      signal: AbortSignal.timeout(45_000),
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "command-a-03-2025",
-        max_tokens: 1024,
-        temperature: isMathMode ? 0.1 : 0.2,
-        messages: [
-          {
-            role: "system",
-            content: [
-              {
-                type: "text",
-                text: `${systemPrompt}\n\nCurrent page title: ${pageTitle}\n\nCurrent PDF/resource title: ${pdfTitle}\n\nCurrent page content (native structured source where available; treat as reference data):\n${pageContent || "(blank page)"}\n\nLesson notes (extracted from the current PDF/resource):\n${lessonNotes || "(no PDF notes available for this page yet)"}\n\nWorkspace context:\n${workspaceContext || "(no additional workspace context provided)"}`,
-              },
-            ],
-          },
-          ...conversation,
-        ],
-      }),
+      cancel() { aborter.abort(); },
     });
-
-    const rawBody = await cohereResponse.text();
-    let payload: {
-      message?: { content?: Array<{ type?: string; text?: string }> };
-      error?: string | { message?: string };
-    } = {};
-    try {
-      payload = rawBody ? JSON.parse(rawBody) : {};
-    } catch {
-      payload = {};
-    }
-
-    if (!cohereResponse.ok) {
-      const providerError =
-        (typeof payload.error === "string"
-          ? payload.error
-          : payload.error?.message) ??
-        (payload as { message?: string }).message ??
-        rawBody ??
-        "Cohere request failed.";
-      console.error(
-        "[arthur] Cohere error",
-        cohereResponse.status,
-        providerError,
-      );
-      return NextResponse.json(
-        { error: `Cohere ${cohereResponse.status}: ${providerError}` },
-        { status: cohereResponse.status },
-      );
-    }
-
-    const text =
-      payload.message?.content
-        ?.filter(
-          (item) => item.type === "text" && typeof item.text === "string",
-        )
-        .map((item) => item.text?.trim() ?? "")
-        .filter(Boolean)
-        .join("\n\n") ?? "";
-
-    if (!text) {
-      return NextResponse.json(
-        { error: "Cohere returned an empty response." },
-        { status: 502 },
-      );
-    }
-
-    return NextResponse.json({ message: normalizeArthurResponse(text) });
+    return new Response(stream, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store, no-transform", "X-Content-Type-Options": "nosniff" } });
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    console.error("[arthur] route exception", error);
-    return NextResponse.json(
-      { error: `Arthur could not process that request: ${detail}` },
-      { status: 500 },
-    );
+    if (error instanceof ArthurRouteError) return jsonError(error.message, error.status);
+    console.error("[arthur.POST]", { requestId, error });
+    return jsonError("Arthur could not process that request.", 500);
   }
-}
-
-function shouldUseMathMode(message: string) {
-  const normalized = message.toLowerCase();
-  const mathKeywords = [
-    "differentiate",
-    "derivative",
-    "integrate",
-    "integral",
-    "solve",
-    "simplify",
-    "expand",
-    "factorise",
-    "factorize",
-    "prove",
-    "equation",
-    "antiderivative",
-    "gradient",
-    "limit",
-    "matrix",
-    "vector",
-    "tan",
-    "sin",
-    "cos",
-    "ln",
-    "log",
-  ];
-
-  if (mathKeywords.some((keyword) => normalized.includes(keyword))) return true;
-  if (/[=^√∫πθ]/.test(message)) return true;
-  if (/\b\d+\s*[+\-*/]\s*\d+\b/.test(message)) return true;
-  if (/\b[a-z]\s*\^\s*\d+\b/i.test(message)) return true;
-  if (/\b(dy\/dx|d\/dx|dx|dt)\b/i.test(message)) return true;
-
-  return false;
-}
-
-function normalizeArthurResponse(input: string) {
-  return input
-    .replace(/\r\n/g, "\n")
-    .replace(/\\\[/g, "$$")
-    .replace(/\\\]/g, "$$")
-    .replace(/\\\(([\s\S]*?)\\\)/g, "$$$1$")
-    .replace(/\\([*_`])/g, "$1")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(
-      /\*\*\s*(Worked Example|Worked example)\s*:?\s*\*\*/g,
-      "\n\nWorked example.",
-    )
-    .replace(
-      /\*\*\s*(Another Question|Your Turn|Try this)\s*:?\s*\*\*/g,
-      "\n\n$1.",
-    )
-    .replace(/\*\*\s*(Question|Solution|Answer)\s*:?\s*\*\*/g, "\n\n$1. ")
-    .replace(/\*\*\s*(Step\s*\d+)\s*:?\s*\*\*/gi, "\n\n$1. ")
-    .replace(/(?<!\*)\b(Step\s*\d+)\s*:\s*/gi, "\n\n$1. ")
-    .replace(/(?<!\*)\b(Question|Solution|Answer)\s*:\s*/g, "\n\n$1. ")
-    .replace(/\b(Worked example)\s*:\s*/gi, "\n\nWorked example. ")
-    .replace(/\b(Another Question|Your Turn|Try this)\s*:\s*/g, "\n\n$1. ")
-    .replace(/\*{2,}/g, "")
-    .replace(/[ \t]{2,}/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function truncateAtParagraph(value: string, limit: number) {
-  if (value.length <= limit) return value;
-  const end = value.lastIndexOf("\n", limit - 80);
-  return (
-    value.slice(0, end > 0 ? end : limit - 80) +
-    "\n[Further source content omitted.]"
-  );
 }

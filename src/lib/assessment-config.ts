@@ -39,7 +39,7 @@ export const CHAPTER_ONE_ASSESSMENT_CONFIG = {
   durationSeconds: 90 * 60,
   questionCount: 15,
   totalMarks: 75,
-  minimumStudentPlan: "basic" as "basic" | "premium",
+  minimumStudentPlan: "basic" as "basic" | "plus",
   requiredModuleTitles: chapterOneModuleTitles,
   rules: STANDARD_ASSESSMENT_RULES,
 } as const;
@@ -55,7 +55,7 @@ export const GENERATED_ASSESSMENT_CONFIGS = COURSE_BANK_MAPPINGS.map((mapping) =
   durationSeconds: 90 * 60,
   questionCount: 15,
   totalMarks: 75,
-  minimumStudentPlan: mapping.courseTopicKey === "pure_1_algebra_and_functions" ? "basic" as const : "premium" as const,
+  minimumStudentPlan: mapping.courseTopicKey === "pure_1_algebra_and_functions" ? "basic" as const : "plus" as const,
   requiredModuleTitles: moduleTitles(mapping.subjectTitle, mapping.chapterTitle),
   rules: STANDARD_ASSESSMENT_RULES,
 }));
@@ -83,7 +83,7 @@ export const SYNOPTIC_ASSESSMENT_CONFIGS = A_LEVEL_MATHS_SUBJECTS.map((subject) 
     durationSeconds: 90 * 60,
     questionCount: 20,
     totalMarks: null,
-    minimumStudentPlan: "premium" as const,
+    minimumStudentPlan: "plus" as const,
     requiredModuleTitles: subject.chapters.flatMap((chapter) => moduleTitles(subject.title, chapter.title)),
     requiredModules: subject.chapters.flatMap((chapter) =>
       moduleTitles(subject.title, chapter.title).map((title) => ({

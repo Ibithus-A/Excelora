@@ -3,7 +3,7 @@
 import { CloseIcon } from "@/components/icons";
 import { useEffect, useMemo, useState } from "react";
 
-export type TutorialSurface = "dashboard" | "course-map" | "notes" | "video" | "ai";
+export type TutorialSurface = "dashboard" | "course-map" | "notes" | "practice" | "ai";
 
 type TutorialStep = {
   id: TutorialSurface;
@@ -49,24 +49,24 @@ const STEPS: TutorialStep[] = [
     id: "notes",
     selector: "[data-tour='lesson-notes']",
     eyebrow: "Interactive lesson",
-    title: "Learn directly from the page",
-    body: "Each topic opens as a structured lesson page with explanations, worked examples, diagrams, and practice in the correct order.",
+    title: "Learn by interacting with the page",
+    body: "Each topic combines clear explanations, worked examples and responsive diagrams. The lesson is a real web page, so it adapts to your screen and keeps every tool close by.",
     placement: "left",
   },
   {
-    id: "video",
-    selector: "[data-tour='lesson-video']",
-    eyebrow: "Video",
-    title: "Video lessons are in development",
-    body: "The video area previews where professionally produced walkthroughs will appear as they are completed and released.",
+    id: "practice",
+    selector: "[data-tour='practice-session']",
+    eyebrow: "Practice",
+    title: "Check the idea straight away",
+    body: "Move from the lesson into focused questions for the same subtopic. Answers, feedback and working stay connected to what you have just learned.",
     placement: "left",
   },
   {
     id: "ai",
     selector: "[data-tour='ai-assistant']",
     eyebrow: "Arthur AI",
-    title: "Ask for help when available",
-    body: "Arthur sits beside the current lesson page. Basic users can see where it is, but the assistant stays locked until their plan includes AI.",
+    title: "Ask without losing the lesson",
+    body: "Arthur opens beside the current lesson or practice question and uses that exact context to explain the step, diagnose a mistake or offer another example.",
     placement: "left",
   },
 ];

@@ -11,6 +11,8 @@ import {
   LinkedInIcon,
   TikTokIcon,
 } from "@/components/icons";
+import { WorkspaceLearningDemo } from "@/components/workspace-learning-demo";
+import { LearningLoopDemo } from "@/components/learning-loop-demo";
 
 type LandingPageProps = {
   onSignIn: () => void;
@@ -169,8 +171,8 @@ const FOOTER_SOCIAL_LINKS = [
 export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
   const copyrightYear = new Date().getFullYear();
   const [isIntroVisible, setIsIntroVisible] = useState(false);
+  const [isScrollCueVisible, setIsScrollCueVisible] = useState(true);
   const [revealCycle, setRevealCycle] = useState(0);
-  const [workspaceShowcaseIndex, setWorkspaceShowcaseIndex] = useState(0);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -181,14 +183,23 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setWorkspaceShowcaseIndex((current) => (current + 1) % WORKSPACE_SHOWCASE_ITEMS.length);
-    }, 2800);
+    const updateScrollCue = () => setIsScrollCueVisible(window.scrollY < 80);
 
-    return () => window.clearInterval(timer);
+    updateScrollCue();
+    window.addEventListener("scroll", updateScrollCue, { passive: true });
+
+    return () => window.removeEventListener("scroll", updateScrollCue);
   }, []);
 
-  const activeWorkspaceShowcase = WORKSPACE_SHOWCASE_ITEMS[workspaceShowcaseIndex];
+  const scrollToSection = (sectionId: string) => {
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    target.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
+  };
+
+  const activeWorkspaceShowcase = WORKSPACE_SHOWCASE_ITEMS[0];
 
   const handleFooterLogoClick = () => {
     if (typeof window === "undefined") return;
@@ -232,7 +243,7 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
   };
 
   return (
-    <div className="relative min-h-dvh w-full overflow-hidden bg-[var(--surface-app)]">
+    <div className="landing-page relative min-h-dvh w-full overflow-hidden bg-white">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(ellipse_at_top,rgba(24,119,242,0.07),transparent_65%)]"
@@ -240,62 +251,88 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
 
       <header
         className={[
-          "landing-intro landing-intro-delay-1 relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 lg:px-8",
+          "landing-intro landing-intro-delay-1 relative z-50 mx-auto w-full px-4 py-4 sm:px-6 sm:py-5",
           isIntroVisible ? "is-visible" : "",
         ].join(" ")}
       >
-        <Image
-          src="/assets/excelora-logo.svg"
-          alt="Excelora"
-          width={120}
-          height={32}
-          className="h-7 w-auto select-none sm:h-8"
-          draggable={false}
-        />
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <button
-            type="button"
-            onClick={onSignIn}
-            className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-50 sm:px-4 sm:py-2 sm:text-sm"
-          >
-            Sign in
+        <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between gap-4 py-1">
+          <button type="button" onClick={() => scrollToSection("top")} aria-label="Back to top">
+            <Image
+              src="/assets/excelora-logo.svg"
+              alt="Excelora"
+              width={120}
+              height={32}
+              className="h-8 w-auto select-none sm:h-9"
+              draggable={false}
+            />
           </button>
-          <button
-            type="button"
-            onClick={onGetStarted}
-            className="inline-flex items-center gap-1.5 rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-800 sm:px-4 sm:py-2 sm:text-sm"
-          >
-            Get started
-            <ChevronRightIcon className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button
+              type="button"
+              onClick={onSignIn}
+              className="inline-flex items-center justify-center rounded-full border border-transparent px-2.5 py-2 text-xs font-semibold text-zinc-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-200 hover:bg-white hover:text-zinc-950 hover:shadow-sm active:translate-y-0 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 sm:px-4 sm:text-sm"
+            >
+              Sign in
+            </button>
+            <button type="button" onClick={onGetStarted} className="landing-cta inline-flex items-center gap-1.5 rounded-full bg-zinc-950 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-md active:translate-y-0 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-sm">
+              <span className="sm:hidden">Start</span>
+              <span className="hidden sm:inline">Start learning</span>
+              <ChevronRightIcon className="landing-cta-icon h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Hero */}
       <section
+        id="top"
         className={[
-          "landing-intro landing-intro-delay-2 relative z-10 mx-auto w-full max-w-6xl px-4 pt-10 pb-16 sm:px-6 sm:pt-16 sm:pb-20 md:pt-24 lg:px-8",
+          "landing-intro landing-intro-delay-2 relative z-10 mx-auto w-full max-w-[1440px] px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-16 lg:px-8 lg:pt-20",
           isIntroVisible ? "is-visible" : "",
         ].join(" ")}
       >
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-600">
-            A Level Maths, refined
-          </span>
-          <h1 className="mt-5 text-[32px] font-semibold leading-[1.05] tracking-[-0.03em] text-zinc-900 sm:mt-6 sm:text-5xl md:text-6xl">
-            Study deeper. Learn faster.
-            <br />
-            Built for focus.
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-zinc-600 sm:mt-5 sm:text-base md:text-lg">
-            Excelora is a calm study workspace pairing chapter notes, video walkthroughs,
-            and Arthur — a quiet tutor that reads the same lesson you do and answers in depth.
-          </p>
-        </div>
+        <div className="grid items-center gap-12 lg:grid-cols-[0.76fr_1.24fr] lg:gap-8 xl:grid-cols-[470px_minmax(0,1fr)] xl:gap-9">
+          <div className="relative z-10 max-w-2xl lg:py-12">
+            <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm backdrop-blur">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              GCSE & A-Level Maths, all in one place
+            </span>
+            <h1 className="mt-6 text-[42px] font-semibold leading-[0.98] tracking-[-0.05em] text-zinc-950 sm:text-6xl lg:text-[68px]">
+              The maths workspace
+              <br />
+              built for your
+              <span className="relative ml-3 inline-block whitespace-nowrap">
+                next grade.
+                <svg aria-hidden viewBox="0 0 240 14" preserveAspectRatio="none" className="absolute -bottom-2 left-0 h-3 w-full overflow-visible">
+                  <path d="M3 9 C 48 2, 104 3, 132 7 C 166 11, 204 8, 237 4" fill="none" stroke="#22c55e" strokeLinecap="round" strokeWidth="4" opacity="0.75" />
+                </svg>
+              </span>
+            </h1>
+            <p className="mt-7 max-w-xl text-base leading-7 text-zinc-600 sm:text-lg sm:leading-8">
+              Learn from structured notes, watch clear walkthroughs, practise exam-style questions and ask Arthur whenever a step does not click.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button type="button" onClick={onGetStarted} className="landing-cta inline-flex items-center justify-center gap-2 rounded-full bg-zinc-950 px-6 py-3.5 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(24,24,27,0.18)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-[0_16px_36px_rgba(24,24,27,0.24)] active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2">
+                Start learning free
+                <ChevronRightIcon className="landing-cta-icon h-4 w-4" />
+              </button>
+              <button type="button" onClick={() => scrollToSection("product")} className="group inline-flex items-center justify-center gap-2 rounded-full border border-zinc-300 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-400 hover:bg-zinc-50 hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2">
+                See how it works
+                <ChevronRightIcon className="h-4 w-4 rotate-90 transition-transform duration-200 group-hover:translate-y-0.5" />
+              </button>
+            </div>
+            <p className="mt-4 text-xs text-zinc-500">Chapter 1 is free · No card required</p>
+            <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 border-t border-zinc-200 pt-6 text-sm text-zinc-600">
+              <span className="inline-flex items-center gap-2"><CheckDotIcon className="h-4 w-4 text-emerald-500" /> Built by UK tutors</span>
+              <span className="inline-flex items-center gap-2"><CheckDotIcon className="h-4 w-4 text-emerald-500" /> Aligned to the course</span>
+              <span className="inline-flex items-center gap-2"><CheckDotIcon className="h-4 w-4 text-emerald-500" /> Progress that stays visible</span>
+            </div>
+          </div>
 
-        {/* Workspace preview */}
-        <div className="relative mx-auto mt-10 max-w-5xl sm:mt-14">
-          <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-[0_40px_120px_rgba(15,23,42,0.10)] sm:rounded-[28px]">
+          {/* Workspace preview */}
+          <div className="relative min-w-0 lg:-mr-28 xl:-mr-36">
+            <div aria-hidden className="absolute -inset-12 -z-10 rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.12),transparent_68%)] blur-2xl" />
+            <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-[0_44px_120px_rgba(15,23,42,0.16)] sm:rounded-[28px]">
             <div className="flex items-center gap-1.5 border-b border-zinc-200 bg-[var(--surface-sidebar)] px-4 py-3">
               <span className="h-2.5 w-2.5 rounded-full bg-zinc-200" />
               <span className="h-2.5 w-2.5 rounded-full bg-zinc-200" />
@@ -304,111 +341,90 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
                 excelora · workspace
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-[190px_minmax(0,1fr)] lg:grid-cols-[210px_minmax(0,1fr)_300px]">
-              <WorkspaceSidebarMock activeIndex={workspaceShowcaseIndex} />
+            <div className="grid grid-cols-1 md:grid-cols-[190px_minmax(0,1fr)] lg:grid-cols-[190px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(400px,1fr)_330px]">
+              <WorkspaceSidebarMock activeIndex={0} />
               <HeroVideoPane showcaseItem={activeWorkspaceShowcase} />
-              <div className="hidden lg:block">
+              <div className="hidden xl:block">
                 <HeroArthurPane showcaseItem={activeWorkspaceShowcase} />
               </div>
             </div>
+            </div>
           </div>
         </div>
+
       </section>
 
-      {/* Features — Notion-style grid of tinted cards */}
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+      <button
+        type="button"
+        onClick={() => scrollToSection("product")}
+        className={[
+          "fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 flex-col items-center gap-2 text-zinc-500 transition-[opacity,color,transform] duration-500 hover:text-zinc-950 focus-visible:rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-4 sm:bottom-7",
+          isScrollCueVisible
+            ? "pointer-events-auto translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-2 opacity-0",
+        ].join(" ")}
+        aria-label="Scroll to explore how Excelora works"
+        aria-hidden={!isScrollCueVisible}
+        tabIndex={isScrollCueVisible ? 0 : -1}
+      >
+        <span className="text-[9px] font-semibold uppercase tracking-[0.22em]">
+          Explore
+        </span>
+        <span aria-hidden className="relative h-8 w-[2px] overflow-hidden rounded-full bg-zinc-200/90">
+          <span className="landing-scroll-cue absolute inset-x-0 top-0 h-2.5 rounded-full bg-zinc-800" />
+        </span>
+      </button>
+
+      {/* Immersive product chapter */}
+      <section id="product" className="relative z-10 scroll-mt-24 overflow-hidden bg-[#111315] px-4 py-24 text-white sm:px-6 sm:py-32 lg:px-8">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.18),transparent_32%),radial-gradient(circle_at_10%_85%,rgba(34,197,94,0.12),transparent_30%)]" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.08),transparent)]" />
+        <div className="relative mx-auto w-full max-w-[1320px]">
         <RevealOnScroll resetKey={revealCycle}>
-          <div className="max-w-3xl">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
-              Features
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+              One connected study loop
             </p>
-            <h2 className="mt-3 text-3xl font-semibold leading-[1.1] tracking-[-0.02em] text-zinc-900 sm:text-4xl md:text-5xl">
-              Bring all your studying together.
+            <h2 className="mt-4 text-4xl font-semibold leading-[1.04] tracking-[-0.04em] text-white sm:text-5xl md:text-6xl">
+              Everything you need to understand maths, in one place.
             </h2>
+            <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-white/60 sm:text-lg">No bouncing between disconnected tools. Lessons, practice, Arthur and progress all share the same learning context.</p>
           </div>
         </RevealOnScroll>
 
         <RevealOnScroll delay={120} resetKey={revealCycle}>
-          <div className="mt-10 grid grid-cols-1 items-stretch gap-4 sm:mt-12 sm:gap-5 md:grid-cols-2">
-            <RevealOnScroll delay={40} resetKey={revealCycle}>
-              <FeatureCard
-                className="h-full"
-                tint="bg-[#e8efe9]"
-                eyebrow="Notes"
-                title="The real notes, shown properly."
-                preview={<NotesPreview />}
-              />
-            </RevealOnScroll>
-            <RevealOnScroll delay={130} resetKey={revealCycle}>
-              <FeatureCard
-                className="h-full"
-                tint="bg-[#eef2f7]"
-                eyebrow="Video"
-                title="Walkthroughs, one click away."
-                preview={<VideoPreview />}
-              />
-            </RevealOnScroll>
-            <RevealOnScroll delay={220} resetKey={revealCycle}>
-              <FeatureCard
-                className="h-full"
-                tint="bg-[#f3eee6]"
-                eyebrow="Arthur"
-                title="Arthur stays grounded in the same lesson."
-                preview={<ArthurPreview />}
-              />
-            </RevealOnScroll>
-            <RevealOnScroll delay={310} resetKey={revealCycle}>
-              <FeatureCard
-                className="h-full"
-                tint="bg-[#eef0ea]"
-                eyebrow="Progress"
-                title="Chapter by chapter."
-                preview={<ProgressPreview />}
-              />
-            </RevealOnScroll>
+          <div className="mt-14 sm:mt-20">
+            <WorkspaceLearningDemo />
           </div>
         </RevealOnScroll>
+        </div>
       </section>
 
       {/* How it works — three connected steps with workspace surfaces */}
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+      <section id="how-it-works" className="relative z-10 mx-auto w-full max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
         <RevealOnScroll resetKey={revealCycle}>
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
               How it works
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl md:text-4xl">
-              Three steps. One study loop.
+            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-zinc-900 sm:text-4xl md:text-5xl">
+              Turn every study session into progress.
             </h2>
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-zinc-600 md:text-base">
+              Work through the lesson, ask Arthur, practise the topic and review every answer in one connected flow.
+            </p>
           </div>
         </RevealOnScroll>
 
         <RevealOnScroll delay={120} resetKey={revealCycle}>
-          <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-14 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-            <StepCard
-              step={1}
-              title="Open a subtopic"
-              body="Pick a chapter from the sidebar and land straight on the notes."
-              preview={<StepSidebarPreview />}
-            />
-            <StepCard
-              step={2}
-              title="Read, watch, or ask"
-              body="Read the notes, watch the walkthrough, or ask Arthur."
-              preview={<StepReadPreview />}
-            />
-            <StepCard
-              step={3}
-              title="Track progress"
-              body="Mark lessons watched as your chapter bar fills in."
-              preview={<StepProgressPreview />}
-            />
+          <div className="mt-10 sm:mt-14">
+            <LearningLoopDemo />
           </div>
         </RevealOnScroll>
       </section>
 
       {/* Pricing */}
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+      <section id="pricing" className="relative z-10 mx-auto w-full max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
         <RevealOnScroll resetKey={revealCycle}>
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
@@ -418,15 +434,14 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
               Simple pricing. Real results.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-zinc-600 md:text-base">
-              Explore the complete first chapter free, including its notes, video
-              walkthroughs and one timed assessment. Upgrade for the full course,
-              Arthur and 1:1 tutoring.
+              Start with Chapter 1 for free, move to Plus for the complete learning
+              workspace, or choose Pro for the full video library.
             </p>
           </div>
         </RevealOnScroll>
 
         <RevealOnScroll delay={120} resetKey={revealCycle}>
-          <div className="mx-auto mt-10 grid max-w-5xl grid-cols-1 items-stretch gap-5 sm:mt-14 md:grid-cols-2 md:gap-6">
+          <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 items-stretch gap-5 sm:mt-14 lg:grid-cols-3 lg:gap-6">
             <PricingCard
               tone="light"
               name="Basic"
@@ -440,16 +455,27 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
             />
             <PricingCard
               tone="dark"
-              name="Premium"
-              price="Coming soon"
-              cadence="early access"
-              tagline="The complete course, Arthur and 1:1 tutor support, together."
-              perks={PREMIUM_PERKS}
-              ctaLabel="Join the Premium waitlist"
+              name="Plus"
+              price="£15"
+              cadence="per month"
+              tagline="The complete course and Arthur, without the video library."
+              perks={PLUS_PERKS}
+              ctaLabel="Choose Plus"
               onCtaClick={onGetStarted}
               featured
               highlight="Most popular"
-              footnote="Cancel anytime · Student-friendly pricing."
+              footnote="Cancel at any time."
+            />
+            <PricingCard
+              tone="light"
+              name="Pro"
+              price="£25"
+              cadence="per month"
+              tagline="Everything in Plus, with the complete video walkthrough library."
+              perks={PRO_PERKS}
+              ctaLabel="Choose Pro"
+              onCtaClick={onGetStarted}
+              footnote="Cancel at any time."
             />
           </div>
         </RevealOnScroll>
@@ -475,30 +501,34 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
       {/* Closing CTA */}
       <section className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8">
         <RevealOnScroll resetKey={revealCycle}>
-          <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white p-6 text-center shadow-[0_30px_80px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-10 md:p-14">
-            <h2 className="mx-auto max-w-2xl text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl md:text-4xl">
-              Ready to find your flow?
+          <div className="relative overflow-hidden rounded-[28px] border border-zinc-800 bg-[#111315] px-6 py-14 text-center shadow-[0_35px_100px_rgba(15,23,42,0.18)] sm:rounded-[36px] sm:px-10 sm:py-20 md:px-14">
+            <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(59,130,246,0.28),transparent_48%),radial-gradient(circle_at_100%_100%,rgba(34,197,94,0.14),transparent_35%)]" />
+            <div className="relative">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Your next chapter</p>
+            <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-semibold leading-tight tracking-[-0.035em] text-white sm:text-4xl md:text-5xl">
+              Better maths starts with one focused lesson.
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-zinc-600 md:text-base">
-              Create your account in seconds. Bring your syllabus and your questions — Arthur is already reading along.
+            <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-white/60 md:text-base">
+              Open Chapter 1 free, work at your own pace and bring Arthur in whenever you need another explanation.
             </p>
             <button
               type="button"
               onClick={onGetStarted}
-              className="mt-7 inline-flex items-center gap-1.5 rounded-full border border-zinc-900 bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800"
+              className="landing-cta mt-8 inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-zinc-950 shadow-[0_14px_35px_rgba(255,255,255,0.12)] transition hover:-translate-y-0.5 hover:bg-zinc-100"
             >
-              Get started
-              <ChevronRightIcon className="h-3.5 w-3.5" />
+              Start learning free
+              <ChevronRightIcon className="landing-cta-icon h-3.5 w-3.5" />
             </button>
+            <p className="mt-4 text-xs text-white/40">No card required</p>
+            </div>
           </div>
         </RevealOnScroll>
       </section>
 
       <RevealOnScroll delay={80} resetKey={revealCycle}>
-        <footer className="relative z-10">
-          <div className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6 sm:pb-10 lg:px-8">
-            <div className="rounded-[22px] border border-zinc-200/80 bg-white/75 px-5 py-6 shadow-[0_18px_50px_rgba(15,23,42,0.04)] backdrop-blur-sm sm:rounded-[28px] sm:px-7 sm:py-7 md:px-8 md:py-8">
-              <div className="flex flex-col gap-8">
+        <footer className="relative z-10 border-t border-zinc-200 bg-[#fafaf9]">
+          <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+              <div className="flex flex-col gap-9">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                   <div className="max-w-xl">
                     <button
@@ -539,7 +569,6 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
                 <div className="h-px w-full bg-zinc-200" />
                 <p className="text-sm text-zinc-500">© {copyrightYear} Excelora. All Rights Reserved.</p>
               </div>
-            </div>
           </div>
         </footer>
       </RevealOnScroll>
@@ -601,75 +630,11 @@ function RevealOnScroll({
   );
 }
 
-/* ---------- Shared layout ---------- */
-
-function FeatureCard({
-  eyebrow,
-  title,
-  preview,
-  tint,
-  className = "",
-}: {
-  eyebrow: string;
-  title: string;
-  preview: React.ReactNode;
-  tint: string;
-  className?: string;
-}) {
-  return (
-    <article
-      className={[
-        "flex flex-col overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.04)]",
-        className,
-      ].join(" ")}
-    >
-      <div className="px-7 pb-5 pt-6">
-        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
-          {eyebrow}
-        </p>
-        <h3 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 md:text-[22px]">
-          {title}
-        </h3>
-      </div>
-      <div className={["relative flex-1 overflow-hidden px-6 pb-7 pt-2", tint].join(" ")}>
-        {preview}
-      </div>
-    </article>
-  );
-}
-
-function StepCard({
-  step,
-  title,
-  body,
-  preview,
-}: {
-  step: number;
-  title: string;
-  body: string;
-  preview: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.04)]">
-      <div className="flex h-[200px] items-start overflow-hidden border-b border-zinc-200 bg-[var(--surface-sidebar)] p-5">
-        {preview}
-      </div>
-      <div className="p-6">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-xs font-semibold text-zinc-700">
-          {step}
-        </span>
-        <h3 className="mt-4 text-base font-semibold tracking-tight text-zinc-900">{title}</h3>
-        <p className="mt-2 text-sm leading-6 text-zinc-600">{body}</p>
-      </div>
-    </div>
-  );
-}
-
 /* ---------- Workspace surface mocks ---------- */
 
 function HeroVideoPane({ showcaseItem }: { showcaseItem: WorkspaceShowcaseItem }) {
   return (
-    <div className="border-b border-zinc-200 p-5 sm:p-6 md:border-b-0 md:p-7 lg:border-r">
+    <div className="border-b border-zinc-200 p-5 sm:p-6 md:border-b-0 md:p-7 xl:border-r">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
@@ -684,21 +649,18 @@ function HeroVideoPane({ showcaseItem }: { showcaseItem: WorkspaceShowcaseItem }
         </span>
       </div>
       <div className="relative mt-5 overflow-hidden rounded-[16px] border border-zinc-200 bg-zinc-950 shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
-        <div className="relative flex aspect-[16/10] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_45%),linear-gradient(135deg,#0f172a,#1f2937_55%,#374151)]">
-          <div className="absolute inset-x-5 top-5 rounded-[12px] border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
+        <div className="relative aspect-[16/10] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.10),transparent_48%),linear-gradient(135deg,#0f172a,#1f2937_55%,#374151)]">
+          <div className="absolute inset-x-4 bottom-14 top-4 overflow-hidden rounded-[12px] border border-white/10 bg-white/10 p-3 backdrop-blur-sm sm:inset-x-5 sm:top-5">
             <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/60">
               On screen
             </p>
-            <p className="mt-1.5 text-[13px] leading-5 text-white/90">
+            <p className="mt-1.5 text-[12px] leading-[1.55] text-white/90 sm:text-[13px]">
               {showcaseItem.onScreenText}
             </p>
           </div>
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-lg text-zinc-900 shadow-[0_10px_25px_rgba(255,255,255,0.18)]">
-            ▶
-          </div>
-          <div className="absolute inset-x-4 bottom-4 rounded-[12px] border border-white/10 bg-black/30 px-3 py-2 backdrop-blur-sm">
+          <div className="absolute inset-x-3 bottom-3 rounded-[12px] border border-white/10 bg-black/35 px-3 py-2 backdrop-blur-sm sm:inset-x-4 sm:bottom-4">
             <div className="flex items-center gap-2.5">
-              <span className="text-[11px] text-white">▶</span>
+              <span className="text-[9px] text-white/90">▶</span>
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/20">
                 <div className="h-full w-[42%] rounded-full bg-white" />
               </div>
@@ -713,9 +675,6 @@ function HeroVideoPane({ showcaseItem }: { showcaseItem: WorkspaceShowcaseItem }
         <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white">
           <span className="leading-none">▶</span>
           Watch the video
-        </span>
-        <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
-          Premium
         </span>
       </div>
     </div>
@@ -784,239 +743,30 @@ function WorkspaceSidebarMock({ activeIndex }: { activeIndex: number }) {
   );
 }
 
-function NotesPreview() {
-  return (
-    <div className="overflow-hidden rounded-[14px] border border-zinc-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-      <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-2.5">
-        <p className="truncate text-[11px] font-medium tracking-wide text-zinc-500">
-          Excelora · Ch.07 Differentiation.pdf
-        </p>
-        <span className="ml-3 inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-900 bg-zinc-900 px-2.5 py-[3px] text-[10px] font-medium text-white">
-          <span className="leading-none">▶</span> Watch
-        </span>
-      </div>
-      <div className="bg-[linear-gradient(180deg,#fafaf9_0%,#f4f4f3_100%)] p-4">
-        <div className="overflow-hidden rounded-[12px] border border-zinc-200 bg-white shadow-[0_16px_30px_rgba(15,23,42,0.08)]">
-          <Image
-            src="/assets/excelora-differentiation-preview.png"
-            alt="Screenshot of the Differentiation from First Principles PDF"
-            width={848}
-            height={1200}
-            className="h-[320px] w-full object-cover object-top"
-            draggable={false}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function VideoPreview() {
-  return (
-    <div className="overflow-hidden rounded-[14px] border border-zinc-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2.5">
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500">
-            Lesson Video
-          </p>
-          <p className="text-[12px] text-zinc-600">Walkthrough · 6 min</p>
-        </div>
-        <span className="inline-flex items-center rounded-full border border-zinc-900 bg-zinc-900 px-2.5 py-[3px] text-[10px] font-medium text-white">
-          Coming soon
-        </span>
-      </div>
-      <div className="px-4 pb-4 pt-3">
-        <div className="flex aspect-[16/8] items-center justify-center rounded-[12px] bg-gradient-to-br from-zinc-900 to-zinc-700">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-sm">
-            <span className="ml-0.5 text-base text-zinc-800">▶</span>
-          </div>
-        </div>
-        <div className="mt-2.5 flex items-center justify-between">
-          <span className="text-[11px] text-zinc-500">Not watched yet</span>
-          <span className="inline-flex items-center rounded-full border border-zinc-900 bg-zinc-900 px-2.5 py-[3px] text-[10px] text-white">
-            Next →
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ArthurPreview() {
-  return (
-    <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-      <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-        <div className="flex items-center gap-3">
-          <div className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white">
-            <AssistantIcon className="h-4 w-4 text-zinc-800" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-zinc-900">Arthur</p>
-            <p className="text-xs text-zinc-500">Differentiation · Chain rule</p>
-          </div>
-        </div>
-        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-emerald-700">
-          Live
-        </span>
-      </div>
-      <div className="space-y-2.5 p-5">
-        <div className="ml-auto max-w-[82%] rounded-[14px] bg-zinc-900 px-3.5 py-2 text-[13px] leading-6 text-white">
-          Walk me through differentiating{" "}
-          <span className="font-serif italic">y = sin(3x² + 1)</span> using the chain rule.
-        </div>
-        <div className="mr-auto max-w-[92%] rounded-[14px] border border-zinc-200 bg-white px-3.5 py-2.5 text-[13px] leading-[1.65] text-zinc-800 shadow-sm">
-          <p className="font-medium text-zinc-900">Identify the inner and outer functions.</p>
-          <p className="mt-0.5">
-            Outer: <span className="font-serif italic">sin(u)</span>. Inner:{" "}
-            <span className="font-serif italic">u = 3x² + 1</span>.
-          </p>
-          <p className="mt-2 font-medium text-zinc-900">Differentiate each layer.</p>
-          <p className="mt-0.5 font-serif italic">
-            du/dx = 6x &nbsp;·&nbsp; d/du (sin u) = cos u
-          </p>
-          <p className="mt-2 font-medium text-zinc-900">Multiply and substitute back.</p>
-          <p className="mt-0.5">
-            <span className="font-serif italic">dy/dx = cos(u) · 6x = 6x cos(3x² + 1)</span>.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProgressPreview() {
-  return (
-    <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-      <div className="px-5 py-5">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
-              Chapter Progress
-            </p>
-            <p className="mt-1 text-sm text-zinc-600">3 of 5 subtopics completed</p>
-          </div>
-          <p className="text-sm font-medium text-zinc-800">60%</p>
-        </div>
-        <div className="mt-4 h-3 overflow-hidden rounded-full bg-zinc-100">
-          <div
-            className="h-full rounded-full bg-[linear-gradient(90deg,#16a34a,#22c55e)]"
-            style={{ width: "60%" }}
-          />
-        </div>
-        <ul className="mt-5 space-y-2 text-sm">
-          {[
-            { label: "7.1 Differentiation from First Principles", done: true },
-            { label: "7.2 Standard Derivatives and Basic Rules", done: true },
-            { label: "7.3 Chain Rule, Product Rule and Quotient Rule", done: true },
-            { label: "7.4 Applications of Differentiation", done: false },
-            { label: "7.5 Implicit and Parametric Differentiation", done: false },
-          ].map((row) => (
-            <li
-              key={row.label}
-              className="flex items-center justify-between rounded-lg bg-zinc-50/80 px-2.5 py-2"
-            >
-              <span className="text-zinc-800">{row.label}</span>
-              <span
-                className={[
-                  "rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
-                  row.done
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-zinc-200 bg-zinc-100 text-zinc-600",
-                ].join(" ")}
-              >
-                {row.done ? "Watched" : "Not yet"}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-function StepSidebarPreview() {
-  return (
-    <div className="w-full rounded-[14px] border border-zinc-200 bg-white p-3 shadow-sm">
-      <p className="px-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500">
-        A Level Maths
-      </p>
-      <ul className="mt-2 space-y-1 text-[13px] text-zinc-700">
-        {["Algebra", "Functions", "Differentiation"].map((item, index) => (
-          <li
-            key={item}
-            className={[
-              "flex items-center gap-2 rounded-md px-1.5 py-1",
-              index === 2 ? "bg-zinc-100 text-zinc-900" : "",
-            ].join(" ")}
-          >
-            <FolderIcon className="h-3 w-3 text-zinc-500" />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function StepReadPreview() {
-  return (
-    <div className="w-full rounded-[14px] border border-zinc-200 bg-white p-3 shadow-sm">
-      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500">
-        Product rule
-      </p>
-      <p className="mt-2 text-[12px] leading-5 text-zinc-600">
-        Read the worked example for <span className="italic">y = x² sin x</span>, or ask Arthur
-        why each term appears.
-      </p>
-      <div className="mt-3 flex gap-1.5">
-        <span className="inline-flex items-center gap-1 rounded-full border border-zinc-900 bg-zinc-900 px-2 py-0.5 text-[10px] font-medium text-white">
-          ▶ Watch
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] text-zinc-700">
-          Ask Arthur
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function StepProgressPreview() {
-  return (
-    <div className="w-full rounded-[14px] border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="flex items-end justify-between">
-        <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500">
-          Chapter
-        </p>
-        <p className="text-[11px] font-medium text-zinc-800">63%</p>
-      </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100">
-        <div
-          className="h-full rounded-full bg-[linear-gradient(90deg,#16a34a,#22c55e)]"
-          style={{ width: "63%" }}
-        />
-      </div>
-      <p className="mt-2.5 text-[11px] text-zinc-500">5 of 8 subtopics watched</p>
-      <div className="mt-2.5 flex items-center justify-between rounded-md bg-zinc-50 px-2.5 py-1.5 text-[11px]">
-        <span className="text-zinc-700">Chain rule</span>
-        <span className="text-emerald-700">Done</span>
-      </div>
-    </div>
-  );
-}
-
 const BASIC_PERKS = [
-  "Complete Chapter 1 notes and video walkthroughs",
-  "One timed Chapter 1 assessment attempt",
+  "Complete Chapter 1 notes",
+  "Chapter 1 practice questions and assessment",
   "Chapter 1 progress tracking",
   "No Arthur AI on the Basic Plan",
+  "Video walkthroughs available on Pro",
   "Works on phone, tablet and laptop",
 ];
 
-const PREMIUM_PERKS = [
+const PLUS_PERKS = [
   "Everything in Basic",
-  "Full course notes and video walkthroughs",
+  "Full course notes",
+  "Practice questions and quizzes across the course",
   "Timed assessments across available chapters",
   "Arthur — grounded in the same notes you read",
+  "1:1 tutor sessions",
+  "Priority support from UK tutors",
+];
+
+const PRO_PERKS = [
+  "Everything in Plus",
+  "Complete video walkthrough library",
+  "Videos aligned with every lesson",
+  "Arthur, practice, quizzes and assessments",
   "1:1 tutor sessions",
   "Priority support from UK tutors",
 ];
@@ -1053,11 +803,11 @@ function PricingCard({
   return (
     <article
       className={[
-        "relative flex h-full flex-col overflow-hidden rounded-[28px] border p-6 shadow-[0_20px_50px_rgba(15,23,42,0.05)] transition sm:p-8",
+        "landing-card relative flex h-full flex-col overflow-hidden rounded-[28px] border p-6 shadow-[0_20px_50px_rgba(15,23,42,0.05)] sm:p-8",
         isDark
           ? "border-zinc-900 bg-[linear-gradient(155deg,#121214_0%,#18181b_55%,#1f1f23_100%)] text-white shadow-[0_40px_100px_rgba(15,23,42,0.22)]"
           : "border-zinc-200 bg-white text-zinc-900",
-        featured ? "md:-translate-y-2 md:scale-[1.01]" : "",
+        featured ? "landing-card-featured" : "",
       ].join(" ")}
     >
       {isDark ? (
@@ -1143,6 +893,7 @@ function PricingCard({
         type="button"
         onClick={onCtaClick}
         className={[
+          "landing-cta",
           "mt-8 inline-flex w-full items-center justify-center gap-1.5 rounded-full px-5 py-3 text-sm font-medium transition",
           isDark
             ? "bg-white text-zinc-900 hover:bg-zinc-100"
@@ -1150,7 +901,7 @@ function PricingCard({
         ].join(" ")}
       >
         {ctaLabel}
-        <ChevronRightIcon className="h-3.5 w-3.5" />
+        <ChevronRightIcon className="landing-cta-icon h-3.5 w-3.5" />
       </button>
 
       {footnote ? (

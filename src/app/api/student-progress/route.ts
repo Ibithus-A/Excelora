@@ -69,6 +69,31 @@ async function repairDeterministicPracticeMarks(sessionIds: string[]) {
   return repaired;
 }
 
+async function removeCompletedEmptyPracticeSessions(studentId: string) {
+  const admin = createAdminClient();
+  const { data: sessions, error } = await admin
+    .from("practice_sessions")
+    .select("id,practice_session_questions(checked_at)")
+    .eq("student_id", studentId)
+    .eq("status", "completed")
+    .limit(200);
+  if (error) throw error;
+  const emptyIds = (sessions ?? [])
+    .filter((session) =>
+      session.practice_session_questions.every(
+        (question) => !question.checked_at,
+      ),
+    )
+    .map((session) => session.id);
+  if (!emptyIds.length) return;
+  const { error: deleteError } = await admin
+    .from("practice_sessions")
+    .delete()
+    .eq("student_id", studentId)
+    .in("id", emptyIds);
+  if (deleteError) throw deleteError;
+}
+
 export async function GET(request: Request) {
   const profile = await viewer();
   if (!profile)
@@ -87,6 +112,7 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   try {
     if (url.searchParams.get("view") === "practice-history") {
+      await removeCompletedEmptyPracticeSessions(student);
       const requestedOffset = Number(url.searchParams.get("offset") ?? 0);
       const offset = Number.isInteger(requestedOffset)
         ? Math.max(0, Math.min(requestedOffset, 10_000))
@@ -95,10 +121,11 @@ export async function GET(request: Request) {
       const loadHistoryPage = () => admin
           .from("practice_sessions")
           .select(
-            "id,subtopic,course_topic_key,status,created_at,completed_at,practice_session_questions(checked_at,marks_awarded,is_correct,requires_review,assessment_question_bank(marks))",
+            "id,subtopic,course_topic_key,status,created_at,completed_at,practice_session_questions!inner(checked_at,marks_awarded,is_correct,requires_review,assessment_question_bank(marks))",
             { count: "exact" },
           )
           .eq("student_id", student)
+          .not("practice_session_questions.checked_at", "is", null)
           .order("created_at", { ascending: false })
           .range(offset, offset + limit - 1);
       let { data, error, count } = await loadHistoryPage();
@@ -234,9 +261,10 @@ export async function GET(request: Request) {
       admin
         .from("practice_sessions")
         .select(
-          "id,subtopic,course_topic_key,status,created_at,completed_at,practice_session_questions(checked_at,requires_review,marks_awarded)",
+          "id,subtopic,course_topic_key,status,created_at,completed_at,practice_session_questions!inner(checked_at,requires_review,marks_awarded)",
         )
         .eq("student_id", student)
+        .not("practice_session_questions.checked_at", "is", null)
         .order("created_at", { ascending: false })
         .limit(20),
       admin

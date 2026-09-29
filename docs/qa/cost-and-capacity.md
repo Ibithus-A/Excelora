@@ -1,6 +1,6 @@
 # Course costs and capacity — 25 September 2026
 
-The course files are small enough that storage is unlikely to be the first constraint. The main costs to control are website/video delivery and Arthur. **The actual plan, upcoming invoice and spend-cap settings have not been verified.** No paid service, project or upgrade was created during this work and no Cohere requests were made for these checks.
+The course files are small enough that storage is unlikely to be the first constraint. The main costs to control are website/video delivery and Arthur. **The actual plan, upcoming invoice and spend-cap settings have not been verified.** No paid service, project or upgrade was created during this work and no DeepSeek requests were made for these checks.
 
 ## What this website uses
 
@@ -9,9 +9,9 @@ The course files are small enough that storage is unlikely to be the first const
 | Native lessons and diagrams | Website deployment; no AI request per page |
 | Videos | `/public/assets/videos`, delivered by the website host; traffic is charged there if its allowance is exceeded |
 | Accounts, question bank, assessment and practice history | Supabase database and API traffic |
-| Practice question generation | Selects and mixes existing bank questions; no Cohere fee |
+| Practice question generation | Selects and mixes existing bank questions; no paid AI fee |
 | Numeric marking | Server code; no paid AI marking |
-| Arthur | Cohere Chat API, `command-a-03-2025`; input and output tokens charged separately from Supabase |
+| Arthur | DeepSeek API; the configured model's input and output tokens are charged separately from Supabase |
 | Workspace drafts | Browser local storage; this is not a cloud backup or cross-device sync |
 | Authentication email, domain, hosting subscription | External/account configuration; providers and invoices still need confirmation |
 
@@ -34,15 +34,13 @@ Run `scripts/supabase-usage-audit.sql` in Supabase SQL Editor to obtain database
 Apply `20260924_arthur_usage_limits.sql` before deploying the updated Arthur route. It defaults to **disabled with zero monthly calls**. The existing deployed app is not protected until the updated code is deployed. An owner must deliberately set an allowance to turn it on.
 
 - Every paid call must first reserve one slot in PostgreSQL. The global monthly cap works across users, server instances and restarts. A daily per-user limit defaults to 20.
-- Missing migration, database errors, disabled settings and exhausted limits stop the request before Cohere.
+- Missing migration, database errors, disabled settings and exhausted limits stop the request before DeepSeek.
 - Failed calls/timeouts still use a slot, since the provider may already have billed them. No automatic paid retries.
-- Replies are limited to 1,024 output tokens. Existing conversation/context limits are retained. Calls time out after 45 seconds; a timeout is not assumed to cancel provider billing.
-- Counters use UTC calendar months/days. Only counters, not chat contents, are stored. Old daily counters are pruned; monthly aggregate totals remain.
+- Replies default to 1,200 output tokens with a bounded server-side override. Only the recent conversation window and concise context are sent. Calls default to a 45-second timeout; a timeout is not assumed to cancel provider billing.
+- Counters use UTC calendar months/days. Conversations are stored in user-scoped service-only tables; request logs omit message content. Old daily counters are pruned and monthly aggregate totals remain.
 - Lessons and practice remain usable when Arthur's allowance is exhausted.
 
-This is a **request cap**, not an invoice meter. Command A's published rates are $2.50 per million input tokens and $10 per million output tokens. For example, 8,000 input + 1,024 output tokens cost about **$0.03024 per request**, or **$30.24 per 1,000 requests**. Actual inputs vary. [Cohere Command A](https://docs.cohere.com/docs/command-a)
-
-For deliberately conservative planning at those rates, even charging the full published 256,000-token context as input plus 1,024 output tokens is below **$0.66 per admitted request**. A $20 pre-tax model-usage budget would therefore allow at most **30 calls/month** under that ceiling. This is intentionally much more restrictive than typical usage. It excludes tax, currency conversion, other uses of the API key and future price changes. Use a dedicated course key and verify the provider invoice/rates before choosing an allowance. Trial keys are not a production plan. [Cohere key and billing policy](https://cohere.com/pricing)
+This is a **request cap**, not an invoice meter. DeepSeek pricing and available model names can change, so verify the chosen model's current input, cached-input and output rates before selecting a monthly request allowance. Start with a deliberately small allowance during testing, review actual token logs and the provider dashboard, then increase it explicitly. [DeepSeek pricing](https://api-docs.deepseek.com/quick_start/pricing/)
 
 The following is a template, **not applied**. Replace `0` with the explicitly chosen allowance after checking the budget; zero admits no calls:
 
@@ -73,7 +71,7 @@ Confirm hosting provider/plan, intended student count, Supabase plan/compute/pro
 
 Practice selects stored questions and uses local/server marking, with no paid model calls. Saved answers and question exposure history grow with use; the capacity estimate above still applies. Activity heartbeats overwrite one row per student rather than accumulating a log. Visible student tabs send at most one periodic heartbeat per 45 seconds, plus page changes; the tutor dashboard polls every 30 seconds. These API requests and autosaves still consume host/database resources and network traffic; they are not an account-wide spending cap.
 
-The live QA checks created and removed nine temporary authenticated users across three runs. They can count toward this billing period's active-user usage. No messages were sent and no paid AI calls were made. No additional Supabase project or paid service was created. DeepSeek integration remains pending; any future provider must retain explicit usage limits before activation.
+The live QA checks created and removed nine temporary authenticated users across three runs. They can count toward this billing period's active-user usage. No messages were sent and no paid AI calls were made. No additional Supabase project or paid service was created. DeepSeek integration is implemented in code, but provider calls remain blocked until the database allowance is deliberately enabled and a server-only API key is configured.
 
 Supabase pricing and cost-control documentation were rechecked on 25 September 2026. The account's actual subscription and spend-cap setting have not been inspected.
 

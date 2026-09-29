@@ -4,8 +4,8 @@ This document is the implementation checklist for every interactive assessment. 
 
 ## Access and attempts
 
-- Assessment availability follows the plan entitlement declared in the shared assessment configuration. Never hard-code a Premium requirement in an assessment page, hook, dashboard, or API route.
-- Basic includes Chapter 1 and its assessment. Premium includes assessments for all chapters otherwise available to that student.
+- Assessment availability follows the plan entitlement declared in the shared assessment configuration. Never hard-code a Plus requirement in an assessment page, hook, dashboard, or API route.
+- Basic includes Chapter 1 and its assessment. Plus and Pro include assessments for all chapters otherwise available to that student.
 - A student assessment remains locked until every submodule in its chapter is complete.
 - Tutor manual unlock is still required after the completion requirement is met.
 - A student receives one timed attempt only. Closing and returning resumes the same attempt; submission or timer expiry permanently ends it.
@@ -14,10 +14,11 @@ This document is the implementation checklist for every interactive assessment. 
 
 ## Plan entitlements
 
-- Basic is a Chapter 1 product preview: Chapter 1 notes, video walkthroughs, progress tracking, and one timed Chapter 1 assessment attempt.
+- Basic is a Chapter 1 product preview: Chapter 1 notes, practice, progress tracking, and its assessment.
 - Basic students cannot use Arthur AI. Enforce this in both the interface and the Arthur API; hiding the button alone is insufficient.
-- Premium provides the full course according to the student's tutor-controlled chapter access, the corresponding assessments under the standard restrictions above, and Arthur outside assessment pages.
-- Pricing and upgrade copy must match these entitlements exactly. Do not describe Basic as the full notes library or imply that its Chapter 1 video walkthroughs require Premium.
+- Plus provides the full course according to the student's tutor-controlled chapter access, practice, quizzes, corresponding assessments, and Arthur outside assessment pages.
+- Pro includes everything in Plus and adds lesson video walkthroughs.
+- Pricing and upgrade copy must match these entitlements exactly. Videos must never be presented as included with Basic or Plus.
 
 ## Questions and answers
 

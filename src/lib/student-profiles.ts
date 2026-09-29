@@ -24,7 +24,8 @@ function sanitizeRole(value: unknown): UserRole {
 }
 
 function sanitizePlan(value: unknown): UserPlan {
-  return value === "premium" ? "premium" : "basic";
+  if (value === "premium" || value === "plus") return "plus";
+  return value === "pro" ? "pro" : "basic";
 }
 
 export function sortProfiles(students: UserAccessProfile[]) {

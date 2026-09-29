@@ -8,6 +8,7 @@ import { createRateLimiter } from "@/lib/security/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getViewerProfile } from "@/lib/supabase/profiles";
 import { createClient } from "@/lib/supabase/server";
+import { hasPlusAccess } from "@/lib/access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -249,7 +250,7 @@ export async function GET(request: Request) {
         : await getStudentPlan(studentId);
     if (!studentPlan) return jsonError("Student profile not found.", 404);
     const requiresPremium =
-      config.minimumStudentPlan === "premium" && studentPlan !== "premium";
+      config.minimumStudentPlan === "plus" && !hasPlusAccess(studentPlan);
 
     const prerequisite = requiresPremium
       ? { isComplete: false, completedCount: 0, totalCount: config.requiredModuleTitles.length }
@@ -317,8 +318,8 @@ export async function PATCH(request: Request) {
       .maybeSingle<{ id: string; plan: string | null }>();
     if (studentError) throw new Error(studentError.message);
     if (!student) return jsonError("Student profile not found.", 404);
-    if (config.minimumStudentPlan === "premium" && student.plan !== "premium") {
-      return jsonError("Assessments require the Premium Plan.", 403);
+    if (config.minimumStudentPlan === "plus" && !hasPlusAccess(student.plan)) {
+      return jsonError("Assessments require Plus or Pro.", 403);
     }
     if (body.isUnlocked) {
       const prerequisite = await getModulePrerequisite(body.studentId, config);
@@ -410,10 +411,10 @@ export async function POST(request: Request) {
     }
 
     if (
-      config.minimumStudentPlan === "premium" &&
-      viewerContext.viewer.plan !== "premium"
+      config.minimumStudentPlan === "plus" &&
+      !hasPlusAccess(viewerContext.viewer.plan)
     ) {
-      return jsonError("Assessments require the Premium Plan.", 403);
+      return jsonError("Assessments require Plus or Pro.", 403);
     }
     if (body.action !== "start" && body.action !== "save" && body.action !== "lock_answer" && body.action !== "submit") {
       return jsonError("Unknown assessment action.", 400);

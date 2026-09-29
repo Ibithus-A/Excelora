@@ -4,7 +4,7 @@ import {
   sanitizeCustomUnlockedChapterTitles,
   sanitizeTaggedChapterTitle,
 } from "@/lib/access";
-import type { UserAccessProfile, UserRole } from "@/types/auth";
+import type { UserAccessProfile, UserPlan, UserRole } from "@/types/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type ProfileRow = {
@@ -72,7 +72,7 @@ export async function listStudentProfiles(
 export async function updateStudentProfileAccess(
   supabase: SupabaseClient,
   userId: string,
-  plan: "basic" | "premium",
+  plan: UserPlan,
   taggedChapterTitle: string | null,
   customUnlockedChapterTitles: string[],
 ): Promise<UserAccessProfile> {

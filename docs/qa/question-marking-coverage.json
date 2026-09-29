@@ -1,0 +1,45 @@
+{
+  "generatedAt": "2026-09-28T18:09:41.807Z",
+  "questions": 4616,
+  "exactAccepted": 4616,
+  "exactCoveragePercent": 100,
+  "flexibleChecks": {
+    "numericScalarAlternative": 564,
+    "numericMultipartStructuredInput": 912,
+    "symbolicEquivalentTransformation": 98,
+    "writtenCaseAndFormatting": 2065
+  },
+  "types": {
+    "symbolic": {
+      "questions": 288,
+      "exactAccepted": 288,
+      "flexibleAccepted": 98
+    },
+    "symbolic_or_written": {
+      "questions": 1688,
+      "exactAccepted": 1688,
+      "flexibleAccepted": 1417
+    },
+    "short_text": {
+      "questions": 672,
+      "exactAccepted": 672,
+      "flexibleAccepted": 648
+    },
+    "numeric_multi": {
+      "questions": 888,
+      "exactAccepted": 888,
+      "flexibleAccepted": 888
+    },
+    "numeric": {
+      "questions": 1080,
+      "exactAccepted": 1080,
+      "flexibleAccepted": 233
+    }
+  },
+  "failures": [],
+  "limitations": [
+    "A passing expected-answer audit proves bank compatibility, not that every conceivable equivalent input can be recognised.",
+    "Free-form explanations, proofs, sketches and method-mark allocation still require authored criteria or verified AI/tutor review.",
+    "Symbolic equivalence is accepted only when the maths engine can prove it; unresolved expressions fail closed to review."
+  ]
+}

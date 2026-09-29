@@ -138,6 +138,77 @@ textarea {
     color 110ms ease;
 }
 
+.landing-page button:not(:disabled) {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.landing-page :is(button:not(:disabled), a) {
+  transition-property:
+    color,
+    background-color,
+    border-color,
+    box-shadow,
+    opacity,
+    transform,
+    filter;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-page button:not(:disabled):active {
+  transform: translateY(0) scale(0.975);
+  transition-duration: 90ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+}
+
+.landing-page :is(button, a):focus-visible {
+  outline: 2px solid rgba(24, 24, 27, 0.9);
+  outline-offset: 3px;
+}
+
+.landing-cta-icon {
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-cta:hover .landing-cta-icon {
+    transform: translateX(3px);
+  }
+}
+
+.landing-card,
+.landing-showcase {
+  transition:
+    transform 440ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 440ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 300ms ease;
+}
+
+@media (min-width: 768px) {
+  .landing-card-featured {
+    transform: translateY(-8px) scale(1.01);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(161, 161, 170, 0.5);
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.1);
+  }
+
+  .landing-card-featured:hover {
+    transform: translateY(-11px) scale(1.01);
+  }
+
+  .landing-showcase:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 48px 120px rgba(0, 0, 0, 0.38);
+  }
+}
+
 .landing-intro,
 .scroll-reveal {
   opacity: 0;
@@ -171,13 +242,124 @@ textarea {
 .landing-intro.is-visible,
 .scroll-reveal.is-visible {
   opacity: 1;
+  transform: none;
+  filter: none;
+  will-change: auto;
+}
+
+@keyframes workspaceDemoStage {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes workspaceDemoStep {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes workspaceDemoAnswer {
+  0%, 35% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes workspaceDemoTyping {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.workspace-demo-stage {
+  animation: workspaceDemoStage 360ms ease-out both;
+}
+
+.workspace-demo-step,
+.workspace-demo-message {
+  opacity: 0;
+  animation: workspaceDemoStep 360ms ease-out forwards;
+}
+
+.workspace-demo-answer {
+  animation: workspaceDemoAnswer 900ms 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.workspace-demo-feedback {
+  opacity: 0;
+  animation: workspaceDemoStage 360ms 420ms ease-out forwards;
+}
+
+.workspace-demo-typing {
+  display: inline-block;
+  animation: workspaceDemoTyping 1100ms 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes landingScrollCue {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  18% {
+    opacity: 1;
+  }
+  62% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+}
+
+.landing-scroll-cue {
+  will-change: transform, opacity;
+  animation: landingScrollCue 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.public-view-transition {
+  opacity: 1;
   transform: translateY(0) scale(1);
   filter: blur(0);
+  transition:
+    opacity 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.public-view-transition.is-switching {
+  opacity: 0;
+  transform: translateY(8px) scale(0.995);
+  filter: blur(3px);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .landing-intro,
   .scroll-reveal,
+  .workspace-demo-stage,
+  .workspace-demo-step,
+  .workspace-demo-message,
+  .workspace-demo-answer,
+  .workspace-demo-feedback,
+  .workspace-demo-typing,
+  .landing-scroll-cue,
+  .public-view-transition,
+  .landing-page button,
+  .landing-page a,
+  .landing-card,
+  .landing-showcase,
   .lesson-surface-reveal,
   .lesson-surface-exit,
   .tutorial-card,

@@ -863,15 +863,19 @@ function DrawerContent({
   onClose?: () => void;
 }) {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [retryMessage, setRetryMessage] = useState("");
   const [isMathsOpen, setIsMathsOpen] = useState(false);
   const [mathDraft, setMathDraft] = useState<MathDraft | null>(null);
   const [mathDraftSelection, setMathDraftSelection] = useState<MathDraftSelection | null>(null);
   const [mathDraftFocus, setMathDraftFocus] = useState<MathDraftSelection | null>(null);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const generationAbortRef = useRef<AbortController | null>(null);
 
   const updateIsEmpty = useCallback(() => {
     const node = composerRef.current;
@@ -885,16 +889,43 @@ function DrawerContent({
     if (composerRef.current) composerRef.current.innerHTML = "";
     setIsEmpty(true);
   }, []);
+  const practiceSessionId = practiceContext?.sessionId;
+  const practiceQuestionId = practiceContext?.questionId;
 
   useEffect(() => {
+    generationAbortRef.current?.abort();
     setMessages([]);
+    setConversationId(null);
     setErrorMessage("");
+    setRetryMessage("");
     setIsMathsOpen(false);
     setMathDraft(null);
     setMathDraftSelection(null);
     setMathDraftFocus(null);
     clearComposer();
-  }, [pageNodeId, clearComposer]);
+    if (!canUseAssistant) return;
+    const controller = new AbortController();
+    setIsLoadingHistory(true);
+    const params = new URLSearchParams({ pageTitle, pdfTitle: pdfTitle ?? "" });
+    if (practiceSessionId && practiceQuestionId) {
+      params.set("practiceSessionId", practiceSessionId);
+      params.set("practiceQuestionId", practiceQuestionId);
+    }
+    if (reviewAttemptId) params.set("reviewAttemptId", reviewAttemptId);
+    void fetch(`/api/arthur?${params}`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const payload = (await response.json()) as { conversationId?: string | null; messages?: AssistantMessage[]; error?: string };
+        if (!response.ok) throw new Error(payload.error ?? "Unable to load your Arthur conversation.");
+        setConversationId(payload.conversationId ?? null);
+        setMessages(Array.isArray(payload.messages) ? payload.messages : []);
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setErrorMessage(error instanceof Error ? error.message : "Unable to load your Arthur conversation.");
+      })
+      .finally(() => setIsLoadingHistory(false));
+    return () => controller.abort();
+  }, [pageNodeId, pageTitle, pdfTitle, reviewAttemptId, practiceSessionId, practiceQuestionId, canUseAssistant, clearComposer]);
 
   const rememberSelection = () => {
     const selection = window.getSelection();
@@ -907,7 +938,7 @@ function DrawerContent({
 
   const helperText = useMemo(() => {
     if (!canUseAssistant) {
-      return "Arthur is available on Premium. This is where AI support appears beside lesson notes and videos.";
+      return "Arthur is available on Plus and Pro. This is where AI support appears beside your lesson notes.";
     }
 
     if (practiceContext) {
@@ -955,20 +986,24 @@ function DrawerContent({
     return walk(root.childNodes);
   };
 
-  const sendMessage = async () => {
+  const sendMessage = async (retryContent?: string) => {
     if (!canUseAssistant) return;
-    const content = serializeComposer().replace(/\s+$/, "").trim();
+    const content = (retryContent ?? serializeComposer()).replace(/\s+$/, "").trim();
     if (!content || isSending) return;
 
     const nextMessages = [...messages, { role: "user" as const, content }];
     setMessages(nextMessages);
     clearComposer();
     setErrorMessage("");
+    setRetryMessage("");
     setIsSending(true);
+    const controller = new AbortController();
+    generationAbortRef.current = controller;
 
     try {
       const response = await fetch("/api/arthur", {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
         },
@@ -980,21 +1015,53 @@ function DrawerContent({
           pageContent,
           pageNodeId,
           workspaceContext,
+          conversationId,
           messages: nextMessages,
         }),
       });
-
-      const payload = (await response.json()) as { message?: string; error?: string };
-      if (!response.ok || !payload.message) {
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
         throw new Error(payload.error ?? "Arthur could not respond right now.");
       }
-
-      setMessages((current) => [...current, { role: "assistant", content: payload.message ?? "" }]);
+      if (!response.body) throw new Error("Arthur returned no response stream.");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assistantStarted = false;
+      let completed = false;
+      const handleLine = (line: string) => {
+        if (!line.trim()) return;
+        const event = JSON.parse(line) as { type?: string; delta?: string; message?: string; conversationId?: string };
+        if (event.type === "meta" && event.conversationId) setConversationId(event.conversationId);
+        if (event.type === "text" && event.delta) {
+          if (!assistantStarted) {
+            assistantStarted = true;
+            setMessages((current) => [...current, { role: "assistant", content: event.delta ?? "" }]);
+          } else {
+            setMessages((current) => current.map((message, index) => index === current.length - 1 && message.role === "assistant" ? { ...message, content: message.content + (event.delta ?? "") } : message));
+          }
+        }
+        if (event.type === "error") throw new Error(event.message ?? "Arthur could not respond right now.");
+        if (event.type === "done") completed = true;
+      };
+      while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) handleLine(line);
+        if (done) break;
+      }
+      if (buffer.trim()) handleLine(buffer);
+      if (!completed && !controller.signal.aborted) throw new Error("Arthur's response ended unexpectedly.");
     } catch (error) {
+      if (controller.signal.aborted) return;
       const nextError =
         error instanceof Error ? error.message : "Arthur could not respond right now.";
       setErrorMessage(nextError);
+      setRetryMessage(content);
     } finally {
+      if (generationAbortRef.current === controller) generationAbortRef.current = null;
       setIsSending(false);
     }
   };
@@ -1227,7 +1294,11 @@ function DrawerContent({
       <div className="min-h-0 flex-1 px-4 py-4">
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[12px] border border-zinc-200 bg-white shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            {messages.length === 0 ? (
+            {isLoadingHistory ? (
+              <div className="mx-auto max-w-[260px] pt-8" role="status" aria-label="Loading Arthur conversation">
+                <ArthurThinkingSkeleton />
+              </div>
+            ) : messages.length === 0 ? (
               <div className="mx-auto max-w-[260px] pt-6 text-center">
                 <p className="text-sm font-medium text-zinc-700">Arthur is ready</p>
                 <p className="mt-2 text-sm text-zinc-500">{helperText}</p>
@@ -1256,7 +1327,7 @@ function DrawerContent({
                     )}
                   </div>
                 ))}
-                {isSending ? (
+                {isSending && messages.at(-1)?.role !== "assistant" ? (
                   <div className="mr-auto max-w-[92%] rounded-[16px] border border-zinc-200/90 bg-[var(--surface-sidebar)] px-4 py-3.5 shadow-sm">
                     <ArthurThinkingSkeleton />
                   </div>
@@ -1331,21 +1402,33 @@ function DrawerContent({
                 >
                   <MathsIcon className="h-3.5 w-3.5" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void sendMessage();
-                  }}
-                  disabled={!canUseAssistant || isEmpty || isSending}
-                  aria-label="Send message"
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-zinc-900 text-white shadow-[0_6px_16px_rgba(9,9,11,0.16)] transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none"
-                >
-                  <ArrowUpIcon className="h-3.5 w-3.5" />
-                </button>
+                {isSending ? (
+                  <button
+                    type="button"
+                    onClick={() => generationAbortRef.current?.abort()}
+                    aria-label="Stop Arthur"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-zinc-900 text-white shadow-[0_6px_16px_rgba(9,9,11,0.16)] transition hover:bg-zinc-800"
+                  >
+                    <span className="h-2.5 w-2.5 rounded-[2px] bg-white" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { void sendMessage(); }}
+                    disabled={!canUseAssistant || isEmpty || isLoadingHistory}
+                    aria-label="Send message"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-zinc-900 text-white shadow-[0_6px_16px_rgba(9,9,11,0.16)] transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:shadow-none"
+                  >
+                    <ArrowUpIcon className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             </div>
             {errorMessage ? (
-              <p className="mt-2 px-1 text-xs text-rose-600">{errorMessage}</p>
+              <div className="mt-2 flex items-center justify-between gap-3 px-1 text-xs text-rose-600" role="alert">
+                <span>{errorMessage}</span>
+                {retryMessage ? <button type="button" onClick={() => void sendMessage(retryMessage)} className="shrink-0 font-medium underline underline-offset-2">Retry</button> : null}
+              </div>
             ) : null}
           </form>
         </div>

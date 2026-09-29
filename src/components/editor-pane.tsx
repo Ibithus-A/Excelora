@@ -10,7 +10,12 @@ import {
 } from "./practice-questions";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { canAccessNode, getLockedChapterMessage } from "@/lib/access";
+import {
+  canAccessNode,
+  getLockedChapterMessage,
+  hasPlusAccess,
+  hasProAccess,
+} from "@/lib/access";
 import { GeneratedChapterAssessment } from "@/components/generated-chapter-assessment";
 import { FolderIcon, PracticeIcon } from "@/components/icons";
 import type { TutorialSurface } from "@/components/tutorial-showcase";
@@ -206,9 +211,10 @@ export function EditorPane({
     : DEFAULT_LOCK_INFO;
   const isStudent = role === "student";
   const canChangeTopicProgress = Boolean(workspaceTopicProgress?.canMutate);
-  const canUseAssistant = role === "tutor" || viewerProfile?.plan === "premium";
+  const canUseAssistant = role === "tutor" || hasPlusAccess(viewerProfile?.plan);
   const canUsePracticeAssistant =
-    role === "student" && viewerProfile?.plan === "premium";
+    role === "student" && hasPlusAccess(viewerProfile?.plan);
+  const canUseVideo = role === "tutor" || hasProAccess(viewerProfile?.plan);
   const isAccessBlocked =
     isStudent && selectedNode
       ? !canAccessNode(state, selectedNode.id, viewerProfile)
@@ -386,7 +392,7 @@ export function EditorPane({
     !!selectedId && mobileAssistantNodeId === selectedId;
   const lessonView =
     lessonSurface.nodeId === selectedId ? lessonSurface.view : "notes";
-  useStudyActivity(role === "student" && Boolean(selectedNode), selectedNode?.title ?? "Workspace", selectedNode?.kind !== "page" ? "dashboard" : isPracticePage ? "practice" : isAssessmentPage || isSynopticAssessment ? "assessment" : lessonView === "video" ? "video" : "notes");
+  useStudyActivity(role === "student" && Boolean(selectedNode), selectedNode?.title ?? "Workspace", selectedNode?.kind !== "page" ? "dashboard" : isPracticePage ? "practice" : isAssessmentPage || isSynopticAssessment ? "assessment" : lessonView === "video" && canUseVideo ? "video" : "notes");
   const isLessonSurfaceExiting =
     !!selectedId && lessonSurfaceExit?.nodeId === selectedId;
   const pdfZoom =
@@ -474,16 +480,27 @@ export function EditorPane({
     const frame = window.requestAnimationFrame(() => {
       setLessonSurface(() => ({
         nodeId: tutorialLessonId,
-        view: tutorialSurface === "video" ? "video" : "notes",
+        view: "notes",
         pdfZoom: 100,
       }));
+      if (tutorialSurface === "practice") {
+        const tutorialNode = state.nodes[tutorialLessonId];
+        setPracticeTarget({
+          nodeId: tutorialLessonId,
+          subtopic: tutorialNode?.title.replace(/^\d+\.\d+\s+/, "") ?? "",
+        });
+      } else {
+        setPracticeTarget(null);
+      }
       if (tutorialSurface === "ai") {
         setMobileAssistantNodeId(tutorialLessonId);
+      } else {
+        setMobileAssistantNodeId(null);
       }
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [revealNode, tutorialLessonId, tutorialSurface]);
+  }, [revealNode, state.nodes, tutorialLessonId, tutorialSurface]);
 
   if (!selectedNode) {
     return (
@@ -703,16 +720,18 @@ export function EditorPane({
                     </span>
                     {practiceTarget ? "Back to lesson" : "Back to chapter"}
                   </button>
-                  <PracticeQuestions
-                    key={`${selectedId}:${practiceTarget?.subtopic ?? "chapter"}`}
-                    subjectTitle={lessonContext.subjectTitle ?? ""}
-                    chapterTitle={lessonContext.chapterTitle}
-                    initialSubtopic={practiceTarget?.subtopic ?? ""}
-                    onMathsSidebarOpenChange={setIsMathsSidebarOpen}
-                    canUseArthur={canUsePracticeAssistant}
-                    onArthurContextChange={handlePracticeArthurContextChange}
-                    onAskArthur={() => setIsPracticeArthurOpen(true)}
-                  />
+                  <div data-tour="practice-session">
+                    <PracticeQuestions
+                      key={`${selectedId}:${practiceTarget?.subtopic ?? "chapter"}`}
+                      subjectTitle={lessonContext.subjectTitle ?? ""}
+                      chapterTitle={lessonContext.chapterTitle}
+                      initialSubtopic={practiceTarget?.subtopic ?? ""}
+                      onMathsSidebarOpenChange={setIsMathsSidebarOpen}
+                      canUseArthur={canUsePracticeAssistant}
+                      onArthurContextChange={handlePracticeArthurContextChange}
+                      onAskArthur={() => setIsPracticeArthurOpen(true)}
+                    />
+                  </div>
                 </>
               )}
               {isLessonPage && lessonContext && (
@@ -888,7 +907,7 @@ export function EditorPane({
                               className="inline-flex items-center gap-2 rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-800"
                             >
                               <span className="ml-0.5 leading-none">▶</span>
-                              Video preview
+                              {canUseVideo ? "Video preview" : "Video · Pro"}
                             </button>
                           </div>
                         </div>
@@ -1046,6 +1065,7 @@ export function EditorPane({
                           <LessonVideoPlayer
                             key={selectedNode.id}
                             lessonTitle={selectedNode.title}
+                            hasAccess={canUseVideo}
                           />
                         )}
 
@@ -1083,7 +1103,7 @@ export function EditorPane({
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
                                   <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-                                  In development
+                                  {canUseVideo ? "In development" : "Pro feature"}
                                 </span>
                                 <button
                                   type="button"
@@ -1557,7 +1577,13 @@ const PdfCanvasDocument = forwardRef<PdfCanvasHandle, PdfCanvasDocumentProps>(
   },
 );
 
-function LessonVideoPlayer({ lessonTitle }: { lessonTitle: string }) {
+function LessonVideoPlayer({
+  lessonTitle,
+  hasAccess,
+}: {
+  lessonTitle: string;
+  hasAccess: boolean;
+}) {
   return (
     <div className="relative isolate flex aspect-video min-h-[300px] overflow-hidden rounded-[24px] border border-zinc-200 bg-zinc-950 shadow-[0_24px_60px_rgba(15,23,42,0.16)]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(255,255,255,0.12),transparent_28%),radial-gradient(circle_at_78%_72%,rgba(113,113,122,0.2),transparent_34%),linear-gradient(145deg,#09090b,#18181b_52%,#27272a)]" />
@@ -1573,16 +1599,18 @@ function LessonVideoPlayer({ lessonTitle }: { lessonTitle: string }) {
         </div>
         <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-amber-100">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
-          In development
+          {hasAccess ? "In development" : "Available on Pro"}
         </span>
         <p className="mt-4 text-xs uppercase tracking-[0.14em] text-white/45">{lessonTitle}</p>
-        <h3 className="mt-2 text-xl font-medium tracking-tight text-white sm:text-2xl">Video walkthroughs are being refined</h3>
+        <h3 className="mt-2 text-xl font-medium tracking-tight text-white sm:text-2xl">{hasAccess ? "Video walkthroughs are being refined" : "Video walkthroughs are included with Pro"}</h3>
         <p className="mt-3 max-w-md text-sm leading-6 text-white/60">
-          We’re producing a consistent library of clear, animated explanations. This lesson remains fully available through the notes while its video is prepared.
+          {hasAccess
+            ? "We’re producing a consistent library of clear, animated explanations. This lesson remains fully available through the notes while its video is prepared."
+            : "Upgrade to Pro for the complete video library alongside every Plus feature. Your lesson notes remain available on your current plan."}
         </p>
         <div className="mt-6 flex items-center gap-2 text-xs text-white/40">
           <span className="h-1.5 w-16 overflow-hidden rounded-full bg-white/10"><span className="block h-full w-2/3 rounded-full bg-white/25" /></span>
-          Production in progress
+          {hasAccess ? "Production in progress" : "£25 per month · Cancel anytime"}
         </div>
       </div>
     </div>

@@ -235,6 +235,19 @@ export async function POST(request: Request) {
       if (!current || current.course_topic_key !== config.bankCourseTopicKey)
         return fail("Session not found.", 404);
       if (body.action === "stop") {
+        const hasAttempt = current.questions.some((question) =>
+          Boolean(question.checked_at),
+        );
+        if (!hasAttempt) {
+          const { error } = await admin
+            .from("practice_sessions")
+            .delete()
+            .eq("id", current.id)
+            .eq("student_id", profile.id)
+            .eq("status", "active");
+          if (error) throw error;
+          return Response.json({ session: null, discarded: true });
+        }
         const { error } = await admin.rpc("stop_practice_run", {
           p_student: profile.id,
           p_session: current.id,

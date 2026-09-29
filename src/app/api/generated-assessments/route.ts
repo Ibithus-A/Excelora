@@ -1,4 +1,4 @@
-import { hasChapterAccess } from "@/lib/access";
+import { hasChapterAccess, hasPlusAccess } from "@/lib/access";
 import { loadExposure } from "@/lib/question-bank/repository.server";
 import { getAssessmentConfig } from "@/lib/assessment-config";
 import type { BankQuestion } from "@/lib/question-bank/bank-types";
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
   try {
     const key = new URL(request.url).searchParams.get("assessmentKey") ?? "";
     const config = getAssessmentConfig(key); if (!config) return fail("Unknown assessment.", 400);
-    if (context.profile.role === "student" && config.minimumStudentPlan === "premium" && context.profile.plan !== "premium") {
+    if (context.profile.role === "student" && config.minimumStudentPlan === "plus" && !hasPlusAccess(context.profile.plan)) {
       return Response.json({ assessment: config, requiresPremium: true, isUnlocked: false, attempt: null });
     }
     if (context.profile.role === "student" && !hasAssessmentAccess(context.profile, config)) return fail("Required course content is locked.", 403);
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
       return Response.json({ grades: (data ?? []).map(q => ({ id: q.id, ...markBankResponse(q.response_type, body.answers?.[q.id] ?? "", { questionId: q.id, answer: q.answer, workedSolution: q.worked_solution }, q.marks) })) });
     }
     if (context.profile.role !== "student") return fail("Tutor previews do not create student records.", 400);
-    if (config.minimumStudentPlan === "premium" && context.profile.plan !== "premium") return fail("This assessment requires Premium.", 403);
+    if (config.minimumStudentPlan === "plus" && !hasPlusAccess(context.profile.plan)) return fail("This assessment requires Plus or Pro.", 403);
     if (!hasAssessmentAccess(context.profile, config)) return fail("Required course content is locked.", 403);
     const admin = createAdminClient();
     if (body.action === "start" || body.action === "retake") {

@@ -40,7 +40,7 @@ function getMutationRateLimitKey(userId: string, method: string) {
 }
 
 function normalizePlan(value: unknown): UserPlan | null {
-  if (value === "basic" || value === "premium") return value;
+  if (value === "basic" || value === "plus" || value === "pro") return value;
   return null;
 }
 
@@ -131,7 +131,7 @@ export async function PATCH(request: Request) {
 
     const plan = normalizePlan(body.plan);
     if (!plan) {
-      return jsonError("Plan must be basic or premium.", 400);
+      return jsonError("Plan must be Basic, Plus or Pro.", 400);
     }
 
     const taggedChapterTitle = sanitizeTaggedChapterTitle(body.taggedChapterTitle);

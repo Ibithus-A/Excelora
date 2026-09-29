@@ -382,7 +382,7 @@ export function DashboardHome({
                 {role === "student" ? (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">
-                      {currentPlan} plan
+                      {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} plan
                     </span>
                   </div>
                 ) : null}
@@ -497,10 +497,10 @@ export function DashboardHome({
                       <span>{accessibleChapterTitles.length} of {chapterTitles.length} chapters unlocked</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="relative grid grid-cols-2 rounded-full border border-zinc-200 bg-zinc-50 p-0.5" aria-label="Student plan">
-                        <span aria-hidden="true" className={["pointer-events-none absolute bottom-0.5 left-0.5 top-0.5 w-[calc(50%-2px)] rounded-full bg-white shadow-sm transition-transform duration-200", selectedStudentPlan === "premium" ? "translate-x-full" : "translate-x-0"].join(" ")} />
-                        {(["basic", "premium"] as const).map((plan) => (
-                          <button key={plan} type="button" onClick={() => void onSetStudentPlan?.(plan)} className={["relative z-10 rounded-full px-3.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.08em] transition", selectedStudentPlan === plan ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-800"].join(" ")}>{plan}</button>
+                      <div className="relative grid grid-cols-3 rounded-full border border-zinc-200 bg-zinc-50 p-0.5" aria-label="Student plan">
+                        <span aria-hidden="true" style={{ transform: `translateX(${(["basic", "plus", "pro"] as const).indexOf(selectedStudentPlan) * 100}%)` }} className="pointer-events-none absolute bottom-0.5 left-0.5 top-0.5 w-[calc(33.333%-1.5px)] rounded-full bg-white shadow-sm transition-transform duration-200" />
+                        {(["basic", "plus", "pro"] as const).map((plan) => (
+                          <button key={plan} type="button" onClick={() => void onSetStudentPlan?.(plan)} className={["relative z-10 rounded-full px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.08em] transition", selectedStudentPlan === plan ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-800"].join(" ")}>{plan}</button>
                         ))}
                       </div>
                       <button type="button" onClick={() => { setDeleteConfirmationStudentId(selectedStudent.id); setDeleteError(""); }} disabled={isDeletingStudent || isDeleteConfirming} aria-label={`Delete ${selectedStudent.name}`} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"><TrashIcon className="h-3.5 w-3.5" /></button>
@@ -747,7 +747,7 @@ export function DashboardHome({
                 </div>
               ) : assessmentRequiresPremium ? (
                 <div>
-                  <p className="text-sm font-medium text-zinc-900">Premium required</p>
+                  <p className="text-sm font-medium text-zinc-900">Plus required</p>
                   <p className="mt-1 text-xs text-zinc-500">
                     Upgrade your plan to access this assessment.
                   </p>
@@ -982,11 +982,11 @@ export function DashboardHome({
                               : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100",
                           ].join(" ")}
                           aria-pressed={isChapterOneAssessmentUnlocked && !assessmentNeedsPremium}
-                          title={assessmentNeedsPremium ? "Upgrade this student to Premium before unlocking the assessment" : assessmentModulesIncomplete ? "All chapter modules must be completed before this assessment can be unlocked" : isChapterOneAssessmentUnlocked ? "Click to lock assessment" : "Click to unlock assessment"}
+                          title={assessmentNeedsPremium ? "Upgrade this student to Plus or Pro before unlocking the assessment" : assessmentModulesIncomplete ? "All chapter modules must be completed before this assessment can be unlocked" : isChapterOneAssessmentUnlocked ? "Click to lock assessment" : "Click to unlock assessment"}
                         >
                           {isChapterOneAssessmentUnlocked && !assessmentNeedsPremium ? <UnlockIcon className="h-3 w-3" /> : <LockIcon className="h-3 w-3" />}
                           {assessmentNeedsPremium
-                            ? "Assessment · Premium required"
+                            ? "Assessment · Plus required"
                             : assessmentModulesIncomplete
                               ? chapterOneAssessmentPrerequisite.totalCount > 0
                                 ? `Assessment · ${chapterOneAssessmentPrerequisite.completedCount}/${chapterOneAssessmentPrerequisite.totalCount} modules`
@@ -996,7 +996,7 @@ export function DashboardHome({
                         {assessmentAccessError ? <p className="mt-1 text-[11px] text-red-600">{assessmentAccessError}</p> : null}
                         <p className="mt-1 text-[11px] text-zinc-500">
                           {assessmentNeedsPremium
-                            ? "Upgrade this student to Premium before unlocking."
+                            ? "Upgrade this student to Plus or Pro before unlocking."
                             : assessmentModulesIncomplete
                               ? chapterOneAssessmentPrerequisite.totalCount > 0
                                 ? `Complete all ${chapterOneAssessmentPrerequisite.totalCount} chapter modules before unlocking.`

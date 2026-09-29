@@ -17,9 +17,12 @@
     "test:question-bank": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/question-bank.test.ts",
     "test:assessment-engine": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/generated-assessment-selector.test.ts",
     "test:assessment-security": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/generated-assessment-security.test.ts",
+    "test:arthur": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/arthur-intelligence.test.ts",
+    "audit:question-marking": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/audit-question-marking.mjs",
     "bank:import": "node scripts/import-assessment-bank.mjs"
   },
   "dependencies": {
+    "@cortex-js/compute-engine": "^0.140.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.98.0",
     "katex": "^0.16.45",

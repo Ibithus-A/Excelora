@@ -112,7 +112,7 @@ test("practice rejects invalid counts, scarcity and unknown difficulty", () => {
       } as Parameters<typeof selectPracticeQuestions>[0]),
     );
 });
-test("numeric marking accepts rich fractions but never strips units or case-folds algebra", () => {
+test("marking accepts equivalent numeric, symbolic and multipart answer forms", () => {
   const encoded = encodeAssessmentAnswer([
     { type: "math", latex: "\\frac{1}{2}" },
   ]);
@@ -147,21 +147,46 @@ test("numeric marking accepts rich fractions but never strips units or case-fold
     ).isCorrect,
     false,
   );
-  for (const type of [
-    "symbolic",
-    "symbolic_or_written",
-    "short_text",
-    "numeric_multi",
-  ])
-    assert.equal(
-      markBankResponse(
-        type,
-        "x",
-        { questionId: "q", answer: "x", workedSolution: "" },
-        3,
-      ).requiresReview,
-      true,
-    );
+  assert.deepEqual(
+    markBankResponse(
+      "symbolic",
+      "2(x+1)",
+      { questionId: "symbolic", answer: "2x+2", workedSolution: "" },
+      3,
+    ),
+    { marks: 3, isCorrect: true, requiresReview: false },
+  );
+  assert.deepEqual(
+    markBankResponse(
+      "symbolic",
+      "\\sqrt{32}",
+      { questionId: "surd", answer: "4\\sqrt{2}", workedSolution: "" },
+      2,
+    ),
+    { marks: 2, isCorrect: true, requiresReview: false },
+  );
+  assert.deepEqual(
+    markBankResponse(
+      "numeric_multi",
+      encodeParts({ "(a)": "4.47213595", "(b)": "26.6" }),
+      {
+        questionId: "vector",
+        answer: "Magnitude 4.472 N, angle 26.6°",
+        workedSolution: "",
+      },
+      3,
+    ),
+    { marks: 3, isCorrect: true, requiresReview: false },
+  );
+  assert.equal(
+    markBankResponse(
+      "symbolic",
+      "X",
+      { questionId: "case-sensitive", answer: "x", workedSolution: "" },
+      3,
+    ).requiresReview,
+    true,
+  );
 });
 test("multipart labels and rich empty values are distinguished", () => {
   assert.deepEqual(
@@ -206,17 +231,13 @@ test("Arthur blocks active attempts on server before context construction and pr
     new URL("../src/app/api/arthur/route.ts", import.meta.url),
     "utf8",
   );
-  assert.ok(
-    source.indexOf('.eq("status", "active")') < source.indexOf("const pageTitle ="),
-  );
-  assert.ok(
-    source.indexOf("if (active?.length) return") <
-      source.indexOf("await fetch(COHERE_API_URL"),
-  );
-  assert.match(source, /getStructuredLesson\(pageTitle\)/);
-  assert.match(source, /if \(pdfTitle && !nativeLesson && !reviewContext && !verifiedPracticeContext\)/);
+  const post = source.slice(source.indexOf("export async function POST"));
+  assert.match(post, /await hasActiveAssessment\(auth\.admin, auth\.user\.id\)[\s\S]*Finish your active formal assessment/);
+  assert.ok(post.indexOf("await hasActiveAssessment") < post.indexOf("getCanonicalCourseContext(body.pageTitle"));
+  assert.match(post, /getCanonicalCourseContext\(body\.pageTitle, body\.pdfTitle\)/);
+  assert.doesNotMatch(source, /COHERE_API_URL|COHERE_API_KEY/);
   assert.match(source, /\.eq\("status", "submitted"\)/);
-  assert.match(source, /\.eq\("student_id", user.id\)/);
+  assert.match(source, /\.eq\("student_id", userId\)/);
 });
 test("practice has no formal persistence or timer and only reveals checked solutions", () => {
   const source = readFileSync(
@@ -225,6 +246,8 @@ test("practice has no formal persistence or timer and only reveals checked solut
   );
   assert.match(source, /filter\(\(r\) => r.checked_at\)/);
   assert.match(source, /\.eq\("student_id",\s*studentId\)/);
+  assert.match(source, /if \(!hasAttempt\)/);
+  assert.match(source, /\.from\("practice_sessions"\)\s*\.delete\(\)/);
   assert.ok(!source.includes("deadline_at"));
   assert.ok(!source.includes("start_generated_assessment"));
   const ui = readFileSync(

@@ -10,7 +10,10 @@ import {
   SYNOPTIC_ASSESSMENT_TITLE,
 } from "@/lib/seed";
 import type { FlowState } from "@/types/flowstate";
-import type { UserAccessProfile, UserPlan } from "@/types/auth";
+import type { UserAccessProfile } from "@/types/auth";
+import { hasPlusAccess } from "@/lib/plans";
+
+export { hasPlusAccess, hasProAccess, normalizeUserPlan } from "@/lib/plans";
 
 export const CHAPTER_TITLES = A_LEVEL_MATHS_CHAPTER_TITLES;
 export const CHAPTER_ONE_TITLE = A_LEVEL_MATHS_CHAPTER_TITLES[0] ?? "Chapter 1";
@@ -19,11 +22,6 @@ const NORMALIZED_CHAPTER_ONE_TITLE = CHAPTER_ONE_TITLE.trim().toLowerCase();
 
 function normalizeTitle(title: string) {
   return title.trim().toLowerCase();
-}
-
-export function normalizeUserPlan(value: unknown): UserPlan | null {
-  if (value === "basic" || value === "premium") return value;
-  return null;
 }
 
 const CANONICAL_CHAPTER_TITLE_MAP = new Map(
@@ -206,7 +204,7 @@ export function canAccessNode(
     directParent &&
     isSubjectFolder(state, directParent.id)
   ) {
-    if (access?.plan !== "premium") return false;
+    if (!hasPlusAccess(access?.plan)) return false;
     const subject = A_LEVEL_MATHS_SUBJECTS.find(
       (item) => normalizeTitle(item.title) === normalizeTitle(directParent.title),
     );
@@ -253,8 +251,8 @@ export function getLockedChapterMessage(
   }
 
   if (profile.plan === "basic") {
-    return "This chapter is locked on the Basic Plan. Ask a tutor to upgrade your account to Premium.";
+    return "This chapter is locked on the Basic Plan. Ask a tutor to upgrade your account to Plus or Pro.";
   }
 
-  return "This chapter is locked. Ask your tutor to tag the chapter or custom unlock it on your Premium plan.";
+  return "This chapter is locked. Ask your tutor to tag the chapter or custom unlock it for your plan.";
 }

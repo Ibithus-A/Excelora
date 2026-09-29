@@ -15,7 +15,7 @@ import { useStudents } from "@/lib/hooks/use-students";
 import { useSidebarResize } from "@/lib/hooks/use-sidebar-resize";
 import { useTopicProgress } from "@/lib/hooks/use-topic-progress";
 import type { AuthenticatedAccount } from "@/types/auth";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type AppView = "workspace" | "dashboard";
 const PORTAL_CONTAINER_CLASS = "relative min-h-dvh w-full overflow-hidden bg-[var(--surface-panel)]";
@@ -24,6 +24,8 @@ export default function HomePage() {
   const [view, setView] = useState<AppView>("dashboard");
   const [isSidebarAutoOpen, setIsSidebarAutoOpen] = useState(false);
   const [signInView, setSignInView] = useState<"sign-in" | "sign-up" | null>(null);
+  const [isPublicViewTransitioning, setIsPublicViewTransitioning] = useState(false);
+  const publicViewTransitionTimerRef = useRef<number | null>(null);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [tutorialSurface, setTutorialSurface] = useState<TutorialSurface>("dashboard");
   const { currentUser, setAuthenticatedUser, signOut } = useAuthSession();
@@ -67,6 +69,35 @@ export default function HomePage() {
       : effectiveCurrentUser?.id ?? null,
     assessmentProgressVersion,
   );
+
+  const transitionToPublicView = useCallback((nextView: "sign-in" | "sign-up" | null) => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (publicViewTransitionTimerRef.current !== null) {
+      window.clearTimeout(publicViewTransitionTimerRef.current);
+    }
+
+    if (prefersReducedMotion) {
+      setSignInView(nextView);
+      window.scrollTo({ top: 0 });
+      return;
+    }
+
+    setIsPublicViewTransitioning(true);
+    publicViewTransitionTimerRef.current = window.setTimeout(() => {
+      setSignInView(nextView);
+      window.scrollTo({ top: 0 });
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => setIsPublicViewTransitioning(false));
+      });
+    }, 200);
+  }, []);
+
+  useEffect(() => () => {
+    if (publicViewTransitionTimerRef.current !== null) {
+      window.clearTimeout(publicViewTransitionTimerRef.current);
+    }
+  }, []);
 
   const handleContinueFromSignIn = (account: AuthenticatedAccount) => {
     setAuthenticatedUser(account);
@@ -119,19 +150,21 @@ export default function HomePage() {
       <main className="min-h-dvh w-full bg-[var(--surface-app)]">
         {!effectiveCurrentUser ? (
           signInView ? (
-            <div className={PORTAL_CONTAINER_CLASS}>
+            <div className={`${PORTAL_CONTAINER_CLASS} public-view-transition ${isPublicViewTransitioning ? "is-switching" : ""}`}>
               <SignInPortal
-                onClose={() => setSignInView(null)}
+                onClose={() => transitionToPublicView(null)}
                 onContinue={handleContinueFromSignIn}
                 showCloseButton
                 initialView={signInView}
               />
             </div>
           ) : (
-            <LandingPage
-              onSignIn={() => setSignInView("sign-in")}
-              onGetStarted={() => setSignInView("sign-up")}
-            />
+            <div className={`public-view-transition min-h-dvh ${isPublicViewTransitioning ? "is-switching" : ""}`}>
+              <LandingPage
+                onSignIn={() => transitionToPublicView("sign-in")}
+                onGetStarted={() => transitionToPublicView("sign-up")}
+              />
+            </div>
           )
         ) : view === "dashboard" ? (
           <DashboardHome

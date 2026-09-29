@@ -29,7 +29,7 @@ async function account(role) {
   created.push(data.user.id);
   const { error: e } = await admin
     .from("profiles")
-    .update({ role, plan: "premium" })
+    .update({ role, plan: "plus" })
     .eq("id", data.user.id);
   if (e) throw e;
   const cookies = new Map();
