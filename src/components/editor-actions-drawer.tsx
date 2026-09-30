@@ -938,7 +938,7 @@ function DrawerContent({
 
   const helperText = useMemo(() => {
     if (!canUseAssistant) {
-      return "Arthur is available on Plus and Pro. This is where AI support appears beside your lesson notes.";
+      return "Arthur is available on Plus and Premium. This is where AI support appears beside your lesson notes.";
     }
 
     if (practiceContext) {

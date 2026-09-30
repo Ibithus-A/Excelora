@@ -431,11 +431,10 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
               Pricing
             </p>
             <h2 className="mt-2 text-3xl font-semibold leading-[1.1] tracking-[-0.02em] text-zinc-900 sm:text-4xl md:text-5xl">
-              Simple pricing. Real results.
+              One workspace. A clearer path to better grades.
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-zinc-600 md:text-base">
-              Start with Chapter 1 for free, move to Plus for the complete learning
-              workspace, or choose Pro for the full video library.
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-zinc-600 md:text-base">
+              Experience the learning loop for free. Choose Plus to identify and close gaps automatically, or Premium for the complete guided experience with video walkthroughs.
             </p>
           </div>
         </RevealOnScroll>
@@ -447,35 +446,39 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
               name="Basic"
               price="£0"
               cadence="free forever"
-              tagline="A complete Chapter 1 preview of the Excelora learning experience."
+              audience="Experience the learning loop"
+              tagline="See how Excelora turns a complete chapter into structured learning, focused practice and visible progress."
               perks={BASIC_PERKS}
               ctaLabel="Create free account"
               onCtaClick={onGetStarted}
               footnote="No credit card required."
             />
             <PricingCard
-              tone="dark"
+              tone="light"
               name="Plus"
-              price="£15"
+              price="£30"
               cadence="per month"
-              tagline="The complete course and Arthur, without the video library."
+              audience="Personalised progress, every week"
+              tagline="Excelora identifies gaps, brings them back at the right time and builds the next piece of work around your results."
               perks={PLUS_PERKS}
               ctaLabel="Choose Plus"
               onCtaClick={onGetStarted}
-              featured
               highlight="Most popular"
-              footnote="Cancel at any time."
+              footnote="The complete workspace. Cancel at any time."
             />
             <PricingCard
-              tone="light"
-              name="Pro"
-              price="£25"
+              tone="dark"
+              name="Premium"
+              price="£50"
               cadence="per month"
-              tagline="Everything in Plus, with the complete video walkthrough library."
-              perks={PRO_PERKS}
-              ctaLabel="Choose Pro"
+              audience="See every method worked through"
+              tagline="Everything in Plus, with clear lesson-by-lesson video walkthroughs whenever written explanations are not enough."
+              perks={PREMIUM_PERKS}
+              ctaLabel="Choose Premium"
               onCtaClick={onGetStarted}
-              footnote="Cancel at any time."
+              featured
+              highlight="Complete experience"
+              footnote="Maximum support and flexibility. Cancel at any time."
             />
           </div>
         </RevealOnScroll>
@@ -744,31 +747,32 @@ function WorkspaceSidebarMock({ activeIndex }: { activeIndex: number }) {
 }
 
 const BASIC_PERKS = [
-  "Complete Chapter 1 notes",
-  "Chapter 1 practice questions and assessment",
-  "Chapter 1 progress tracking",
-  "No Arthur AI on the Basic Plan",
-  "Video walkthroughs available on Pro",
-  "Works on phone, tablet and laptop",
+  "Complete Chapter 1 interactive lessons",
+  "Exam-style practice and chapter assessment",
+  "Saved answers, worked solutions and progress tracking",
+  "Review heatmap and mistake flashcards",
+  "Automated gap-filling quizzes from your results",
+  "Works across phone, tablet and laptop",
 ];
 
 const PLUS_PERKS = [
   "Everything in Basic",
-  "Full course notes",
-  "Practice questions and quizzes across the course",
-  "Timed assessments across available chapters",
-  "Arthur — grounded in the same notes you read",
-  "1:1 tutor sessions",
-  "Priority support from UK tutors",
+  "Interactive course access beyond Chapter 1",
+  "Arthur AI beside every supported lesson and question",
+  "Targeted practice, tutor-set quizzes and timed assessments",
+  "Spaced review that retains every learning gap",
+  "Adaptive homework generated from real performance",
+  "Weekly and monthly learning reports",
+  "Tutor visibility across progress, practice and review",
 ];
 
-const PRO_PERKS = [
+const PREMIUM_PERKS = [
   "Everything in Plus",
-  "Complete video walkthrough library",
-  "Videos aligned with every lesson",
-  "Arthur, practice, quizzes and assessments",
-  "1:1 tutor sessions",
-  "Priority support from UK tutors",
+  "Guided video walkthroughs for supported lessons",
+  "Step-by-step explanations aligned to the workspace",
+  "Switch seamlessly between lesson, video and Arthur",
+  "Rewatch difficult methods whenever you need them",
+  "The most complete Excelora learning experience",
 ];
 
 type PricingCardProps = {
@@ -776,6 +780,7 @@ type PricingCardProps = {
   name: string;
   price: string;
   cadence: string;
+  audience: string;
   tagline: string;
   perks: readonly string[];
   ctaLabel: string;
@@ -790,6 +795,7 @@ function PricingCard({
   name,
   price,
   cadence,
+  audience,
   tagline,
   perks,
   ctaLabel,
@@ -840,7 +846,11 @@ function PricingCard({
         ) : null}
       </div>
 
-      <div className="mt-6 flex items-baseline gap-2">
+      <p className={["mt-4 text-[11px] font-semibold uppercase tracking-[0.15em]", isDark ? "text-emerald-300" : "text-emerald-700"].join(" ")}>
+        {audience}
+      </p>
+
+      <div className="mt-4 flex items-baseline gap-2">
         <span
           className={[
             "text-4xl font-semibold leading-none tracking-[-0.03em] sm:text-[44px]",

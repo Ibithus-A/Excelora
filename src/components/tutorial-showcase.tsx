@@ -1,9 +1,23 @@
 "use client";
 
 import { CloseIcon } from "@/components/icons";
+import type { UserRole } from "@/types/auth";
 import { useEffect, useMemo, useState } from "react";
 
-export type TutorialSurface = "dashboard" | "course-map" | "notes" | "practice" | "ai";
+export type TutorialSurface =
+  | "dashboard"
+  | "learning-profile"
+  | "course-map"
+  | "notes"
+  | "ai"
+  | "practice"
+  | "review"
+  | "homework"
+  | "assessment"
+  | "reports"
+  | "tutor-student"
+  | "tutor-activity"
+  | "tutor-assessment";
 
 type TutorialStep = {
   id: TutorialSurface;
@@ -11,6 +25,7 @@ type TutorialStep = {
   eyebrow: string;
   title: string;
   body: string;
+  takeaway: string;
   placement?: "right" | "left" | "bottom" | "top" | "dashboard";
 };
 
@@ -24,49 +39,184 @@ type SpotlightRect = {
 
 type TutorialShowcaseProps = {
   isOpen: boolean;
+  role: UserRole;
   onClose: () => void;
   onSurfaceChange: (surface: TutorialSurface) => void;
 };
 
-const STEPS: TutorialStep[] = [
+const STUDENT_STEPS: TutorialStep[] = [
   {
     id: "dashboard",
     selector: "[data-tour='dashboard-progress']",
-    eyebrow: "Dashboard",
-    title: "Start from your course overview",
-    body: "This is the first page after sign-in. It shows completed topics, the current topic, and what is still waiting.",
+    eyebrow: "Your dashboard",
+    title: "Know exactly where to continue",
+    body: "Your dashboard keeps completed, current and available topics in one place, so every session starts with a clear next step.",
+    takeaway: "Open any available topic directly from your progress overview.",
+    placement: "dashboard",
+  },
+  {
+    id: "learning-profile",
+    selector: "[data-tour='learning-heatmap']",
+    eyebrow: "Learning profile",
+    title: "See the pattern behind your progress",
+    body: "The heatmap records when you practise, how many questions you complete and the score achieved in each topic. Excelora uses the same evidence to identify your next focus.",
+    takeaway: "Select any active day to inspect its topics and results.",
     placement: "dashboard",
   },
   {
     id: "course-map",
     selector: "[data-tour='sidebar-tree']",
     eyebrow: "Course map",
-    title: "Move around the course",
-    body: "The sidebar is where subjects, chapters, interactive lessons, and assessments live. Open a chapter, search, then jump straight into a topic.",
+    title: "Move through the course with purpose",
+    body: "Subjects, chapters, interactive lessons, practice and assessments live in one course map. Your unlocked path and current position remain visible as you work.",
+    takeaway: "Choose a lesson from the sidebar whenever you are ready to study.",
     placement: "right",
   },
   {
     id: "notes",
     selector: "[data-tour='lesson-notes']",
     eyebrow: "Interactive lesson",
-    title: "Learn by interacting with the page",
-    body: "Each topic combines clear explanations, worked examples and responsive diagrams. The lesson is a real web page, so it adapts to your screen and keeps every tool close by.",
-    placement: "left",
-  },
-  {
-    id: "practice",
-    selector: "[data-tour='practice-session']",
-    eyebrow: "Practice",
-    title: "Check the idea straight away",
-    body: "Move from the lesson into focused questions for the same subtopic. Answers, feedback and working stay connected to what you have just learned.",
+    title: "Work through a real interactive lesson",
+    body: "Each topic combines structured explanations, mathematical notation, worked examples and responsive diagrams. It is a native page—not a static PDF—so it stays clear on every screen.",
+    takeaway: "Complete the lesson in order, then move straight into practice.",
     placement: "left",
   },
   {
     id: "ai",
     selector: "[data-tour='ai-assistant']",
     eyebrow: "Arthur AI",
-    title: "Ask without losing the lesson",
-    body: "Arthur opens beside the current lesson or practice question and uses that exact context to explain the step, diagnose a mistake or offer another example.",
+    title: "Ask without losing your place",
+    body: "Arthur opens beside the lesson or practice question you are viewing. It uses that exact context to explain a step, diagnose a mistake or show another route through the method.",
+    takeaway: "Ask about the precise step that does not click.",
+    placement: "left",
+  },
+  {
+    id: "practice",
+    selector: "[data-tour='practice-session']",
+    eyebrow: "Practice",
+    title: "Apply the method while it is fresh",
+    body: "Focused exam-style questions open for the same subtopic. Enter proper mathematical notation, save working and check each answer without leaving the learning flow.",
+    takeaway: "Every marked result is retained in your learning profile.",
+    placement: "left",
+  },
+  {
+    id: "review",
+    selector: "[data-tour='learning-review']",
+    eyebrow: "Spaced review",
+    title: "Turn every mistake into a future strength",
+    body: "A wrong or partially correct answer becomes a review card with the original question, expected answer and worked solution. The card returns at an interval based on your recall.",
+    takeaway: "Rate each recall honestly so the next review is timed correctly.",
+    placement: "dashboard",
+  },
+  {
+    id: "homework",
+    selector: "[data-tour='quiz-panel']",
+    eyebrow: "Adaptive homework",
+    title: "Let your results shape the next quiz",
+    body: "When a reliable gap appears, Excelora automatically builds focused homework from that topic and prioritises questions already due for review. Tutor assignments appear here too.",
+    takeaway: "Open Your Work to complete the most relevant questions next.",
+    placement: "dashboard",
+  },
+  {
+    id: "assessment",
+    selector: "[data-tour='assessment-overview']",
+    eyebrow: "Assessments",
+    title: "Measure what you can do independently",
+    body: "Complete the chapter requirements, receive access from your tutor and take the timed assessment in the workspace. Submitted marks and anything awaiting tutor review remain visible here.",
+    takeaway: "Use the result to decide what to consolidate before moving on.",
+    placement: "dashboard",
+  },
+  {
+    id: "reports",
+    selector: "[data-tour='learning-reports']",
+    eyebrow: "Progress reports",
+    title: "Finish with a clear view of the week",
+    body: "Weekly and monthly reports combine questions completed, active days, score, strongest topics and the clearest next focus into one concise learning record.",
+    takeaway: "Your tutor sees the same evidence, so support stays specific.",
+    placement: "dashboard",
+  },
+];
+
+const TUTOR_STEPS: TutorialStep[] = [
+  {
+    id: "tutor-student",
+    selector: "[data-tour='tutor-student-selector']",
+    eyebrow: "Student context",
+    title: "Choose the learner you want to support",
+    body: "The selected student becomes the context for progress, practice, review cards, reports, quizzes and access controls across the dashboard.",
+    takeaway: "Change the student once and every monitoring panel follows.",
+    placement: "dashboard",
+  },
+  {
+    id: "learning-profile",
+    selector: "[data-tour='learning-intelligence']",
+    eyebrow: "Learning intelligence",
+    title: "See effort and attainment together",
+    body: "The heatmap, topic accuracy and recommended focus show how often the student practises, what they attempted and where marks are being lost.",
+    takeaway: "Use the evidence to make the next intervention precise.",
+    placement: "dashboard",
+  },
+  {
+    id: "review",
+    selector: "[data-tour='learning-review']",
+    eyebrow: "Spaced-review monitor",
+    title: "Monitor every retained learning gap",
+    body: "Review cards show the topic, due status, number of misses, review count and mastery state for every question retained from the student’s mistakes.",
+    takeaway: "You can see whether difficult ideas are actually being revisited.",
+    placement: "dashboard",
+  },
+  {
+    id: "homework",
+    selector: "[data-tour='quiz-panel']",
+    eyebrow: "Homework",
+    title: "Review tutor-set and adaptive quizzes",
+    body: "Set your own focused quiz or inspect automatically generated homework. Adaptive assignments explain why they were created and remain fully reviewable after submission.",
+    takeaway: "Automation fills gaps without removing tutor oversight.",
+    placement: "dashboard",
+  },
+  {
+    id: "tutor-activity",
+    selector: "[data-tour='tutor-activity']",
+    eyebrow: "Marked work",
+    title: "Open the student’s real attempts",
+    body: "Review saved practice and assessment attempts question by question, including the response, marks and worked solution. Complete any answers that require human marking here.",
+    takeaway: "The final tutor mark feeds back into the learning profile.",
+    placement: "dashboard",
+  },
+  {
+    id: "tutor-assessment",
+    selector: "[data-tour='tutor-assessment-controls']",
+    eyebrow: "Assessment access",
+    title: "Release assessments at the right time",
+    body: "Excelora checks the chapter prerequisites and plan access. Once the student is ready, you control whether the formal chapter assessment is unlocked.",
+    takeaway: "Readiness stays visible before access is granted.",
+    placement: "dashboard",
+  },
+  {
+    id: "reports",
+    selector: "[data-tour='learning-reports']",
+    eyebrow: "Tutor reports",
+    title: "Read the week or month in minutes",
+    body: "Reports summarise effort, accuracy, active days, strengths and focus topics, giving you a consistent evidence base for lessons and parent updates.",
+    takeaway: "Switch between weekly and monthly views without rebuilding reports.",
+    placement: "dashboard",
+  },
+  {
+    id: "course-map",
+    selector: "[data-tour='sidebar-tree']",
+    eyebrow: "Course workspace",
+    title: "Preview the environment students use",
+    body: "Open the course map to inspect lessons, practice and assessments in the same structured workspace your students experience.",
+    takeaway: "Use the workspace when planning what the student should study next.",
+    placement: "right",
+  },
+  {
+    id: "notes",
+    selector: "[data-tour='lesson-notes']",
+    eyebrow: "Interactive lesson",
+    title: "Inspect the teaching experience",
+    body: "Lessons are native interactive pages with structured explanations, notation, examples and diagrams—not static documents or disconnected tools.",
+    takeaway: "The lesson, Arthur, practice and review all share this context.",
     placement: "left",
   },
 ];
@@ -90,8 +240,8 @@ function getSpotlightRect(stepId: TutorialSurface, selector: string): SpotlightR
 
 function getPopupStyle(step: TutorialStep, rect: SpotlightRect) {
   const gap = 16;
-  const maxWidth = 360;
-  const estimatedHeight = 250;
+  const maxWidth = 380;
+  const estimatedHeight = 330;
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   const clampLeft = (value: number) =>
@@ -144,18 +294,22 @@ function getPopupStyle(step: TutorialStep, rect: SpotlightRect) {
 
 export function TutorialShowcase({
   isOpen,
+  role,
   onClose,
   onSurfaceChange,
 }: TutorialShowcaseProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [spotlightRect, setSpotlightRect] = useState<SpotlightRect | null>(null);
-  const step = STEPS[stepIndex];
+  const steps = role === "tutor" ? TUTOR_STEPS : STUDENT_STEPS;
+  const step = steps[Math.min(stepIndex, steps.length - 1)];
   const activeSpotlightRect = spotlightRect?.stepId === step.id ? spotlightRect : null;
   const popupStyle = useMemo(
     () =>
-      typeof window === "undefined" || !activeSpotlightRect
+      typeof window === "undefined"
         ? null
-        : getPopupStyle(step, activeSpotlightRect),
+        : activeSpotlightRect
+          ? getPopupStyle(step, activeSpotlightRect)
+          : { left: "50%", top: "50%", transform: "translate(-50%, -50%)" },
     [activeSpotlightRect, step],
   );
 
@@ -166,19 +320,56 @@ export function TutorialShowcase({
 
   useEffect(() => {
     if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+      if (event.key === "ArrowLeft") setStepIndex((current) => Math.max(0, current - 1));
+      if (event.key === "ArrowRight") {
+        if (stepIndex >= steps.length - 1) onClose();
+        else setStepIndex((current) => current + 1);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose, stepIndex, steps.length]);
+
+  useEffect(() => {
+    if (!isOpen) return;
 
     const updateSpotlight = () => {
       setSpotlightRect(getSpotlightRect(step.id, step.selector));
     };
 
     const frame = window.requestAnimationFrame(updateSpotlight);
-    const settledFrame = window.setTimeout(updateSpotlight, 640);
+    const revealTargetTimer = window.setTimeout(() => {
+      const target = document.querySelector<HTMLElement>(step.selector);
+      if (!target) return;
+
+      const rect = target.getBoundingClientRect();
+      const isOutsideViewport = rect.top < 24 || rect.bottom > window.innerHeight - 24;
+      if (isOutsideViewport) {
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        target.scrollIntoView({
+          behavior: prefersReducedMotion ? "auto" : "smooth",
+          block: "center",
+        });
+      }
+      updateSpotlight();
+    }, 140);
+    const settledFrame = window.setTimeout(updateSpotlight, 760);
+    const targetPoll = window.setInterval(updateSpotlight, 120);
+    const stopTargetPoll = window.setTimeout(() => window.clearInterval(targetPoll), 1800);
+    const targetObserver = new MutationObserver(updateSpotlight);
+    targetObserver.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("resize", updateSpotlight);
     window.addEventListener("scroll", updateSpotlight, true);
 
     return () => {
       window.cancelAnimationFrame(frame);
+      window.clearTimeout(revealTargetTimer);
       window.clearTimeout(settledFrame);
+      window.clearInterval(targetPoll);
+      window.clearTimeout(stopTargetPoll);
+      targetObserver.disconnect();
       window.removeEventListener("resize", updateSpotlight);
       window.removeEventListener("scroll", updateSpotlight, true);
     };
@@ -186,8 +377,8 @@ export function TutorialShowcase({
 
   if (!isOpen) return null;
 
-  const isLastStep = stepIndex === STEPS.length - 1;
-  const progressPercent = ((stepIndex + 1) / STEPS.length) * 100;
+  const isLastStep = stepIndex === steps.length - 1;
+  const progressPercent = ((stepIndex + 1) / steps.length) * 100;
 
   return (
     <div
@@ -213,8 +404,9 @@ export function TutorialShowcase({
       {popupStyle ? (
         <article
           key={step.id}
-          className="tutorial-card fixed w-[min(360px,calc(100vw-32px))] rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:p-5"
+          className="tutorial-card fixed w-[min(380px,calc(100vw-32px))] rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:p-5"
           style={popupStyle}
+          aria-live="polite"
         >
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -241,6 +433,11 @@ export function TutorialShowcase({
 
           <p className="mt-3 text-sm leading-6 text-zinc-600">{step.body}</p>
 
+          <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700">What to do</p>
+            <p className="mt-1 text-xs leading-5 text-zinc-700">{step.takeaway}</p>
+          </div>
+
           <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-zinc-100">
             <div
               className="h-full rounded-full bg-zinc-900 transition-[width] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]"
@@ -250,7 +447,7 @@ export function TutorialShowcase({
 
           <div className="mt-4 flex items-center justify-between gap-3">
             <span className="text-xs font-medium text-zinc-500">
-              {stepIndex + 1} of {STEPS.length}
+              {stepIndex + 1} of {steps.length}
             </span>
             <div className="flex items-center gap-2">
               <button

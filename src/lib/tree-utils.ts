@@ -98,6 +98,7 @@ export function addNodeToState(
 
 export function selectNodeInState(state: FlowState, id: string): FlowState {
   if (!state.nodes[id]) return state;
+  if (state.selectedId === id) return state;
   return { ...state, selectedId: id };
 }
 

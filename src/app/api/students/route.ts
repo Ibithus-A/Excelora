@@ -131,7 +131,7 @@ export async function PATCH(request: Request) {
 
     const plan = normalizePlan(body.plan);
     if (!plan) {
-      return jsonError("Plan must be Basic, Plus or Pro.", 400);
+      return jsonError("Plan must be Basic, Plus or Premium.", 400);
     }
 
     const taggedChapterTitle = sanitizeTaggedChapterTitle(body.taggedChapterTitle);

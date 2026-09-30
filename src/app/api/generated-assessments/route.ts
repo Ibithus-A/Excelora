@@ -134,7 +134,7 @@ export async function POST(request: Request) {
       return Response.json({ grades: (data ?? []).map(q => ({ id: q.id, ...markBankResponse(q.response_type, body.answers?.[q.id] ?? "", { questionId: q.id, answer: q.answer, workedSolution: q.worked_solution }, q.marks) })) });
     }
     if (context.profile.role !== "student") return fail("Tutor previews do not create student records.", 400);
-    if (config.minimumStudentPlan === "plus" && !hasPlusAccess(context.profile.plan)) return fail("This assessment requires Plus or Pro.", 403);
+    if (config.minimumStudentPlan === "plus" && !hasPlusAccess(context.profile.plan)) return fail("This assessment requires Plus or Premium.", 403);
     if (!hasAssessmentAccess(context.profile, config)) return fail("Required course content is locked.", 403);
     const admin = createAdminClient();
     if (body.action === "start" || body.action === "retake") {

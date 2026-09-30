@@ -148,7 +148,7 @@ export function StudentPracticeHistory() {
   const reviewedState = answer ? answerState(answer) : null;
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
+    <section data-tour="practice-history" className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
       <div className="border-b border-zinc-200/80 bg-[linear-gradient(135deg,rgba(244,244,245,0.96),rgba(255,255,255,1))] p-5 md:p-6">
         <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Saved Work</p>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3">

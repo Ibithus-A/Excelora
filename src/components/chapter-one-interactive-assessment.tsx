@@ -382,7 +382,7 @@ export function ChapterOneInteractiveAssessment({
       <div className="mx-auto max-w-xl py-16 text-center">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-xl">⌑</div>
         <h2 className="mt-5 text-2xl font-semibold tracking-tight text-zinc-950">Plus assessment</h2>
-        <p className="mt-3 text-sm leading-7 text-zinc-600">This assessment requires Plus or Pro. Ask your tutor to upgrade your account; they must then unlock the assessment after you complete its chapter.</p>
+        <p className="mt-3 text-sm leading-7 text-zinc-600">This assessment requires Plus or Premium. Ask your tutor to upgrade your account; they must then unlock the assessment after you complete its chapter.</p>
       </div>
     );
   }

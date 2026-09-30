@@ -15,6 +15,8 @@ type QuizSummary = {
   score: number | null;
   total_marks: number;
   completed_at: string | null;
+  assignment_source?: "tutor" | "adaptive";
+  recommendation_reason?: string | null;
 };
 type QuizTopic = { key: string; subjectTitle: string; chapterTitle: string };
 type QuizQuestion = {
@@ -45,9 +47,11 @@ function Spinner() {
 export function QuizPanel({
   role,
   selectedStudentId = "",
+  selectedStudentName = "",
 }: {
   role: UserRole;
   selectedStudentId?: string;
+  selectedStudentName?: string;
 }) {
   const [assignments, setAssignments] = useState<QuizSummary[]>([]);
   const [topics, setTopics] = useState<QuizTopic[]>([]);
@@ -78,6 +82,11 @@ export function QuizPanel({
   }, [role, selectedStudentId]);
 
   useEffect(() => { void load(); }, [load, refreshKey]);
+  useEffect(() => {
+    const refresh = () => setRefreshKey((value) => value + 1);
+    window.addEventListener("excelora:quizzes-updated", refresh);
+    return () => window.removeEventListener("excelora:quizzes-updated", refresh);
+  }, []);
 
   const openQuiz = async (id: string) => {
     setOpeningId(id);
@@ -112,17 +121,19 @@ export function QuizPanel({
   }
 
   return (
-    <section className="relative rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
+    <section data-tour="quiz-panel" className="relative rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-t-[27px] border-b border-zinc-200 bg-[linear-gradient(135deg,#f4f4f5,#fff)] p-5 md:p-6">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">
             {role === "tutor" ? "Set work" : "Your work"}
           </p>
           <h2 className="mt-1 text-xl font-medium tracking-tight text-zinc-950">
-            {role === "tutor" ? "Quizzes" : outstanding.length ? `${outstanding.length} quiz${outstanding.length === 1 ? "" : "zes"} to complete` : "You’re all caught up"}
+            {role === "tutor"
+              ? selectedStudentName ? `Quizzes for ${selectedStudentName}` : "Student quizzes"
+              : outstanding.length ? `${outstanding.length} quiz${outstanding.length === 1 ? "" : "zes"} to complete` : "You’re all caught up"}
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            {role === "tutor" ? "Assign focused question sets with a clear deadline." : "Homework from your tutor, ordered by deadline."}
+            {role === "tutor" ? "Set focused work and monitor both tutor-assigned and adaptive quizzes." : "Tutor assignments and adaptive review quizzes, ordered by deadline."}
           </p>
         </div>
         {role === "tutor" && selectedStudentId ? (
@@ -133,6 +144,13 @@ export function QuizPanel({
       </div>
 
       <div className="p-5 md:p-6">
+        {!loading && !error && (selectedStudentId || role === "student") ? (
+          <div className="mb-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-3"><p className="text-xs text-zinc-500">To complete</p><p className="mt-1 text-xl font-medium tabular-nums text-zinc-950">{outstanding.length}</p></div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-3"><p className="text-xs text-zinc-500">Completed</p><p className="mt-1 text-xl font-medium tabular-nums text-zinc-950">{completed.length}</p></div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-3"><p className="text-xs text-zinc-500">Adaptive review</p><p className="mt-1 text-xl font-medium tabular-nums text-zinc-950">{assignments.filter((quiz) => quiz.assignment_source === "adaptive").length}</p></div>
+          </div>
+        ) : null}
         {role === "tutor" && !selectedStudentId ? (
           <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
             Select a student to set and review their quizzes.
@@ -168,7 +186,10 @@ export function QuizPanel({
                       <span className={["h-2 w-2 rounded-full", quiz.status === "completed" ? "bg-emerald-500" : overdue ? "bg-rose-500" : "bg-amber-400"].join(" ")} />
                       <span className="truncate font-medium text-zinc-900">{quiz.title}</span>
                     </span>
-                    <span className="mt-2 block text-xs text-zinc-500">{quiz.subtopic || "Whole chapter"} · {quiz.question_count} questions</span>
+                    <span className="mt-2 block text-xs text-zinc-500">{quiz.subtopic || "Whole chapter"} · {quiz.question_count} questions{quiz.assignment_source === "adaptive" ? " · Smart review" : ""}</span>
+                    {quiz.assignment_source === "adaptive" && quiz.recommendation_reason ? (
+                      <span className="mt-2 block line-clamp-2 text-xs leading-5 text-zinc-500">{quiz.recommendation_reason}</span>
+                    ) : null}
                     <span className={["mt-3 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium", quiz.status === "completed" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : overdue ? "border-rose-200 bg-rose-50 text-rose-700" : "border-amber-200 bg-amber-50 text-amber-700"].join(" ")}>
                       {quiz.status === "completed" ? `${quiz.score ?? 0}/${quiz.total_marks} marks` : dueLabel(quiz.due_at)}
                     </span>

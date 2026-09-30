@@ -6,7 +6,7 @@ Arthur is a server-mediated tutoring system. The browser sends a student questio
 
 Copy the names in `.env.example` into the deployment environment. `DEEPSEEK_API_KEY` is mandatory and must remain server-only. `DEEPSEEK_MODEL` defaults to `deepseek-flash`. Timeout and output limits have bounded environment overrides. Arthur does not retry paid provider requests automatically.
 
-Arthur also retains the existing database allowance in `arthur_usage_settings`. Provider calls remain disabled until the owner explicitly enables that allowance and sets monthly and per-student daily request limits. This protects against accidental usage even when an API key is present.
+Arthur also retains a database allowance in `arthur_usage_settings`. Provider calls remain disabled until the owner explicitly enables that allowance and sets a global monthly student limit. Daily limits are role and plan aware: tutors are unrestricted, Plus students receive 25 requests per UTC day, Premium (`pro`) students receive 35, and selected QA accounts can receive a private override. This protects student usage even when an API key is present while leaving the tutor account available for testing.
 
 ## Provider boundary
 
@@ -32,7 +32,44 @@ Existing deterministic marking remains authoritative. `generateDiagnosticFeedbac
 
 ## Database setup
 
-Apply `20261001000000_arthur_conversations.sql` after the earlier Excelora migrations. The new tables use RLS, revoke browser roles and grant access only to the service role. Deleting an auth user cascades their conversations and messages.
+Apply `20261001000000_arthur_conversations.sql` and then `20261001000003_arthur_role_plan_limits.sql` after the earlier Excelora migrations. The new tables use RLS, revoke browser roles and grant access only to the service role. Deleting an auth user cascades their conversations, messages and any private allowance override.
+
+Arthur remains disabled after the migration. Enable it only after the server-only API key is configured. Choose a monthly student circuit breaker that fits the approved provider budget; `5000` below is an example, not a spending guarantee:
+
+```sql
+update public.arthur_usage_settings
+set enabled = true,
+    monthly_request_limit = 5000,
+    plus_daily_user_limit = 25,
+    pro_daily_user_limit = 35
+where id = true;
+```
+
+Give the owner's dedicated student QA account a 50-request daily limit and ensure it exercises the genuine Plus interface. Replace the email before running:
+
+```sql
+update public.profiles
+set plan = 'plus'
+where id = (
+  select id from auth.users where lower(email) = lower('YOUR-STUDENT-EMAIL')
+);
+
+insert into public.arthur_user_limit_overrides (
+  user_id,
+  daily_request_limit,
+  reason,
+  updated_at
+)
+select id, 50, 'Owner student QA account', now()
+from auth.users
+where lower(email) = lower('YOUR-STUDENT-EMAIL')
+on conflict (user_id) do update
+set daily_request_limit = excluded.daily_request_limit,
+    reason = excluded.reason,
+    updated_at = now();
+```
+
+The tutor role needs no override. Tutor requests bypass the application daily and global monthly allowances, while request metadata and token usage continue to be recorded in `arthur_request_logs`.
 
 ## Local verification
 

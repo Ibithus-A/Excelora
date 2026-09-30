@@ -251,7 +251,7 @@ export function getLockedChapterMessage(
   }
 
   if (profile.plan === "basic") {
-    return "This chapter is locked on the Basic Plan. Ask a tutor to upgrade your account to Plus or Pro.";
+    return "This chapter is locked on the Basic Plan. Ask a tutor to upgrade your account to Plus or Premium.";
   }
 
   return "This chapter is locked. Ask your tutor to tag the chapter or custom unlock it for your plan.";

@@ -339,6 +339,9 @@ export function EditorPane({
 
     return fallbackLessonId;
   }, [state, viewerProfile]);
+  const tutorialLessonTitle = tutorialLessonId
+    ? state.nodes[tutorialLessonId]?.title ?? ""
+    : "";
   const editorShellStyle = {
     paddingLeft:
       sidebarInsetPx > 0 ? `min(${sidebarInsetPx}px, 88vw)` : undefined,
@@ -478,17 +481,18 @@ export function EditorPane({
 
     revealNode(tutorialLessonId);
     const frame = window.requestAnimationFrame(() => {
-      setLessonSurface(() => ({
-        nodeId: tutorialLessonId,
-        view: "notes",
-        pdfZoom: 100,
-      }));
+      setLessonSurface((current) =>
+        current.nodeId === tutorialLessonId && current.view === "notes" && current.pdfZoom === 100
+          ? current
+          : { nodeId: tutorialLessonId, view: "notes", pdfZoom: 100 },
+      );
       if (tutorialSurface === "practice") {
-        const tutorialNode = state.nodes[tutorialLessonId];
-        setPracticeTarget({
-          nodeId: tutorialLessonId,
-          subtopic: tutorialNode?.title.replace(/^\d+\.\d+\s+/, "") ?? "",
-        });
+        const subtopic = tutorialLessonTitle.replace(/^\d+\.\d+\s+/, "");
+        setPracticeTarget((current) =>
+          current?.nodeId === tutorialLessonId && current.subtopic === subtopic
+            ? current
+            : { nodeId: tutorialLessonId, subtopic },
+        );
       } else {
         setPracticeTarget(null);
       }
@@ -500,7 +504,7 @@ export function EditorPane({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [revealNode, state.nodes, tutorialLessonId, tutorialSurface]);
+  }, [revealNode, tutorialLessonId, tutorialLessonTitle, tutorialSurface]);
 
   if (!selectedNode) {
     return (
@@ -907,7 +911,7 @@ export function EditorPane({
                               className="inline-flex items-center gap-2 rounded-full border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-zinc-800"
                             >
                               <span className="ml-0.5 leading-none">▶</span>
-                              {canUseVideo ? "Video preview" : "Video · Pro"}
+                              {canUseVideo ? "Video preview" : "Video · Premium"}
                             </button>
                           </div>
                         </div>
@@ -1103,7 +1107,7 @@ export function EditorPane({
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
                                   <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-                                  {canUseVideo ? "In development" : "Pro feature"}
+                                  {canUseVideo ? "In development" : "Premium feature"}
                                 </span>
                                 <button
                                   type="button"
@@ -1599,14 +1603,14 @@ function LessonVideoPlayer({
         </div>
         <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-amber-100">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
-          {hasAccess ? "In development" : "Available on Pro"}
+          {hasAccess ? "In development" : "Available on Premium"}
         </span>
         <p className="mt-4 text-xs uppercase tracking-[0.14em] text-white/45">{lessonTitle}</p>
-        <h3 className="mt-2 text-xl font-medium tracking-tight text-white sm:text-2xl">{hasAccess ? "Video walkthroughs are being refined" : "Video walkthroughs are included with Pro"}</h3>
+        <h3 className="mt-2 text-xl font-medium tracking-tight text-white sm:text-2xl">{hasAccess ? "Video walkthroughs are being refined" : "Video walkthroughs are included with Premium"}</h3>
         <p className="mt-3 max-w-md text-sm leading-6 text-white/60">
           {hasAccess
             ? "We’re producing a consistent library of clear, animated explanations. This lesson remains fully available through the notes while its video is prepared."
-            : "Upgrade to Pro for the complete video library alongside every Plus feature. Your lesson notes remain available on your current plan."}
+            : "Upgrade to Premium for guided video walkthroughs alongside every Plus feature. Your lesson notes remain available on your current plan."}
         </p>
         <div className="mt-6 flex items-center gap-2 text-xs text-white/40">
           <span className="h-1.5 w-16 overflow-hidden rounded-full bg-white/10"><span className="block h-full w-2/3 rounded-full bg-white/25" /></span>

@@ -16,6 +16,8 @@ import type { UserAccessProfile, UserPlan, UserRole } from "@/types/auth";
 import {StudentActivityPanel} from "./student-activity-panel";
 import { StudentPracticeHistory } from "./student-practice-history";
 import { QuizPanel } from "./quiz-panel";
+import { LearningIntelligencePanel } from "./learning-intelligence-panel";
+import type { TutorialSurface } from "./tutorial-showcase";
 import {useStudyActivity} from "@/lib/hooks/use-study-activity";
 import type { FlowNode } from "@/types/flowstate";
 import type { TopicProgressController } from "@/types/topic-progress";
@@ -56,6 +58,7 @@ type DashboardHomeProps = {
   onAssessmentAttemptCleared?: () => void;
   onDeleteStudent?: () => Promise<{ ok: boolean; error?: string }>;
   topicProgress?: TopicProgressController;
+  tutorialSurface?: TutorialSurface | null;
 };
 
 type DashboardTopicItem = {
@@ -106,6 +109,7 @@ export function DashboardHome({
   onAssessmentAttemptCleared,
   onDeleteStudent,
   topicProgress,
+  tutorialSurface = null,
 }: DashboardHomeProps) {
   const { state, revealNode } = useFlowState();
   const {lessonProgress,currentSubtopicId}=useMemo(()=>mapLessonProgress(state,topicProgress?.rows??[]),[state,topicProgress?.rows]);
@@ -367,25 +371,24 @@ export function DashboardHome({
   return (
     <main className="min-h-dvh w-full overflow-x-hidden overflow-y-auto bg-[var(--surface-app)] px-3 py-4 sm:px-5 sm:py-5 md:px-8 md:py-7">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
-        <header className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] px-4 py-4 shadow-sm transition-all duration-200 sm:px-5 md:px-7 md:py-5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <header className="overflow-hidden rounded-[24px] border border-zinc-200 bg-[var(--surface-panel)] shadow-[0_18px_50px_rgba(15,23,42,0.05)]">
+          <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-5 md:px-7 md:py-6">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white">
-                <FlowLogoIcon className="h-4 w-4" />
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm">
+                <FlowLogoIcon className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Welcome Page</p>
-                <h1 className="text-xl font-medium text-zinc-900 md:text-2xl">
-                  Welcome back
+                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+                  {role === "tutor" ? "Tutor dashboard" : "Student dashboard"}
+                </p>
+                <h1 className="mt-1 text-xl font-medium tracking-tight text-zinc-950 md:text-2xl">
+                  Welcome back, {name.split(" ")[0]}
                 </h1>
-                <p className="text-sm text-zinc-600">{name}</p>
-                {role === "student" ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">
-                      {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} plan
-                    </span>
-                  </div>
-                ) : null}
+                <p className="mt-1 text-sm leading-6 text-zinc-600">
+                  {role === "tutor"
+                    ? "Monitor learning patterns, review marked work and decide what comes next."
+                    : "Your learning, review schedule and next steps are connected here."}
+                </p>
               </div>
             </div>
 
@@ -393,37 +396,52 @@ export function DashboardHome({
               <button
                 type="button"
                 onClick={onOpenWorkspace}
-                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
+                className="inline-flex w-full items-center justify-center rounded-full bg-zinc-950 px-4 py-2.5 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-md sm:w-auto"
               >
                 Open Workspace
               </button>
               <button
                 type="button"
                 onClick={onStartTutorial}
-                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
+                className="inline-flex w-full items-center justify-center rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition duration-200 hover:border-zinc-300 hover:bg-zinc-50 sm:w-auto"
               >
                 Replay Tutorial
               </button>
               <button
                 type="button"
                 onClick={onSignOut}
-                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
+                className="inline-flex w-full items-center justify-center rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition duration-200 hover:border-zinc-300 hover:bg-zinc-50 sm:w-auto"
               >
                 Sign Out
               </button>
               <button
                 type="button"
                 onClick={onSwitchAccount}
-                className="inline-flex w-full items-center justify-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
+                className="inline-flex w-full items-center justify-center rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition duration-200 hover:border-zinc-300 hover:bg-zinc-50 sm:w-auto"
               >
                 Switch Account
               </button>
             </div>
           </div>
+          <nav aria-label="Dashboard sections" className="flex items-center gap-1 overflow-x-auto border-t border-zinc-200 bg-zinc-50/70 px-4 py-2 sm:px-5 md:px-7">
+            {(role === "tutor"
+              ? [["Student insight", "learning-profile"], ["Quizzes", "dashboard-quizzes"], ["Marked work", "dashboard-attempts"], ["Course access", "student-access"]]
+              : [["Learning profile", "learning-profile"], ["Your work", "dashboard-quizzes"], ["Practice history", "practice-history"], ["Course progress", "dashboard-course-progress"]]
+            ).map(([label, target]) => (
+              <button key={target} type="button" onClick={() => document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" })} className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-white hover:text-zinc-950 hover:shadow-sm">
+                {label}
+              </button>
+            ))}
+            {role === "student" ? (
+              <span className="ml-auto shrink-0 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-500">
+                {currentPlan === "pro" ? "Premium" : currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} plan
+              </span>
+            ) : null}
+          </nav>
         </header>
 
         {role === "tutor" ? (
-          <section className="relative z-30 rounded-[24px] border border-zinc-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-5">
+          <section data-tour="tutor-student-selector" className="relative z-30 rounded-[24px] border border-zinc-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-5">
             <div className="grid gap-4 lg:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.15fr)] lg:items-center">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400">Student workspace</p>
@@ -500,7 +518,7 @@ export function DashboardHome({
                       <div className="relative grid grid-cols-3 rounded-full border border-zinc-200 bg-zinc-50 p-0.5" aria-label="Student plan">
                         <span aria-hidden="true" style={{ transform: `translateX(${(["basic", "plus", "pro"] as const).indexOf(selectedStudentPlan) * 100}%)` }} className="pointer-events-none absolute bottom-0.5 left-0.5 top-0.5 w-[calc(33.333%-1.5px)] rounded-full bg-white shadow-sm transition-transform duration-200" />
                         {(["basic", "plus", "pro"] as const).map((plan) => (
-                          <button key={plan} type="button" onClick={() => void onSetStudentPlan?.(plan)} className={["relative z-10 rounded-full px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.08em] transition", selectedStudentPlan === plan ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-800"].join(" ")}>{plan}</button>
+                          <button key={plan} type="button" onClick={() => void onSetStudentPlan?.(plan)} className={["relative z-10 rounded-full px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.08em] transition", selectedStudentPlan === plan ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-800"].join(" ")}>{plan === "pro" ? "Premium" : plan}</button>
                         ))}
                       </div>
                       <button type="button" onClick={() => { setDeleteConfirmationStudentId(selectedStudent.id); setDeleteError(""); }} disabled={isDeletingStudent || isDeleteConfirming} aria-label={`Delete ${selectedStudent.name}`} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"><TrashIcon className="h-3.5 w-3.5" /></button>
@@ -522,21 +540,35 @@ export function DashboardHome({
           </section>
         ) : null}
 
-        <QuizPanel
-          role={role}
-          selectedStudentId={selectedStudentId ?? ""}
-        />
-        {role === "student" ? <StudentPracticeHistory /> : null}
-        {role === "tutor" && (
-          <StudentActivityPanel
-            students={students}
-            studentId={selectedStudentId ?? ""}
-            onAssessmentAttemptCleared={onAssessmentAttemptCleared}
+        <div id="learning-profile" className="scroll-mt-5">
+          <LearningIntelligencePanel
+            role={role}
+            selectedStudentId={selectedStudentId ?? ""}
+            selectedStudentName={selectedStudent?.name ?? ""}
+            tutorialSurface={tutorialSurface}
           />
+        </div>
+        <div id="dashboard-quizzes" className="scroll-mt-5">
+          <QuizPanel
+            role={role}
+            selectedStudentId={selectedStudentId ?? ""}
+            selectedStudentName={selectedStudent?.name ?? ""}
+          />
+        </div>
+        {role === "student" ? <div id="practice-history" className="scroll-mt-5"><StudentPracticeHistory /></div> : null}
+        {role === "tutor" && (
+          <div id="dashboard-attempts" className="scroll-mt-5">
+            <StudentActivityPanel
+              students={students}
+              studentId={selectedStudentId ?? ""}
+              onAssessmentAttemptCleared={onAssessmentAttemptCleared}
+            />
+          </div>
         )}
         <article
+          id="dashboard-course-progress"
           data-tour="dashboard-progress"
-          className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6"
+          className="scroll-mt-5 rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -681,7 +713,7 @@ export function DashboardHome({
         </article>
 
         {role === "student" ? (
-          <article className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
+          <article data-tour="assessment-overview" className="rounded-2xl border border-zinc-200 bg-[var(--surface-panel)] p-4 shadow-sm transition-all duration-200 md:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
@@ -970,7 +1002,7 @@ export function DashboardHome({
                       </div>
                     ) : null}
                     {role === "tutor" && selectedStudent && chapterTitle === CHAPTER_ONE_TITLE ? (
-                      <div className="mt-2 border-t border-zinc-100 pt-2 pl-[18px]">
+                      <div data-tour="tutor-assessment-controls" className="mt-2 border-t border-zinc-100 pt-2 pl-[18px]">
                         <button
                           type="button"
                           onClick={() => { void onToggleChapterOneAssessment?.(); }}
@@ -982,7 +1014,7 @@ export function DashboardHome({
                               : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100",
                           ].join(" ")}
                           aria-pressed={isChapterOneAssessmentUnlocked && !assessmentNeedsPremium}
-                          title={assessmentNeedsPremium ? "Upgrade this student to Plus or Pro before unlocking the assessment" : assessmentModulesIncomplete ? "All chapter modules must be completed before this assessment can be unlocked" : isChapterOneAssessmentUnlocked ? "Click to lock assessment" : "Click to unlock assessment"}
+                          title={assessmentNeedsPremium ? "Upgrade this student to Plus or Premium before unlocking the assessment" : assessmentModulesIncomplete ? "All chapter modules must be completed before this assessment can be unlocked" : isChapterOneAssessmentUnlocked ? "Click to lock assessment" : "Click to unlock assessment"}
                         >
                           {isChapterOneAssessmentUnlocked && !assessmentNeedsPremium ? <UnlockIcon className="h-3 w-3" /> : <LockIcon className="h-3 w-3" />}
                           {assessmentNeedsPremium
@@ -996,7 +1028,7 @@ export function DashboardHome({
                         {assessmentAccessError ? <p className="mt-1 text-[11px] text-red-600">{assessmentAccessError}</p> : null}
                         <p className="mt-1 text-[11px] text-zinc-500">
                           {assessmentNeedsPremium
-                            ? "Upgrade this student to Plus or Pro before unlocking."
+                            ? "Upgrade this student to Plus or Premium before unlocking."
                             : assessmentModulesIncomplete
                               ? chapterOneAssessmentPrerequisite.totalCount > 0
                                 ? `Complete all ${chapterOneAssessmentPrerequisite.totalCount} chapter modules before unlocking.`

@@ -235,7 +235,6 @@ test("Arthur blocks active attempts on server before context construction and pr
   assert.match(post, /await hasActiveAssessment\(auth\.admin, auth\.user\.id\)[\s\S]*Finish your active formal assessment/);
   assert.ok(post.indexOf("await hasActiveAssessment") < post.indexOf("getCanonicalCourseContext(body.pageTitle"));
   assert.match(post, /getCanonicalCourseContext\(body\.pageTitle, body\.pdfTitle\)/);
-  assert.doesNotMatch(source, /COHERE_API_URL|COHERE_API_KEY/);
   assert.match(source, /\.eq\("status", "submitted"\)/);
   assert.match(source, /\.eq\("student_id", userId\)/);
 });

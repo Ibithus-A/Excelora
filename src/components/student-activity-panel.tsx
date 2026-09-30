@@ -273,7 +273,7 @@ export function StudentActivityPanel({
     }
   };
   return (
-    <section className="mb-6 overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.07)]">
+    <section data-tour="tutor-activity" className="mb-6 overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.07)]">
       <div className="border-b border-zinc-200/80 bg-[linear-gradient(135deg,rgba(244,244,245,0.96),rgba(255,255,255,1))] p-4 md:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-3">

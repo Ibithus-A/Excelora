@@ -65,19 +65,23 @@ function reducer(state: FlowState, action: Action): FlowState {
       const targetNode = state.nodes[action.id];
       if (!targetNode) return state;
 
-      const nodes = { ...state.nodes };
+      let nodes = state.nodes;
+      let didExpandParent = false;
       let parentId = targetNode.parentId;
 
       while (parentId) {
         const parentNode = nodes[parentId];
         if (!parentNode) break;
         if (parentNode.kind === "folder" && !parentNode.isExpanded) {
+          if (!didExpandParent) nodes = { ...state.nodes };
           nodes[parentId] = { ...parentNode, isExpanded: true };
+          didExpandParent = true;
         }
         parentId = parentNode.parentId;
       }
 
-      return selectNodeInState({ ...state, nodes }, action.id);
+      if (!didExpandParent && state.selectedId === action.id) return state;
+      return { ...state, nodes, selectedId: action.id };
     }
     case "toggleLock":
       return toggleLockedInState(state, action.id);

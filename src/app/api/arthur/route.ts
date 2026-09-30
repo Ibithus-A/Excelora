@@ -27,7 +27,7 @@ async function authenticatedContext() {
   if (!user) return { error: jsonError("Unauthorized.", 401) } as const;
   const viewer = await getViewerProfile(supabase, user.id);
   if (!viewer) return { error: jsonError("Profile not found.", 404) } as const;
-  if (viewer.role === "student" && !hasPlusAccess(viewer.plan)) return { error: jsonError("Arthur AI is available on Plus and Pro.", 403) } as const;
+  if (viewer.role === "student" && !hasPlusAccess(viewer.plan)) return { error: jsonError("Arthur AI is available on Plus and Premium.", 403) } as const;
   return { user, viewer, admin: createAdminClient() } as const;
 }
 
@@ -112,8 +112,10 @@ export async function POST(request: Request) {
   try {
     const auth = await authenticatedContext();
     if ("error" in auth) return auth.error;
-    const limiter = enforceArthurRateLimit(`${auth.user.id}:/api/arthur`);
-    if (!limiter.allowed) return jsonError("Too many requests. Please slow down.", 429, { "Retry-After": String(limiter.retryAfterSeconds) });
+    if (auth.viewer.role !== "tutor") {
+      const limiter = enforceArthurRateLimit(`${auth.user.id}:/api/arthur`);
+      if (!limiter.allowed) return jsonError("Too many requests. Please slow down.", 429, { "Retry-After": String(limiter.retryAfterSeconds) });
+    }
     let raw: unknown;
     try { raw = await request.json(); } catch { return jsonError("Invalid request body.", 400); }
     const body = parseArthurRequest(raw);

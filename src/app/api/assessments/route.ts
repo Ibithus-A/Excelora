@@ -319,7 +319,7 @@ export async function PATCH(request: Request) {
     if (studentError) throw new Error(studentError.message);
     if (!student) return jsonError("Student profile not found.", 404);
     if (config.minimumStudentPlan === "plus" && !hasPlusAccess(student.plan)) {
-      return jsonError("Assessments require Plus or Pro.", 403);
+      return jsonError("Assessments require Plus or Premium.", 403);
     }
     if (body.isUnlocked) {
       const prerequisite = await getModulePrerequisite(body.studentId, config);
@@ -414,7 +414,7 @@ export async function POST(request: Request) {
       config.minimumStudentPlan === "plus" &&
       !hasPlusAccess(viewerContext.viewer.plan)
     ) {
-      return jsonError("Assessments require Plus or Pro.", 403);
+      return jsonError("Assessments require Plus or Premium.", 403);
     }
     if (body.action !== "start" && body.action !== "save" && body.action !== "lock_answer" && body.action !== "submit") {
       return jsonError("Unknown assessment action.", 400);

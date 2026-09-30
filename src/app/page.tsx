@@ -135,7 +135,17 @@ export default function HomePage() {
 
   const handleTutorialSurfaceChange = useCallback((surface: TutorialSurface) => {
     setTutorialSurface(surface);
-    if (surface === "dashboard") {
+    if (
+      surface === "dashboard" ||
+      surface === "learning-profile" ||
+      surface === "review" ||
+      surface === "homework" ||
+      surface === "assessment" ||
+      surface === "reports" ||
+      surface === "tutor-student" ||
+      surface === "tutor-activity" ||
+      surface === "tutor-assessment"
+    ) {
       setView("dashboard");
       setIsSidebarAutoOpen(false);
       return;
@@ -169,7 +179,7 @@ export default function HomePage() {
         ) : view === "dashboard" ? (
           <DashboardHome
             name={effectiveCurrentUser.name}
-            role={effectiveCurrentUser.role}
+            role={effectiveCurrentUser?.role ?? "student"}
             onOpenWorkspace={handleOpenWorkspaceFromDashboard}
             onStartTutorial={handleStartTutorial}
             onSignOut={handleSignOut}
@@ -198,6 +208,7 @@ export default function HomePage() {
             onAssessmentAttemptCleared={() => void assessmentAccess.refresh()}
             onDeleteStudent={deleteSelectedStudent}
             topicProgress={topicProgress}
+            tutorialSurface={isTutorialOpen ? tutorialSurface : null}
           />
         ) : (
           <div className={PORTAL_CONTAINER_CLASS}>
@@ -278,6 +289,7 @@ export default function HomePage() {
         {isTutorialOpen ? (
           <TutorialShowcase
             isOpen={isTutorialOpen}
+            role={effectiveCurrentUser?.role ?? "student"}
             onClose={handleCloseTutorial}
             onSurfaceChange={handleTutorialSurfaceChange}
           />

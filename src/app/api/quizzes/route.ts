@@ -21,7 +21,9 @@ async function viewer() {
 async function presentAssignment(id: string, viewerId: string, role: "tutor" | "student") {
   const admin = createAdminClient();
   let query = admin.from("quiz_assignments").select("*").eq("id", id);
-  query = role === "tutor" ? query.eq("tutor_id", viewerId) : query.eq("student_id", viewerId);
+  query = role === "tutor"
+    ? query.or(`tutor_id.eq.${viewerId},assignment_source.eq.adaptive`)
+    : query.eq("student_id", viewerId);
   const { data: assignment, error } = await query.maybeSingle();
   if (error) throw new Error(error.message);
   if (!assignment) return null;
@@ -84,9 +86,12 @@ export async function GET(request: Request) {
     let query = admin.from("quiz_assignments").select("*").order("due_at", { ascending: true }).limit(100);
     if (profile.role === "student") query = query.eq("student_id", profile.id);
     else {
-      query = query.eq("tutor_id", profile.id);
       const studentId = url.searchParams.get("studentId");
-      if (studentId) query = query.eq("student_id", studentId);
+      if (studentId) {
+        query = query
+          .eq("student_id", studentId)
+          .or(`tutor_id.eq.${profile.id},assignment_source.eq.adaptive`);
+      } else query = query.eq("tutor_id", profile.id);
     }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
@@ -153,6 +158,7 @@ export async function POST(request: Request) {
         question_count: selected.length,
         due_at: dueAt.toISOString(),
         total_marks: totalMarks,
+        assignment_source: "tutor",
       }).select("*").single();
       if (error) throw new Error(error.message);
       const { error: questionError } = await admin.from("quiz_assignment_questions").insert(

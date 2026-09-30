@@ -705,7 +705,7 @@ export function PracticeQuestions({
                       className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-zinc-950 px-4 py-2.5 text-xs font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
                     >
                       <span aria-hidden="true">✦</span>
-                      {canUseArthur ? "Ask Arthur to explain" : "Arthur requires Plus or Pro"}
+                      {canUseArthur ? "Ask Arthur to explain" : "Arthur requires Plus or Premium"}
                     </button>
                   </div>
                 </div>
