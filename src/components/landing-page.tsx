@@ -291,17 +291,17 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
           isIntroVisible ? "is-visible" : "",
         ].join(" ")}
       >
-        <div className="grid items-center gap-12 lg:grid-cols-[0.76fr_1.24fr] lg:gap-8 xl:grid-cols-[470px_minmax(0,1fr)] xl:gap-9">
+        <div className="grid min-w-0 items-center gap-12 xl:grid-cols-[minmax(380px,0.76fr)_minmax(0,1.24fr)] xl:gap-9 2xl:grid-cols-[470px_minmax(0,1fr)] 2xl:gap-10">
           <div className="relative z-10 max-w-2xl lg:py-12">
             <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm backdrop-blur">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               GCSE & A-Level Maths, all in one place
             </span>
-            <h1 className="mt-6 text-[42px] font-semibold leading-[0.98] tracking-[-0.05em] text-zinc-950 sm:text-6xl lg:text-[68px]">
-              The maths workspace
-              <br />
-              built for your
-              <span className="relative ml-3 inline-block whitespace-nowrap">
+            <h1 className="mt-6 text-[clamp(2.5rem,11vw,4.25rem)] font-semibold leading-[0.98] tracking-[-0.05em] text-zinc-950">
+              <span className="block">The maths</span>
+              <span className="block">workspace</span>
+              <span className="block">built for your</span>
+              <span className="relative block w-fit whitespace-nowrap">
                 next grade.
                 <svg aria-hidden viewBox="0 0 240 14" preserveAspectRatio="none" className="absolute -bottom-2 left-0 h-3 w-full overflow-visible">
                   <path d="M3 9 C 48 2, 104 3, 132 7 C 166 11, 204 8, 237 4" fill="none" stroke="#22c55e" strokeLinecap="round" strokeWidth="4" opacity="0.75" />
@@ -330,7 +330,7 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
           </div>
 
           {/* Workspace preview */}
-          <div className="relative min-w-0 lg:-mr-28 xl:-mr-36">
+          <div className="relative min-w-0">
             <div aria-hidden className="absolute -inset-12 -z-10 rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.12),transparent_68%)] blur-2xl" />
             <div className="overflow-hidden rounded-[22px] border border-zinc-200 bg-white shadow-[0_44px_120px_rgba(15,23,42,0.16)] sm:rounded-[28px]">
             <div className="flex items-center gap-1.5 border-b border-zinc-200 bg-[var(--surface-sidebar)] px-4 py-3">
@@ -341,10 +341,10 @@ export function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
                 excelora · workspace
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-[190px_minmax(0,1fr)] lg:grid-cols-[190px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(400px,1fr)_330px]">
+            <div className="grid min-w-0 grid-cols-1 md:grid-cols-[170px_minmax(0,1fr)] 2xl:grid-cols-[180px_minmax(0,1fr)_280px]">
               <WorkspaceSidebarMock activeIndex={0} />
               <HeroVideoPane showcaseItem={activeWorkspaceShowcase} />
-              <div className="hidden xl:block">
+              <div className="hidden min-w-0 2xl:block">
                 <HeroArthurPane showcaseItem={activeWorkspaceShowcase} />
               </div>
             </div>
@@ -638,16 +638,16 @@ function RevealOnScroll({
 function HeroVideoPane({ showcaseItem }: { showcaseItem: WorkspaceShowcaseItem }) {
   return (
     <div className="border-b border-zinc-200 p-5 sm:p-6 md:border-b-0 md:p-7 xl:border-r">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
             Lesson Video
           </p>
-          <h3 className="mt-1 text-[17px] font-semibold tracking-tight text-zinc-900">
+          <h3 className="mt-1 text-[17px] font-semibold leading-snug tracking-tight text-zinc-900">
             {showcaseItem.videoTitle}
           </h3>
         </div>
-        <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-600">
+        <span className="shrink-0 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-600">
           {showcaseItem.videoLength}
         </span>
       </div>

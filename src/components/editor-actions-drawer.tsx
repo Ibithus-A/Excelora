@@ -6,6 +6,7 @@ import {
   SHARED_MATH_INPUT_GROUPS,
   type SharedMathInputItem,
 } from "@/lib/math-input-catalog";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 import katex from "katex";
 import {
   FormEvent,
@@ -32,6 +33,34 @@ type MessageSegment =
 type AssistantBlock =
   | { type: "divider" }
   | { type: "paragraph"; content: string };
+
+async function fetchArthur(input: RequestInfo | URL, init?: RequestInit) {
+  const requestInit: RequestInit = { ...init, credentials: "same-origin" };
+  let response = await fetch(input, requestInit);
+  if (response.status !== 401) return response;
+
+  // A browser can briefly retain an expired access token after a key/session
+  // change. Refresh once, which also synchronises the Supabase auth cookie used
+  // by the server route, then repeat the original request exactly once.
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase.auth.refreshSession();
+  if (error || !data.session) return response;
+
+  try {
+    await response.body?.cancel();
+  } catch {
+    // The retry is still safe if the short JSON error body is already closed.
+  }
+  response = await fetch(input, requestInit);
+  return response;
+}
+
+function arthurResponseError(response: Response, message?: string) {
+  if (response.status === 401) {
+    return "Your session has expired. Please sign out and sign in again.";
+  }
+  return message ?? "Arthur could not respond right now.";
+}
 
 /* ---------- Math keypad ----------
  * Each item describes:
@@ -912,10 +941,10 @@ function DrawerContent({
       params.set("practiceQuestionId", practiceQuestionId);
     }
     if (reviewAttemptId) params.set("reviewAttemptId", reviewAttemptId);
-    void fetch(`/api/arthur?${params}`, { cache: "no-store", signal: controller.signal })
+    void fetchArthur(`/api/arthur?${params}`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         const payload = (await response.json()) as { conversationId?: string | null; messages?: AssistantMessage[]; error?: string };
-        if (!response.ok) throw new Error(payload.error ?? "Unable to load your Arthur conversation.");
+        if (!response.ok) throw new Error(arthurResponseError(response, payload.error ?? "Unable to load your Arthur conversation."));
         setConversationId(payload.conversationId ?? null);
         setMessages(Array.isArray(payload.messages) ? payload.messages : []);
       })
@@ -1001,7 +1030,7 @@ function DrawerContent({
     generationAbortRef.current = controller;
 
     try {
-      const response = await fetch("/api/arthur", {
+      const response = await fetchArthur("/api/arthur", {
         method: "POST",
         signal: controller.signal,
         headers: {
@@ -1021,7 +1050,7 @@ function DrawerContent({
       });
       if (!response.ok) {
         const payload = (await response.json()) as { error?: string };
-        throw new Error(payload.error ?? "Arthur could not respond right now.");
+        throw new Error(arthurResponseError(response, payload.error));
       }
       if (!response.body) throw new Error("Arthur returned no response stream.");
       const reader = response.body.getReader();

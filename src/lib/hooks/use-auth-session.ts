@@ -85,7 +85,39 @@ export function useAuthSession() {
           throw error;
         }
 
-        setCurrentUser(data.session?.user ? accountFromUser(data.session.user) : null);
+        if (!data.session) {
+          setCurrentUser(null);
+          return;
+        }
+
+        // getSession() can return a locally cached session whose access token is
+        // no longer accepted by the server (for example, after credentials are
+        // rotated). Validate it before allowing the authenticated workspace to
+        // render so API routes and the client cannot disagree about auth state.
+        let { data: verified, error: verificationError } =
+          await supabase.auth.getUser();
+        if (!isMounted) return;
+
+        if (verificationError || !verified.user) {
+          const { data: refreshed, error: refreshError } =
+            await supabase.auth.refreshSession();
+          if (!isMounted) return;
+          if (refreshError || !refreshed.session) {
+            await clearStaleSession();
+            return;
+          }
+
+          const verification = await supabase.auth.getUser();
+          verified = verification.data;
+          verificationError = verification.error;
+          if (!isMounted) return;
+          if (verificationError || !verified.user) {
+            await clearStaleSession();
+            return;
+          }
+        }
+
+        setCurrentUser(accountFromUser(verified.user));
       } catch (error) {
         if (isMissingRefreshTokenError(error)) {
           await clearStaleSession();
