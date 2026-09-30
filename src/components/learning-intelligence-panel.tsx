@@ -134,7 +134,7 @@ export function LearningIntelligencePanel({
       const payload = await response.json();
       if (!response.ok) throw Error(payload.error ?? "Unable to load learning insights.");
       setData(payload);
-      setSelectedDate((current) => current || payload.heatmap.at(-1)?.date || "");
+      setSelectedDate(payload.heatmap.at(-1)?.date || "");
       setCardIndex(0);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to load learning insights.");
@@ -226,14 +226,14 @@ export function LearningIntelligencePanel({
   };
 
   return (
-    <section data-tour="learning-intelligence" className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
-      <header className="border-b border-zinc-200 bg-[linear-gradient(135deg,#f4f4f5,#fff)] p-5 md:p-6">
+    <section data-tour="learning-intelligence" className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      <header className="border-b border-zinc-200 bg-white p-5 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-500">
               {role === "tutor" && selectedStudentName ? `${selectedStudentName} · learning intelligence` : "Learning intelligence"}
             </p>
-            <h2 className="mt-1 text-xl font-medium tracking-tight text-zinc-950 md:text-2xl">
+            <h2 className="mt-2 text-xl font-medium tracking-tight text-zinc-950 md:text-2xl">
               {role === "tutor" ? "Student learning profile" : "Your learning profile"}
             </h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600">
@@ -242,9 +242,9 @@ export function LearningIntelligencePanel({
                 : "See your practice pattern, revisit missed questions and understand exactly where to focus next."}
             </p>
           </div>
-          <div className="inline-flex rounded-full border border-zinc-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Learning insights">
+          <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-zinc-200 bg-zinc-50 p-1" role="tablist" aria-label="Learning insights">
             {(["activity", "review", "reports"] as const).map((view) => (
-              <button key={view} type="button" role="tab" aria-selected={activeView === view} onClick={() => setActiveView(view)} className={["rounded-full px-3.5 py-2 text-xs font-medium capitalize transition", activeView === view ? "bg-zinc-950 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900"].join(" ")}>
+              <button key={view} type="button" role="tab" aria-selected={activeView === view} onClick={() => setActiveView(view)} className={["shrink-0 rounded-full px-3.5 py-2 text-xs font-medium capitalize transition", activeView === view ? "bg-zinc-950 text-white shadow-sm" : "text-zinc-500 hover:bg-white hover:text-zinc-900"].join(" ")}>
                 {view === "activity" ? "Overview" : view === "review" ? "Review cards" : "Reports"}
                 {view === "review" && data?.summary.dueCards ? ` · ${data.summary.dueCards}` : ""}
               </button>
@@ -291,45 +291,58 @@ export function LearningIntelligencePanel({
                 </div>
 
                 <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,.7fr)]">
-                  <div data-tour="learning-heatmap" className="min-w-0 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 md:p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-medium text-zinc-950">Review heatmap</h3>
-                          <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-500">Past 12 months</span>
-                        </div>
+                  <div data-tour="learning-heatmap" className="min-w-0 overflow-hidden rounded-2xl border border-zinc-200 bg-[#fcfcfb] shadow-[0_12px_32px_rgba(15,23,42,0.04)]">
+                    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 bg-white px-4 py-4 md:px-5">
+                      <div className="max-w-xl">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-500">Practice consistency</p>
+                        <h3 className="mt-1.5 text-lg font-medium tracking-tight text-zinc-950">Review heatmap</h3>
                         <p className="mt-1 text-sm leading-6 text-zinc-500">
                           {role === "tutor"
-                            ? "Daily question activity for the selected student, with topic and score detail."
-                            : "Every marked question builds your activity record. Select a day to review its topics and score."}
+                            ? "A year of marked question activity, with the topic and attainment behind every session."
+                            : "Your marked questions across the year. Select any active day to see what you practised and how you scored."}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-zinc-500"><span>Less</span>{["bg-zinc-100", "bg-emerald-100", "bg-emerald-300", "bg-emerald-500", "bg-emerald-700"].map((className) => <span key={className} className={`h-3.5 w-3.5 rounded-[4px] ${className}`} />)}<span>More</span></div>
+                      <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-[11px] font-medium text-zinc-600">Last 52 weeks</span>
                     </div>
-                    <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50/60 p-3 md:p-4">
-                      <div className="flex min-w-0 gap-3">
-                        <div aria-hidden="true" className="grid shrink-0 grid-rows-7 gap-1 text-[10px] leading-[14px] text-zinc-400">
-                          <span /><span>Mon</span><span /><span>Wed</span><span /><span>Fri</span><span />
-                        </div>
-                        <div className="min-w-0 flex-1 overflow-x-auto pb-2">
-                          <div className="grid w-max grid-flow-col grid-rows-7 auto-cols-[14px] gap-1" aria-label="Question review heatmap">
-                            {calendarDays.map(({ date, day }) => (
-                              <button key={date} type="button" onClick={() => setSelectedDate(date)} aria-label={`${date}: ${day?.questions ?? 0} questions`} title={`${date} · ${day?.questions ?? 0} questions${day ? ` · ${day.scorePercent}%` : ""}`} className={["h-3.5 w-3.5 rounded-[4px] ring-offset-2 transition duration-150 hover:scale-125 hover:ring-1 hover:ring-zinc-400", intensity(day), selectedDate === date ? "ring-2 ring-zinc-900" : ""].join(" ")} />
-                            ))}
+
+                    <div className="p-4 md:p-5">
+                      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white px-3 py-4 md:px-4">
+                        <div className="flex min-w-0 gap-3">
+                          <div aria-hidden="true" className="grid shrink-0 grid-rows-7 gap-[3px] pt-px text-[10px] leading-3 text-zinc-400">
+                            <span /><span>Mon</span><span /><span>Wed</span><span /><span>Fri</span><span />
                           </div>
+                          <div className="min-w-0 flex-1 overflow-x-auto pb-1">
+                            <div className="grid w-max grid-flow-col grid-rows-7 auto-cols-[12px] gap-[3px]" aria-label="Question review heatmap">
+                              {calendarDays.map(({ date, day }) => (
+                                <button key={date} type="button" onClick={() => setSelectedDate(date)} aria-pressed={selectedDate === date} aria-label={`${date}: ${day?.questions ?? 0} questions${day ? `, ${day.scorePercent}%` : ""}`} title={`${date} · ${day?.questions ?? 0} questions${day ? ` · ${day.scorePercent}%` : ""}`} className={["h-3 w-3 rounded-[3px] ring-offset-2 transition duration-150 hover:scale-125 hover:ring-1 hover:ring-zinc-400", intensity(day), selectedDate === date ? "ring-2 ring-zinc-900" : ""].join(" ")} />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-3">
+                          <p className="text-xs text-zinc-500">Colour reflects questions completed that day.</p>
+                          <div className="flex items-center gap-1.5 text-[11px] text-zinc-500"><span>Less</span>{["bg-zinc-100", "bg-emerald-100", "bg-emerald-300", "bg-emerald-500", "bg-emerald-700"].map((className) => <span key={className} className={`h-3 w-3 rounded-[3px] ${className}`} />)}<span>More</span></div>
                         </div>
                       </div>
-                    </div>
-                    <div className="mt-4 min-h-28 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                      {selectedDay ? (
-                        <>
-                          <div className="flex items-center justify-between gap-4">
-                            <p className="text-sm font-medium text-zinc-900">{dateLabel(selectedDay.date, true)}</p>
-                            <p className="text-sm tabular-nums text-zinc-600">{selectedDay.questions} questions · {selectedDay.scorePercent}%</p>
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2">{selectedDay.topics.map((topic) => <span key={topic.topic} className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-600">{topic.topic} · {topic.scorePercent}%</span>)}</div>
-                        </>
-                      ) : <p className="text-sm leading-6 text-zinc-500">Choose an active day to see the topics practised and score achieved.</p>}
+
+                      <div className="mt-4 min-h-32 rounded-xl border border-zinc-200 bg-white p-4">
+                        {selectedDay ? (
+                          <>
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                              <div>
+                                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">Selected session</p>
+                                <p className="mt-1.5 text-sm font-medium text-zinc-950">{dateLabel(selectedDay.date, true)}</p>
+                              </div>
+                              <div className="flex items-center gap-5">
+                                <div><p className="text-xl font-medium tabular-nums text-zinc-950">{selectedDay.questions}</p><p className="text-[11px] text-zinc-500">questions</p></div>
+                                <div className="h-9 w-px bg-zinc-200" />
+                                <div><p className="text-xl font-medium tabular-nums text-zinc-950">{selectedDay.scorePercent}%</p><p className="text-[11px] text-zinc-500">of marks</p></div>
+                              </div>
+                            </div>
+                            <div className="mt-4 grid gap-2 sm:grid-cols-2">{selectedDay.topics.map((topic) => <div key={topic.topic} className="flex items-center justify-between gap-3 rounded-lg bg-zinc-50 px-3 py-2.5"><div className="min-w-0"><p className="truncate text-xs font-medium text-zinc-800">{topic.topic}</p><p className="mt-0.5 text-[11px] text-zinc-500">{topic.questions} question{topic.questions === 1 ? "" : "s"}</p></div><span className="shrink-0 text-sm font-medium tabular-nums text-zinc-700">{topic.scorePercent}%</span></div>)}</div>
+                          </>
+                        ) : <div className="flex min-h-24 items-center justify-center text-center"><div><p className="text-sm font-medium text-zinc-800">Select an active day</p><p className="mt-1 text-xs leading-5 text-zinc-500">Its topics, question count and score will appear here.</p></div></div>}
+                      </div>
                     </div>
                   </div>
 
@@ -404,13 +417,139 @@ export function LearningIntelligencePanel({
 
             {activeView === "reports" ? (
               <div data-tour="learning-reports">
-                <div className="flex flex-wrap items-end justify-between gap-4"><div><h3 className="text-lg font-medium tracking-tight text-zinc-950">Progress reports</h3><p className="mt-1 text-sm text-zinc-500">A consistent summary of effort, attainment, strengths and next focus.</p></div><div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 p-1">{(["weekly", "monthly"] as const).map((type) => <button key={type} type="button" onClick={() => setReportType(type)} className={["rounded-full px-4 py-2 text-xs font-medium capitalize transition", reportType === type ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500"].join(" ")}>{type}</button>)}</div></div>
-                <div className="mt-5 space-y-3">{reports.map((report, index) => <article key={`${report.period_type}-${report.period_start}`} className={["rounded-2xl border p-5", index === 0 ? "border-zinc-300 bg-white shadow-sm" : "border-zinc-200 bg-zinc-50/50"].join(" ")}><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-medium uppercase tracking-[0.1em] text-zinc-500">{dateLabel(report.period_start, true)} — {dateLabel(report.period_end, true)}</p><p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-700">{report.narrative}</p></div><div className="flex gap-5 text-right"><div><p className="text-2xl font-medium tabular-nums text-zinc-950">{report.questions_attempted}</p><p className="text-xs text-zinc-500">questions</p></div><div><p className="text-2xl font-medium tabular-nums text-zinc-950">{report.score_percent === null ? "—" : `${report.score_percent}%`}</p><p className="text-xs text-zinc-500">score</p></div><div><p className="text-2xl font-medium tabular-nums text-zinc-950">{report.active_days}</p><p className="text-xs text-zinc-500">active days</p></div></div></div>{report.focus_topics.length ? <div className="mt-4 flex flex-wrap gap-2">{report.focus_topics.map((topic) => <span key={`${report.period_start}-${topic.subtopic}`} className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">Focus: {topic.subtopic} · {topic.scorePercent}%</span>)}</div> : null}</article>)}</div>
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-500">Learning record</p>
+                    <h3 className="mt-1.5 text-lg font-medium tracking-tight text-zinc-950">Progress reports</h3>
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-500">A concise view of effort, attainment, strengths and the clearest next focus.</p>
+                  </div>
+                  <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 p-1" role="tablist" aria-label="Report period">
+                    {(["weekly", "monthly"] as const).map((type) => <button key={type} type="button" role="tab" aria-selected={reportType === type} onClick={() => setReportType(type)} className={["rounded-full px-4 py-2 text-xs font-medium capitalize transition", reportType === type ? "bg-zinc-950 text-white shadow-sm" : "text-zinc-500 hover:bg-white hover:text-zinc-900"].join(" ")}>{type}</button>)}
+                  </div>
+                </div>
+
+                {reports.length ? (
+                  <div className="mt-5 space-y-4">
+                    {reports.map((report, index) => index === 0 ? (
+                      <article key={`${report.period_type}-${report.period_start}`} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+                        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 bg-[#fcfcfb] px-5 py-4 md:px-6">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-zinc-950 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.1em] text-white">Current {report.period_type}</span>
+                              <span className="text-xs text-zinc-500">Generated from marked work</span>
+                            </div>
+                            <h4 className="mt-3 text-lg font-medium tracking-tight text-zinc-950">{dateLabel(report.period_start, true)} — {dateLabel(report.period_end, true)}</h4>
+                          </div>
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">Up to date</span>
+                        </div>
+
+                        <div className="p-5 md:p-6">
+                          <div className="grid overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/60 sm:grid-cols-3">
+                            <ReportMetric value={report.questions_attempted} label="Questions completed" />
+                            <ReportMetric value={report.score_percent === null ? "—" : `${report.score_percent}%`} label="Available marks" bordered />
+                            <ReportMetric value={report.active_days} label="Active days" bordered />
+                          </div>
+
+                          <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,.65fr)]">
+                            <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
+                              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">{role === "tutor" ? "Tutor summary" : "Your summary"}</p>
+                              <p className="mt-3 text-sm leading-7 text-zinc-700">{report.narrative}</p>
+                            </div>
+                            <div className="space-y-3">
+                              <ReportTopicGroup title="Strongest areas" topics={report.strongest_topics} tone="strong" periodStart={report.period_start} />
+                              <ReportTopicGroup title="Next focus" topics={report.focus_topics} tone="focus" periodStart={report.period_start} />
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    ) : (
+                      <article key={`${report.period_type}-${report.period_start}`} className="rounded-xl border border-zinc-200 bg-white px-4 py-4 transition hover:border-zinc-300 md:px-5">
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-zinc-900">{dateLabel(report.period_start, true)} — {dateLabel(report.period_end, true)}</p>
+                            <p className="mt-1 line-clamp-1 text-xs text-zinc-500">{report.narrative}</p>
+                          </div>
+                          <div className="flex items-center gap-5 text-right sm:gap-7">
+                            <CompactReportMetric value={report.questions_attempted} label="questions" />
+                            <CompactReportMetric value={report.score_percent === null ? "—" : `${report.score_percent}%`} label="score" />
+                            <CompactReportMetric value={report.active_days} label="days" />
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-6 py-12 text-center">
+                    <p className="text-sm font-medium text-zinc-900">No reports available yet</p>
+                    <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-500">Complete marked practice, quizzes or assessments and Excelora will build the first {reportType} report automatically.</p>
+                  </div>
+                )}
               </div>
             ) : null}
           </>
         ) : null}
       </div>
     </section>
+  );
+}
+
+function ReportMetric({
+  value,
+  label,
+  bordered = false,
+}: {
+  value: string | number;
+  label: string;
+  bordered?: boolean;
+}) {
+  return (
+    <div className={["px-4 py-4 md:px-5", bordered ? "border-t border-zinc-200 sm:border-l sm:border-t-0" : ""].join(" ")}>
+      <p className="text-2xl font-medium tabular-nums tracking-tight text-zinc-950">{value}</p>
+      <p className="mt-1 text-xs text-zinc-500">{label}</p>
+    </div>
+  );
+}
+
+function CompactReportMetric({ value, label }: { value: string | number; label: string }) {
+  return (
+    <div>
+      <p className="text-sm font-medium tabular-nums text-zinc-900">{value}</p>
+      <p className="mt-0.5 text-[11px] text-zinc-500">{label}</p>
+    </div>
+  );
+}
+
+function ReportTopicGroup({
+  title,
+  topics,
+  tone,
+  periodStart,
+}: {
+  title: string;
+  topics: TopicSummary[];
+  tone: "strong" | "focus";
+  periodStart: string;
+}) {
+  const dotClassName = tone === "strong" ? "bg-emerald-500" : "bg-amber-500";
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+      <p className="flex items-center gap-2 text-xs font-medium text-zinc-700">
+        <span className={`h-1.5 w-1.5 rounded-full ${dotClassName}`} />
+        {title}
+      </p>
+      {topics.length ? (
+        <div className="mt-3 space-y-2">
+          {topics.slice(0, 3).map((topic) => (
+            <div key={`${periodStart}-${title}-${topic.subtopic}`} className="flex items-center justify-between gap-3">
+              <span className="min-w-0 truncate text-xs text-zinc-600">{topic.subtopic}</span>
+              <span className="shrink-0 text-xs font-medium tabular-nums text-zinc-800">{topic.scorePercent}%</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-xs leading-5 text-zinc-500">More marked questions are needed.</p>
+      )}
+    </div>
   );
 }
